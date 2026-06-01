@@ -29,6 +29,7 @@ const issue: DebtIssue = {
   message: "Parent forwards 5 props across 2 components.",
   file: "src/Parent.tsx",
   location: { startLine: 10, endLine: 20 },
+  tags: [],
 };
 
 describe("renderTerminal", () => {

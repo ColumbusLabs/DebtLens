@@ -12,7 +12,7 @@
     "url": "https://github.com/ColumbusLabs/DebtLens/issues"
   },
   "bin": {
-    "debtlens": "./dist/cli/index.js"
+    "debtlens": "dist/cli/index.js"
   },
   "files": [
     "dist",

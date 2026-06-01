@@ -44,6 +44,10 @@ export interface DebtLensConfig {
   maxFiles?: number;
   /** Concept id -> competing term variants, used by the naming-drift rule. */
   vocabulary?: Record<string, string[]>;
+  /** Prop-drilling rule configuration. */
+  propDrilling?: {
+    ignoreComponents?: string[];
+  };
 }
 
 export interface ScanOptions {
@@ -58,6 +62,8 @@ export interface ScanOptions {
   vocabulary?: Record<string, string[]>;
   /** When set, only scan files whose absolute path is in this list (--changed mode). */
   changedFiles?: string[];
+  /** Prop-drilling rule configuration. */
+  propDrillingIgnoreComponents?: string[];
 }
 
 export interface CliOptions {

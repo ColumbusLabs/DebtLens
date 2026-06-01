@@ -63,6 +63,18 @@ export function buildConfigSchema(): Record<string, unknown> {
           items: { type: "string" },
         },
       },
+      propDrilling: {
+        type: "object",
+        description: "Prop-drilling rule configuration.",
+        properties: {
+          ignoreComponents: {
+            type: "array",
+            items: { type: "string" },
+            description: "Additional UI primitive component names to ignore (extends built-in host components).",
+          },
+        },
+        additionalProperties: false,
+      },
     },
   };
 }

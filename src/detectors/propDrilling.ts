@@ -14,6 +14,7 @@ export const propDrillingDetector: Detector = {
   detect(context: DetectorContext): DebtIssue[] {
     const issues: DebtIssue[] = [];
     const maxForwardedProps = context.getThreshold("prop-drilling.maxForwardedProps", 4);
+    const customIgnoreComponents = context.options.propDrillingIgnoreComponents;
 
     for (const file of context.files) {
       for (const fn of collectFunctionLikes(file)) {
@@ -33,7 +34,7 @@ export const propDrillingDetector: Detector = {
           const tagName = jsx.getTagNameNode().getText();
           // Skip host elements (lowercase DOM tags) and UI primitives (RN/icon
           // components are PascalCase but aren't user-defined children).
-          if (/^[a-z]/.test(tagName) || isHostComponent(tagName)) continue;
+          if (/^[a-z]/.test(tagName) || isHostComponent(tagName, customIgnoreComponents)) continue;
           const childForwarded = new Set<string>();
           for (const attribute of jsx.getAttributes()) {
             if (!Node.isJsxAttribute(attribute)) continue;

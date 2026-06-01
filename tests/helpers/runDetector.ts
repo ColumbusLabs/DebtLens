@@ -14,6 +14,8 @@ export interface RunDetectorOptions {
   minSeverity?: ScanOptions["minSeverity"];
   /** Naming-drift vocabulary override. */
   vocabulary?: Record<string, string[]>;
+  /** Prop-drilling custom ignore components. */
+  propDrillingIgnoreComponents?: string[];
 }
 
 /**
@@ -60,6 +62,7 @@ export async function runDetector(
     rules: undefined,
     maxFiles: undefined,
     vocabulary: options.vocabulary,
+    propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
   };
 
   const issues = await detector.detect({

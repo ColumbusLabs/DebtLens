@@ -3,13 +3,17 @@ import { createColorizer } from "../utils/color.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
-export function renderTerminal(result: ScanResult, options: { color: boolean } = { color: true }): string {
+export function renderTerminal(result: ScanResult, options: { color: boolean; quiet?: boolean } = { color: true }): string {
   const color = createColorizer(options.color);
   const lines: string[] = [];
 
   lines.push(color.bold("DebtLens Report"));
   lines.push(`Scanned ${result.summary.filesScanned} files with ${result.summary.rulesRun} rules in ${result.summary.elapsedMs}ms.`);
   lines.push(`Issues: ${result.summary.totalIssues} | high ${result.summary.bySeverity.high} | medium ${result.summary.bySeverity.medium} | low ${result.summary.bySeverity.low} | info ${result.summary.bySeverity.info}`);
+
+  if (options.quiet) {
+    return `${lines.join("\n")}\n`;
+  }
 
   if (result.issues.length === 0) {
     lines.push("");

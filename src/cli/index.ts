@@ -39,6 +39,7 @@ program.command("scan")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
   .option("--no-color", "disable ANSI color in terminal output")
+  .option("-q, --quiet", "print only the summary line, suppress individual findings")
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
@@ -88,7 +89,7 @@ program.command("scan")
         ? applyBaseline(result, loadBaseline(cwd, String(rawOptions.baseline)))
         : result;
 
-      const report = renderReport(reported, format, { color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY });
+      const report = renderReport(reported, format, { color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY, quiet: rawOptions.quiet === true });
 
       if (rawOptions.output) {
         const outputPath = resolve(cwd, String(rawOptions.output));

@@ -33,6 +33,15 @@ inputs:
   config:
     description: Path to debtlens.config.json.
     default: ""
+  write-baseline:
+    description: Write current issues to this baseline file and exit. Mutually exclusive with baseline.
+    default: ""
+  thresholds:
+    description: Comma-separated key=value threshold overrides (e.g. large-component.maxLines=300).
+    default: ""
+  max-files:
+    description: Maximum number of files to scan.
+    default: ""
   working-directory:
     description: Directory to run the scan from.
     default: "."
@@ -62,6 +71,9 @@ runs:
         DL_CHANGED: ${{ inputs.changed }}
         DL_BASELINE: ${{ inputs.baseline }}
         DL_CONFIG: ${{ inputs.config }}
+        DL_WRITE_BASELINE: ${{ inputs.write-baseline }}
+        DL_THRESHOLDS: ${{ inputs.thresholds }}
+        DL_MAX_FILES: ${{ inputs.max-files }}
       run: |
         args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$DL_FORMAT")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
@@ -74,4 +86,7 @@ runs:
         elif [ -n "$DL_CHANGED" ]; then
           args+=(--changed "$DL_CHANGED")
         fi
+        [ -n "$DL_WRITE_BASELINE" ] && args+=(--write-baseline "$DL_WRITE_BASELINE")
+        [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
+        [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
         node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"

@@ -212,6 +212,7 @@ jobs:
           changed: origin/${{ github.base_ref }}
           format: sarif
           output: debtlens.sarif
+          thresholds: large-component.maxLines=300
           fail-on: high
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -219,7 +220,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `baseline`, `config`, `working-directory`. Each maps to the matching `scan` flag. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
 
 ## Development
 

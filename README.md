@@ -45,11 +45,13 @@ HIGH (2)
 
 See [`docs/showcase-expensify-app.md`](./docs/showcase-expensify-app.md) for a curated run against a large production React Native codebase.
 
-## Why this exists
+## Why this matters
 
 AI coding assistants make it easier to generate working code quickly. That creates a new maintainer problem: code review must catch duplicated implementations, architectural drift, unnecessary abstractions, and components that quietly absorb too many responsibilities.
 
-DebtLens gives maintainers a neutral, explainable report before debt becomes permanent.
+That review burden is especially hard for new coders who have not yet built the instinct for what maintainability debt looks like. A beginner can ship something that works and still miss warning signs: repeated logic, overloaded effects, local state scattered everywhere, thin wrappers, or names that drift across a feature.
+
+DebtLens gives maintainers and newer contributors a neutral, explainable report before debt becomes permanent. It is meant to teach what to look for, not just fail a build.
 
 ## Current rule set
 
@@ -229,7 +231,7 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 ## Project status
 
-DebtLens is currently a v0.1 proof-of-concept. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md) and [`CURSOR_HANDOFF.md`](./CURSOR_HANDOFF.md).
+DebtLens is currently a v0.1 proof-of-concept. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md), and starter contribution ideas are tracked in [`docs/good-first-issues.md`](./docs/good-first-issues.md).
 
 ## Positioning
 

@@ -1,7 +1,7 @@
 import type { ScanResult, Severity } from "../core/types.js";
 import { allDetectors } from "../detectors/index.js";
 
-const TOOL_VERSION = "0.1.0";
+const TOOL_VERSION = "0.1.1";
 const INFORMATION_URI = "https://github.com/ColumbusLabs/debtlens";
 
 type SarifLevel = "error" | "warning" | "note" | "none";

@@ -1,6 +1,6 @@
 {
   "name": "debtlens",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find maintainability debt common in fast-moving AI-assisted TypeScript, React, React Native, Expo, and Next.js codebases.",
   "type": "module",
   "homepage": "https://github.com/ColumbusLabs/DebtLens#readme",

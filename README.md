@@ -103,6 +103,7 @@ Options:
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
 --no-color                     disable terminal color
+-q, --quiet                    terminal only: summary counts, no per-finding detail
 ```
 
 Examples:
@@ -157,6 +158,9 @@ Create `debtlens.config.json`:
     "state-sprawl.maxStatefulHooks": 6,
     "effect-complexity.maxLines": 30,
     "duplicate-logic.minSimilarity": 0.86
+  },
+  "propDrilling": {
+    "ignoreComponents": ["DesignSystemCard", "DesignSystemModal"]
   }
 }
 ```

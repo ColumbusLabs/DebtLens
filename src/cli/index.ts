@@ -19,7 +19,7 @@ const program = new Command();
 program
   .name("debtlens")
   .description("Find maintainability debt common in fast-moving AI-assisted TypeScript and React codebases.")
-  .version("0.1.0");
+  .version("0.1.1");
 
 program.command("scan")
   .description("Scan a project, directory, or file for maintainability debt.")

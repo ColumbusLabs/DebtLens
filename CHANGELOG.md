@@ -3,6 +3,18 @@
 All notable changes to DebtLens are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-06-01
+
+### Added
+- **`--quiet` / `-q`** on `debtlens scan`: terminal output shows header and summary
+  counts only; individual findings are suppressed. Exit codes and `--fail-on` are unchanged.
+- **Configurable prop-drilling ignores** via `propDrilling.ignoreComponents` in
+  `debtlens.config.json` (extends the built-in host-component list).
+
+### Changed
+- Contributor docs: [`docs/good-first-issues.md`](./docs/good-first-issues.md) links to
+  GitHub issues #1–#28.
+
 ## [0.1.0] - 2026-06-01
 
 First public release.

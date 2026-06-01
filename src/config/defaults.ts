@@ -38,4 +38,7 @@ export const defaultConfig: Required<DebtLensConfig> = {
   },
   maxFiles: 2000,
   vocabulary: {},
+  propDrilling: {
+    ignoreComponents: [],
+  },
 };

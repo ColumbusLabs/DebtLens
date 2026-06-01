@@ -68,4 +68,34 @@ export function Parent({ a, b, c, d, e }: Props) {
     const issues = await runDetector(propDrillingDetector, { "Parent.tsx": src });
     assert.equal(issues.length, 1);
   });
+
+  it("does NOT flag a component forwarding to a custom ignored component", async () => {
+    const src = `
+export function Parent({ a, b, c, d, e }: Props) {
+  return <CustomButton a={a} b={b} c={c} d={d} e={e} />;
+}
+`;
+    const issues = await runDetector(propDrillingDetector, { "Parent.tsx": src }, {
+      propDrillingIgnoreComponents: ["CustomButton"],
+    });
+    assert.equal(issues.length, 0);
+  });
+
+  it("flags forwarding to a user-defined child even when other custom components are ignored", async () => {
+    const src = `
+export function Parent({ a, b, c, d, e, f }: Props) {
+  return (
+    <>
+      <CustomButton a={a} b={b} />
+      <Child c={c} d={d} e={e} f={f} />
+    </>
+  );
+}
+`;
+    const issues = await runDetector(propDrillingDetector, { "Parent.tsx": src }, {
+      propDrillingIgnoreComponents: ["CustomButton"],
+    });
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /forwards 4 props/);
+  });
 });

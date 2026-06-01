@@ -23,6 +23,10 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     },
     maxFiles: cliOptions.maxFiles ?? fileConfig.maxFiles ?? defaultConfig.maxFiles,
     vocabulary: { ...defaultConfig.vocabulary, ...(fileConfig.vocabulary ?? {}) },
+    propDrillingIgnoreComponents: [
+      ...(defaultConfig.propDrilling?.ignoreComponents ?? []),
+      ...(fileConfig.propDrilling?.ignoreComponents ?? []),
+    ],
     changedFiles: cliOptions.changedFiles,
   };
 }

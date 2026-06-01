@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/ColumbusLabs/debtlens/main/schema/debtlens.config.schema.json",
+  "title": "DebtLens configuration",
+  "description": "Configuration for the DebtLens static-analysis CLI.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns to scan."
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns to skip."
+    },
+    "minSeverity": {
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Lowest severity to report."
+    },
+    "rules": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "large-component",
+          "state-sprawl",
+          "effect-complexity",
+          "duplicate-logic",
+          "dead-abstraction",
+          "prop-drilling",
+          "todo-comment",
+          "naming-drift"
+        ]
+      },
+      "description": "Rule ids to run. Omit to run all rules."
+    },
+    "maxFiles": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of files to scan."
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Per-rule numeric threshold overrides.",
+      "properties": {
+        "large-component.maxLines": {
+          "type": "number"
+        },
+        "large-component.maxBranches": {
+          "type": "number"
+        },
+        "large-component.maxHooks": {
+          "type": "number"
+        },
+        "state-sprawl.maxStatefulHooks": {
+          "type": "number"
+        },
+        "effect-complexity.maxLines": {
+          "type": "number"
+        },
+        "effect-complexity.maxDependencies": {
+          "type": "number"
+        },
+        "duplicate-logic.minSimilarity": {
+          "type": "number"
+        },
+        "duplicate-logic.minLines": {
+          "type": "number"
+        },
+        "duplicate-logic.maxSnippets": {
+          "type": "number"
+        },
+        "dead-abstraction.maxWrapperLines": {
+          "type": "number"
+        },
+        "prop-drilling.maxForwardedProps": {
+          "type": "number"
+        },
+        "naming-drift.minVariants": {
+          "type": "number"
+        },
+        "duplicate-logic.minStructuralSimilarity": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "vocabulary": {
+      "type": "object",
+      "description": "Naming-drift concept groups (concept id -> competing terms).",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

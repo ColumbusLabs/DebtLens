@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
+import { renderSarif } from "../../src/reporters/sarifReporter.js";
+
+function makeResult(issues: DebtIssue[]): ScanResult {
+  const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
+  for (const issue of issues) bySeverity[issue.severity] += 1;
+  return {
+    issues,
+    summary: {
+      totalIssues: issues.length,
+      bySeverity,
+      byRule: {},
+      filesScanned: 1,
+      rulesRun: 8,
+      elapsedMs: 12,
+    },
+    options: { target: ".", include: [], exclude: [], minSeverity: "info", rules: undefined },
+  };
+}
+
+const highIssue: DebtIssue = {
+  id: "dl_1",
+  ruleId: "prop-drilling",
+  ruleName: "Prop drilling",
+  severity: "high",
+  confidence: 0.73,
+  message: "Parent forwards 5 props across 1 child component.",
+  file: "src/Parent.tsx",
+  location: { startLine: 13, endLine: 20 },
+  evidence: ["Child: a, b, c, d, e"],
+  suggestion: "Colocate the data owner.",
+  tags: ["react"],
+};
+
+const infoIssue: DebtIssue = {
+  id: "dl_2",
+  ruleId: "naming-drift",
+  ruleName: "Naming drift",
+  severity: "info",
+  confidence: 0.62,
+  message: "This file uses 4 competing terms.",
+  file: "src/release.ts",
+  location: { startLine: 1 },
+  tags: ["naming"],
+};
+
+describe("sarif reporter", () => {
+  it("emits valid SARIF 2.1.0 envelope with the full rule catalog", () => {
+    const sarif = JSON.parse(renderSarif(makeResult([highIssue])));
+    assert.equal(sarif.version, "2.1.0");
+    assert.ok(sarif.$schema.includes("sarif-2.1.0"));
+    const driver = sarif.runs[0].tool.driver;
+    assert.equal(driver.name, "DebtLens");
+    // All 8 detectors should be present in the rule catalog.
+    assert.equal(driver.rules.length, 8);
+    assert.ok(driver.rules.some((r: { id: string }) => r.id === "prop-drilling"));
+  });
+
+  it("maps severities to SARIF levels and locations correctly", () => {
+    const sarif = JSON.parse(renderSarif(makeResult([highIssue, infoIssue])));
+    const results = sarif.runs[0].results;
+    assert.equal(results.length, 2);
+
+    const high = results.find((r: { ruleId: string }) => r.ruleId === "prop-drilling");
+    assert.equal(high.level, "error");
+    assert.equal(high.message.text, "Parent forwards 5 props across 1 child component.");
+    const region = high.locations[0].physicalLocation.region;
+    assert.equal(high.locations[0].physicalLocation.artifactLocation.uri, "src/Parent.tsx");
+    assert.equal(region.startLine, 13);
+    assert.equal(region.endLine, 20);
+    assert.equal(high.properties.suggestion, "Colocate the data owner.");
+    assert.deepEqual(high.properties.evidence, ["Child: a, b, c, d, e"]);
+
+    const info = results.find((r: { ruleId: string }) => r.ruleId === "naming-drift");
+    assert.equal(info.level, "note");
+    assert.equal(info.locations[0].physicalLocation.region.startLine, 1);
+  });
+
+  it("emits an empty results array when there are no issues", () => {
+    const sarif = JSON.parse(renderSarif(makeResult([])));
+    assert.deepEqual(sarif.runs[0].results, []);
+    assert.equal(sarif.runs[0].tool.driver.rules.length, 8);
+  });
+});

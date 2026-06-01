@@ -1,0 +1,52 @@
+{
+  "name": "debtlens",
+  "version": "0.1.0",
+  "description": "Find maintainability debt common in fast-moving AI-assisted TypeScript, React, React Native, Expo, and Next.js codebases.",
+  "type": "module",
+  "bin": {
+    "debtlens": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli/index.ts scan examples/react --format terminal",
+    "scan:example": "tsx src/cli/index.ts scan examples/react --format markdown",
+    "test": "node scripts/test.mjs",
+    "test:all": "npm run typecheck && npm run typecheck:tests && npm run test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
+    "schema:generate": "node --import tsx scripts/generate-schema.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "technical-debt",
+    "static-analysis",
+    "react",
+    "react-native",
+    "typescript",
+    "ai-code-review",
+    "cli",
+    "maintainability"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "fast-glob": "^3.3.3",
+    "ts-morph": "^28.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0"
+  }
+}

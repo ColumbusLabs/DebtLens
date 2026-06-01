@@ -1,0 +1,23 @@
+{
+  "$schema": "./schema/debtlens.config.schema.json",
+  "include": ["src/**/*.{ts,tsx,js,jsx}"],
+  "exclude": ["node_modules/**", "dist/**", "build/**", ".next/**", "coverage/**"],
+  "minSeverity": "low",
+  "rules": [
+    "large-component",
+    "state-sprawl",
+    "effect-complexity",
+    "duplicate-logic",
+    "dead-abstraction",
+    "prop-drilling",
+    "todo-comment",
+    "naming-drift"
+  ],
+  "thresholds": {
+    "large-component.maxLines": 250,
+    "state-sprawl.maxStatefulHooks": 6,
+    "effect-complexity.maxLines": 30,
+    "duplicate-logic.minSimilarity": 0.86,
+    "duplicate-logic.minLines": 8
+  }
+}

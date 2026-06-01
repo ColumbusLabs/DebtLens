@@ -21,6 +21,11 @@ Good fixes:
 - move imperative workflows to named hooks
 - split independent features behind composition boundaries
 
+When this is a false positive:
+
+- the file is not actually a React-style component
+- the component stays within the configured line, hook, and branch budgets
+
 ## `state-sprawl`
 
 Flags components/hooks with many calls to local stateful hooks such as `useState`, `useReducer`, and `useRef`.
@@ -37,6 +42,11 @@ Good fixes:
 - extract a domain hook
 - move server/cache state into the data layer
 - delete unused state before adding new state
+
+When this is a false positive:
+
+- the function is not classified as a component or hook
+- the file stays at or below the configured stateful-hook threshold
 
 ## `effect-complexity`
 
@@ -55,6 +65,11 @@ Good fixes:
 - replace derived-state effects with memoized values
 - move async workflows into named functions
 - use framework data loading where appropriate
+
+When this is a false positive:
+
+- the callback is small and focused
+- the array literal belongs to another API instead of `useEffect`
 
 ## `duplicate-logic`
 
@@ -75,6 +90,11 @@ Good fixes:
 - delete the weaker duplicate if it was accidental
 - keep duplication only when coupling would be worse than repetition
 
+When this is a false positive:
+
+- the compared snippets do materially different work after normalization
+- the shared shape is too short to clear the minimum line-count threshold
+
 ## `dead-abstraction`
 
 Flags short wrappers that delegate to one call, return one value, or render one JSX element without meaningful behavior.
@@ -90,6 +110,11 @@ Good fixes:
 - inline the wrapper
 - keep it only if it is a stable domain boundary
 - add the missing behavior that justifies the abstraction
+
+When this is a false positive:
+
+- the wrapper adds meaningful behavior beyond a single pass-through statement
+- the file is a route module or a hook wrapper that is intentionally thin by convention
 
 ## `prop-drilling`
 
@@ -108,6 +133,11 @@ Good fixes:
 - extract a stable context for cross-cutting values
 - reduce prop surface area
 
+When this is a false positive:
+
+- the component forwards only a small number of props
+- the props are passed only to host primitives instead of user-defined child components
+
 ## `todo-comment`
 
 Flags debt markers in comments, including TODO, FIXME, HACK, temporary, placeholder, and assistant-generation markers.
@@ -120,6 +150,11 @@ Good fixes:
 - add a removal condition
 - fix the debt before more code depends on it
 - delete stale comments that no longer describe reality
+
+When this is a false positive:
+
+- the word appears in executable code or identifiers instead of a comment
+- the comment is already paired with explicit tracking and removal criteria
 
 ## `naming-drift`
 
@@ -137,3 +172,8 @@ Good fixes:
 - rename adapters at system boundaries
 - document vocabulary in a module README
 - add typed domain models where possible
+
+When this is a false positive:
+
+- the file uses fewer distinct variants than the configured threshold
+- the competing names belong to separate concepts rather than one overloaded domain term

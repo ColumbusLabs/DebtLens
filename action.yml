@@ -45,6 +45,9 @@ inputs:
   working-directory:
     description: Directory to run the scan from.
     default: "."
+  quiet:
+    description: Terminal only - suppress per-finding detail.
+    default: "false"
 
 runs:
   using: composite
@@ -74,6 +77,7 @@ runs:
         DL_WRITE_BASELINE: ${{ inputs.write-baseline }}
         DL_THRESHOLDS: ${{ inputs.thresholds }}
         DL_MAX_FILES: ${{ inputs.max-files }}
+        DL_QUIET: ${{ inputs.quiet }}
       run: |
         args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$DL_FORMAT")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
@@ -89,4 +93,5 @@ runs:
         [ -n "$DL_WRITE_BASELINE" ] && args+=(--write-baseline "$DL_WRITE_BASELINE")
         [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
         [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
+        [ "$DL_QUIET" = "true" ] && args+=(--quiet)
         node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"

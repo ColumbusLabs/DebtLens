@@ -103,7 +103,7 @@ Options:
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
 --no-color                     disable terminal color
--q, --quiet                    terminal only: summary counts, no per-finding detail
+-q, --quiet                    terminal only: suppress per-finding detail
 ```
 
 Examples:
@@ -130,6 +130,9 @@ debtlens scan --baseline debtlens-baseline.json --fail-on high
 
 # Pull-request scan: only the files this branch changed vs main
 debtlens scan --changed origin/main --fail-on high
+
+# Quiet terminal output: hide per-finding detail
+debtlens scan --quiet
 ```
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported.
@@ -213,6 +216,7 @@ jobs:
           format: sarif
           output: debtlens.sarif
           thresholds: large-component.maxLines=300
+          quiet: true
           fail-on: high
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
@@ -220,7 +224,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
 
 ## Development
 

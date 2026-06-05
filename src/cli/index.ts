@@ -76,6 +76,10 @@ program.command("scan")
 
       const result = await scan(options);
 
+      if (result.summary.filesScanned === 0) {
+        process.stderr.write(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined));
+      }
+
       if (rawOptions.writeBaseline) {
         const baselinePath = rawOptions.writeBaseline === true
           ? DEFAULT_BASELINE_FILENAME
@@ -97,10 +101,6 @@ program.command("scan")
         writeFileSync(outputPath, report, "utf8");
       } else {
         process.stdout.write(report);
-      }
-
-      if (result.summary.filesScanned === 0) {
-        process.stderr.write(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined));
       }
 
       if (failOn && reported.issues.some((issue) => severityRank[issue.severity] >= severityRank[failOn])) {

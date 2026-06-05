@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -28,5 +30,19 @@ describe("debtlens scan warnings", () => {
 
     assert.equal(result.status, 0);
     assert.doesNotMatch(result.stderr, /DebtLens warning: scanned 0 files\./);
+  });
+
+  it("warns when writing a baseline from a scan that reads zero files", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-"));
+    try {
+      const baselinePath = join(dir, "baseline.json");
+      const result = runScan(["examples/react", "--include", "**/*.py", "--write-baseline", baselinePath]);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /Wrote baseline with 0 issues/);
+      assert.match(result.stderr, /DebtLens warning: scanned 0 files\./);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

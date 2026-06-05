@@ -137,6 +137,8 @@ debtlens scan --quiet
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported.
 
+When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty `--changed` file set. The warning is advisory and does not change the exit code for `--fail-on`.
+
 ## Configuration
 
 Create `debtlens.config.json`:

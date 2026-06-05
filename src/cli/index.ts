@@ -76,6 +76,10 @@ program.command("scan")
 
       const result = await scan(options);
 
+      if (result.summary.filesScanned === 0) {
+        process.stderr.write(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined));
+      }
+
       if (rawOptions.writeBaseline) {
         const baselinePath = rawOptions.writeBaseline === true
           ? DEFAULT_BASELINE_FILENAME
@@ -163,4 +167,23 @@ function parseInteger(value: string): number {
 function parseFormat(value: string): OutputFormat {
   if (value === "terminal" || value === "json" || value === "markdown" || value === "sarif") return value;
   throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, or sarif.`);
+}
+
+function buildZeroFilesScannedWarning(target: string, include: string[], usedChangedFilter: boolean): string {
+  const hints = [
+    "check your include/exclude globs",
+    "verify the target path or --cwd",
+  ];
+
+  if (usedChangedFilter) {
+    hints.push("confirm the git ref used with --changed resolves to tracked files");
+  }
+
+  return [
+    "DebtLens warning: scanned 0 files.",
+    `Target: ${target}`,
+    `Include globs: ${include.join(", ")}`,
+    `Likely causes: ${hints.join("; ")}.`,
+    "",
+  ].join("\n");
 }

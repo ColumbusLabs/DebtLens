@@ -112,6 +112,7 @@ Options:
 --fail-on <severity>           exit 1 when an issue meets this severity
 --fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
 --baseline <path>              report only issues absent from this baseline file
+--diff-base <ref>              report only findings introduced since this git ref
 --write-baseline [path]        write current issues to a baseline file and exit
 --changed [ref]                scan only files changed vs HEAD (or vs <ref> if given)
 --staged                       scan only files staged in git

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getChangedFiles, getIgnoredFiles, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
+import { getChangedFiles, getIgnoredFiles, getRefSnapshot, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
 
 function git(cwd: string, args: string[]): void {
   execFileSync("git", args, { cwd, stdio: "ignore" });
@@ -95,5 +95,13 @@ describe("git changed-files", () => {
 
     assert.ok(stagedPath);
     assert.equal(staged?.contents?.[stagedPath], "export const staged = 2;\n");
+  });
+
+  it("reads scannable file contents at a ref", () => {
+    const snapshot = getRefSnapshot(dir, "HEAD");
+    assert.ok(snapshot);
+    assert.ok(snapshot.files.some((file) => file.endsWith("src/committed.ts")));
+    const committedPath = snapshot.files.find((file) => file.endsWith("src/committed.ts"));
+    assert.equal(snapshot.contents?.[committedPath!], "export const a = 1;\n");
   });
 });

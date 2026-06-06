@@ -148,8 +148,8 @@ When this is a false positive:
 Flags debt markers in comments, including TODO, FIXME, HACK, temporary, placeholder, and assistant-generation markers.
 
 Configure custom markers via `todoComment.markers`, disable built-in labels with
-`todoComment.disableDefaults`, or set `todoComment.replaceDefaults: true` to use only
-custom patterns.
+`todoComment.disableDefaults` (`todo marker`, `fixme/bug marker`), or set
+`todoComment.replaceDefaults: true` to use only custom patterns.
 
 Why it matters: a comment can be a legitimate marker, but untracked markers often become permanent.
 

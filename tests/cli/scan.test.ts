@@ -195,6 +195,19 @@ describe("debtlens scan diff-base", () => {
   });
 });
 
+describe("debtlens scan profile", () => {
+  it("prints per-rule timing to stderr without changing findings", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--profile", "--format", "json"]);
+    const parsed = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stderr, /DebtLens profile \(per-rule ms\):/);
+    assert.match(result.stderr, /todo-comment: \d+ms/);
+    assert.ok(parsed.summary.profile?.ruleTimingsMs["todo-comment"] !== undefined);
+    assert.equal(parsed.summary.totalIssues, parsed.issues.length);
+  });
+});
+
 describe("debtlens scan git modes", () => {
   it("rejects --changed and --staged together", () => {
     const result = runScan(["examples/react", "--changed", "--staged"]);

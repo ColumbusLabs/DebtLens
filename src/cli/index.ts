@@ -49,6 +49,7 @@ program.command("scan")
   .option("--cwd <path>", "working directory", process.cwd())
   .option("--no-color", "disable ANSI color in terminal output")
   .option("-q, --quiet", "print only the summary line, suppress individual findings")
+  .option("--profile", "print per-rule timing without changing findings")
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
@@ -94,6 +95,7 @@ program.command("scan")
         respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
         changedFiles,
         fileContents,
+        profile: rawOptions.profile === true,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
@@ -113,6 +115,10 @@ program.command("scan")
         for (const warning of result.summary.warnings) {
           process.stderr.write(`DebtLens warning: ${warning}\n`);
         }
+      }
+
+      if (rawOptions.profile === true && result.summary.profile) {
+        process.stderr.write(formatProfileReport(result.summary.profile.ruleTimingsMs));
       }
 
       if (rawOptions.writeBaseline) {
@@ -432,4 +438,12 @@ async function resolveReportedIssues(
     fileContents: snapshot.contents,
   });
   return applyBaseline(result, createBaseline(baseResult.issues));
+}
+
+function formatProfileReport(ruleTimingsMs: Record<string, number>): string {
+  const lines = ["DebtLens profile (per-rule ms):"];
+  for (const [ruleId, elapsedMs] of Object.entries(ruleTimingsMs).sort((left, right) => right[1] - left[1])) {
+    lines.push(`  ${ruleId}: ${elapsedMs}ms`);
+  }
+  return `${lines.join("\n")}\n`;
 }

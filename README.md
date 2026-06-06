@@ -121,6 +121,7 @@ Options:
 --cwd <path>                   working directory
 --no-color                     disable terminal color
 -q, --quiet                    terminal only: suppress per-finding detail
+--profile                      print per-rule timing to stderr without changing findings
 ```
 
 Examples:

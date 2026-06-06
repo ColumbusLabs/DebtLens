@@ -124,6 +124,12 @@ export interface Detector {
   detect: (context: DetectorContext) => Promise<DebtIssue[]> | DebtIssue[];
 }
 
+export interface ScanFilterStats {
+  filteredByMinSeverity?: number;
+  suppressedByBaseline?: number;
+  suppressedByInline?: number;
+}
+
 export interface ScanSummary {
   totalIssues: number;
   bySeverity: Record<Severity, number>;
@@ -132,6 +138,7 @@ export interface ScanSummary {
   rulesRun: number;
   elapsedMs: number;
   warnings?: string[];
+  filterStats?: ScanFilterStats;
 }
 
 export interface ScanResult {

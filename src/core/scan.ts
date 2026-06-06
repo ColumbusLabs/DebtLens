@@ -39,6 +39,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const detectors = selectDetectors(options.rules);
   const issues: DebtIssue[] = [];
   const warnings: string[] = [];
+  let filteredByMinSeverity = 0;
 
   for (const detector of detectors) {
     const detectorIssues = await detector.detect({
@@ -50,7 +51,13 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
         if (!warnings.includes(warning)) warnings.push(warning);
       },
     });
-    issues.push(...detectorIssues.filter((issue) => meetsMinSeverity(issue.severity, options.minSeverity)));
+    for (const issue of detectorIssues) {
+      if (meetsMinSeverity(issue.severity, options.minSeverity)) {
+        issues.push(issue);
+      } else {
+        filteredByMinSeverity += 1;
+      }
+    }
   }
 
   issues.sort((a, b) => {
@@ -77,6 +84,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     rulesRun: detectors.length,
     elapsedMs: Date.now() - startedAt,
     ...(warnings.length ? { warnings } : {}),
+    ...(filteredByMinSeverity > 0 ? { filterStats: { filteredByMinSeverity } } : {}),
   };
 
   return {

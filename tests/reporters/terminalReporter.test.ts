@@ -56,4 +56,15 @@ describe("renderTerminal", () => {
     assert.ok(out.includes("Issues: 0"));
     assert.ok(!out.includes("No maintainability debt found"));
   });
+
+  it("includes filter stats when present", () => {
+    const out = renderTerminal({
+      ...makeResult([]),
+      summary: {
+        ...makeResult([]).summary,
+        filterStats: { suppressedByBaseline: 2, filteredByMinSeverity: 3 },
+      },
+    }, { color: false });
+    assert.match(out, /Filtered: 2 baselined \| 3 below min severity/);
+  });
 });

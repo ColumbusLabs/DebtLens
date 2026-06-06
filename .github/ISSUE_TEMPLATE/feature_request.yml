@@ -1,0 +1,45 @@
+name: Feature request
+description: Propose an improvement to the CLI, reporters, Action, config, or docs.
+title: "Feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What user or maintainer outcome should this unlock?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - detector
+        - cli
+        - config
+        - docs
+        - github-action
+        - reporter
+        - performance
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: What happens today?
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behavior
+      description: What should DebtLens do instead?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How should contributors know this is done?
+

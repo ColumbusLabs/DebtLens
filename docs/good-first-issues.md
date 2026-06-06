@@ -11,21 +11,17 @@ Statuses reflect the current repository surface. **Done** means the GitHub issue
 
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
-| 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) | Open |
+| 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) | **Done** |
 | 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | Open |
 | 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
 | 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
 | 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Done** |
 | 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Done** |
 
-### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1)
+### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) (closed)
 
-The ignore list of UI primitives lives in [`src/utils/hostComponents.ts`](../src/utils/hostComponents.ts).
-Add an optional config key (e.g. `propDrilling.ignoreComponents`) that extends it, so
-teams can register their own design-system primitives.
-
-- Touch: `src/core/types.ts`, `src/config/*`, `src/detectors/propDrilling.ts`, schema.
-- Verify: a test where a custom-ignored component is not counted.
+Implemented via `propDrilling.ignoreComponents`, config/schema support, and detector
+tests covering custom ignored components.
 
 ### 2. Teach `large-component` to recognize more component forms — [#2](https://github.com/ColumbusLabs/DebtLens/issues/2)
 

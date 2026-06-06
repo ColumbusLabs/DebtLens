@@ -110,6 +110,7 @@ Options:
 --format <format>              terminal, json, markdown, pr-comment, or sarif
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
+--fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
 --baseline <path>              report only issues absent from this baseline file
 --write-baseline [path]        write current issues to a baseline file and exit
 --changed [ref]                scan only files changed vs HEAD (or vs <ref> if given)
@@ -137,7 +138,7 @@ debtlens scan --format markdown --output debtlens-report.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
-debtlens scan --min-severity medium --fail-on high
+debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
 
 # Tune component-size threshold
 debtlens scan --threshold "large-component.maxLines=320,state-sprawl.maxStatefulHooks=8"

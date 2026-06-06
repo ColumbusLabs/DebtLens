@@ -39,6 +39,8 @@ export interface DebtLensConfig {
   include?: string[];
   exclude?: string[];
   minSeverity?: Severity;
+  /** Built-in rule pack preset (core, react, react-native, next). */
+  pack?: string;
   rules?: string[];
   thresholds?: ScanThresholds;
   maxFiles?: number;
@@ -67,6 +69,7 @@ export interface ScanOptions {
   include: string[];
   exclude: string[];
   minSeverity: Severity;
+  pack?: string;
   rules?: string[];
   thresholds: ScanThresholds;
   maxFiles?: number;
@@ -90,6 +93,7 @@ export interface CliOptions {
   include?: string[];
   exclude?: string[];
   minSeverity?: Severity;
+  pack?: string;
   rules?: string[];
   thresholds?: ScanThresholds;
   maxFiles?: number;

@@ -1,5 +1,6 @@
 import { severities } from "../core/severity.js";
 import { detectorIds } from "../detectors/index.js";
+import { RULE_PACK_IDS } from "./packs.js";
 import { defaultConfig } from "./defaults.js";
 
 export const SCHEMA_ID =
@@ -37,6 +38,10 @@ export function buildConfigSchema(): Record<string, unknown> {
       minSeverity: {
         enum: [...severities],
         description: "Lowest severity to report.",
+      },
+      pack: {
+        enum: [...RULE_PACK_IDS],
+        description: "Built-in rule pack preset. Explicit rules override the pack.",
       },
       rules: {
         type: "array",

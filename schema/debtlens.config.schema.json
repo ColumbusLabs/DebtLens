@@ -32,6 +32,15 @@
       ],
       "description": "Lowest severity to report."
     },
+    "pack": {
+      "enum": [
+        "core",
+        "react",
+        "react-native",
+        "next"
+      ],
+      "description": "Built-in rule pack preset. Explicit rules override the pack."
+    },
     "rules": {
       "type": "array",
       "uniqueItems": true,

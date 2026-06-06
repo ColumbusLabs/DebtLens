@@ -1,10 +1,22 @@
 import { resolve } from "node:path";
 import { defaultConfig } from "./defaults.js";
+import { getRulePack } from "./packs.js";
 import { compileTodoCommentMarkers } from "../detectors/todoComment.js";
 import type { CliOptions, DebtLensConfig, ScanOptions } from "../core/types.js";
 
 export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptions: CliOptions): ScanOptions {
   const cwd = resolve(cliOptions.cwd ?? process.cwd());
+  const packId = cliOptions.pack ?? fileConfig.pack;
+  if (packId) {
+    getRulePack(packId);
+  }
+
+  const explicitRules = cliOptions.rules?.length ? cliOptions.rules : fileConfig.rules;
+  const rules = explicitRules?.length
+    ? explicitRules
+    : packId
+      ? [...getRulePack(packId).rules]
+      : undefined;
 
   return {
     cwd,
@@ -16,7 +28,8 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       ...(cliOptions.exclude ?? []),
     ],
     minSeverity: cliOptions.minSeverity ?? fileConfig.minSeverity ?? defaultConfig.minSeverity,
-    rules: cliOptions.rules?.length ? cliOptions.rules : fileConfig.rules,
+    pack: packId,
+    rules,
     thresholds: {
       ...defaultConfig.thresholds,
       ...(fileConfig.thresholds ?? {}),

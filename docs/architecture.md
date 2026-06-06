@@ -52,6 +52,8 @@ DebtLens intentionally starts with JSON config rather than JavaScript config. St
 
 ## Future plugin model
 
+See [`plugin-api-rfc.md`](./plugin-api-rfc.md) for the proposed third-party rule API (RFC — not implemented yet).
+
 Potential design:
 
 ```ts

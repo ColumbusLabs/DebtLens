@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { findConfigPath, loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
@@ -29,14 +30,21 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   const fileConfig = loadConfig(input.cwd, input.configPath);
   const options = mergeConfig(input.target, fileConfig, input.cliOptions);
   const configPath = findConfigPath(input.cwd, input.configPath);
+  const explicitConfigPath = input.configPath ? resolve(input.cwd, input.configPath) : undefined;
+  const missingConfigPath = explicitConfigPath && !existsSync(explicitConfigPath)
+    ? explicitConfigPath
+    : undefined;
   const filePaths = await resolveFilePaths(options);
   const resolvedRules = resolveRuleIds(options);
+  const warnings = missingConfigPath
+    ? [`DebtLens warning: config file not found at ${missingConfigPath}.`]
+    : [];
 
   const lines = [
     "DebtLens Doctor",
     "===============",
     `Working directory: ${options.cwd}`,
-    `Config: ${configPath ?? "(none found)"}`,
+    `Config: ${missingConfigPath ? `${missingConfigPath} (missing)` : configPath ?? "(none found)"}`,
     `Target: ${options.target}`,
     `Pack: ${options.pack ?? "(none)"}`,
     `Rules: ${resolvedRules.join(", ")}`,
@@ -69,6 +77,11 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   }
 
   lines.push(`Matched files: ${filePaths.length}`);
+
+  if (warnings.length) {
+    lines.push("");
+    lines.push(...warnings);
+  }
 
   if (filePaths.length === 0) {
     lines.push("");

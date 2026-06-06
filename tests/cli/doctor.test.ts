@@ -48,6 +48,16 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /Matched files: 1/);
   });
 
+  it("warns when an explicit config path is missing", () => {
+    const configPath = join(dir, "missing.config.json");
+
+    const result = runDoctor([".", "--cwd", dir, "--config", configPath]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, new RegExp(`Config: ${configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\(missing\\)`));
+    assert.match(result.stdout, new RegExp(`DebtLens warning: config file not found at ${configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`));
+  });
+
   it("warns when zero files match the include globs", () => {
     mkdirSync(join(dir, "src"), { recursive: true });
     writeFileSync(join(dir, "src", "keep.ts"), "export const ok = 1;\n");
@@ -58,6 +68,18 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /Matched files: 0/);
     assert.match(result.stdout, /Include globs: missing\/\*\*\/\*\.ts/);
     assert.match(result.stdout, /DebtLens warning: scanned 0 files/);
+  });
+
+  it("prints exclude globs and applies them to matched files", () => {
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, "src", "keep.ts"), "export const ok = 1;\n");
+    writeFileSync(join(dir, "src", "skip.ts"), "export const skip = 1;\n");
+
+    const result = runDoctor([".", "--cwd", dir, "--include", "src/**/*.ts", "--exclude", "src/skip.ts"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Exclude globs: .*src\/skip\.ts/);
+    assert.match(result.stdout, /Matched files: 1/);
   });
 
   it("notes when --changed is ignored outside a git repo", () => {

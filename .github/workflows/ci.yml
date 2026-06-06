@@ -23,4 +23,6 @@ jobs:
       - run: npm run typecheck:tests
       - run: npm test
       - run: npm run build
-      - run: node dist/cli/index.js scan examples/react --min-severity info --format markdown --output debtlens-example-report.md
+      - run: node dist/cli/index.js scan examples/react --min-severity info --format markdown --output debtlens-react-report.md
+      - run: node dist/cli/index.js scan examples/react-native --min-severity info --format markdown --output debtlens-react-native-report.md
+      - run: node dist/cli/index.js scan examples/next --min-severity info --format markdown --output debtlens-next-report.md

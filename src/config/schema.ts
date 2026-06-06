@@ -114,6 +114,17 @@ export function buildConfigSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      namingDrift: {
+        type: "object",
+        description: "Naming-drift rule configuration.",
+        properties: {
+          disableBuiltInVocabulary: {
+            type: "boolean",
+            description: "When true, skip built-in concept groups; only user vocabulary applies.",
+          },
+        },
+        additionalProperties: false,
+      },
     },
   };
 }

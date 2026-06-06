@@ -171,7 +171,11 @@ Flags files where related domain concepts are represented by many competing name
 
 Default threshold:
 
-- `naming-drift.minVariants`: 4
+- `naming-drift.minVariants`: 5
+
+Configuration:
+
+- `namingDrift.disableBuiltInVocabulary`: when `true`, skip the built-in media/release vocabulary pack and use only your `vocabulary` groups. Useful for domain-heavy apps where built-in terms are legitimate product language, not drift.
 
 Why it matters: inconsistent names create translation work for every maintainer and can hide duplicate domain models.
 

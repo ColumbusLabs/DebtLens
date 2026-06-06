@@ -20,18 +20,27 @@ describe("naming-drift vocabulary", () => {
     assert.ok(groups.some((g) => g.id === "media-entity"));
   });
 
+  it("omits built-in groups when disableBuiltInVocabulary is true", () => {
+    const groups = resolveConceptGroups(undefined, true);
+    assert.equal(groups.length, 0);
+    const withCustom = resolveConceptGroups({ "commerce-entity": ["product"] }, true);
+    assert.equal(withCustom.length, 1);
+    assert.equal(withCustom[0]?.id, "commerce-entity");
+  });
+
   it("flags drift using a custom vocabulary group", async () => {
     const src = `
 const product = 1;
 const sku = 2;
 const listing = 3;
 const inventoryRecord = 4;
-export { product, sku, listing, inventoryRecord };
+const catalogItem = 5;
+export { product, sku, listing, inventoryRecord, catalogItem };
 `;
     const issues = await runDetector(
       namingDriftDetector,
       { "catalog.ts": src },
-      { vocabulary: { "commerce-entity": ["product", "sku", "listing", "inventory"] } },
+      { vocabulary: { "commerce-entity": ["product", "sku", "listing", "inventory", "catalog"] } },
     );
     assert.equal(issues.length, 1);
     assert.match(issues[0]?.message ?? "", /commerce entity/);

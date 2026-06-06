@@ -11,14 +11,15 @@ import { packageVersion } from "../../src/utils/packageInfo.js";
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
 
-function runCli(args: string[], options: { cwd?: string } = {}) {
+function runCli(args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
   return spawnSync(process.execPath, ["--import", "tsx", cliEntrypoint, ...args], {
     cwd: options.cwd ?? repoRoot,
     encoding: "utf8",
+    env: { ...process.env, ...(options.env ?? {}) },
   });
 }
 
-function runScan(args: string[], options: { cwd?: string } = {}) {
+function runScan(args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
   return runCli(["scan", ...args], options);
 }
 
@@ -93,6 +94,41 @@ describe("debtlens scan warnings", () => {
     assert.equal(result.status, 0);
     assert.match(result.stderr, /DebtLens warning: duplicate-logic inspected 1 of/);
     assert.match(parsed.summary.warnings[0], /duplicate-logic inspected 1 of/);
+  });
+});
+
+describe("debtlens scan output formats", () => {
+  it("accepts pr-comment format", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /^## DebtLens findings/);
+    assert.match(result.stdout, /### Grouped annotations/);
+    assert.match(result.stdout, /#### `src\/Dashboard\.tsx`/);
+    assert.match(result.stdout, /\*\*Low\*\* Debt marker comment \(`todo-comment`\)/);
+  });
+
+  it("includes pr-comment in invalid format errors", () => {
+    const result = runScan(["examples/react", "--format", "nope"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, or sarif/);
+  });
+
+  it("links locations when GitHub source env is available", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"], {
+      env: {
+        GITHUB_SERVER_URL: "https://github.com",
+        GITHUB_REPOSITORY: "ColumbusLabs/DebtLens",
+        GITHUB_SHA: "abc123",
+      },
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(
+      result.stdout,
+      /\[`src\/Dashboard\.tsx:22`\]\(https:\/\/github\.com\/ColumbusLabs\/DebtLens\/blob\/abc123\/src\/Dashboard\.tsx#L22\)/,
+    );
   });
 });
 

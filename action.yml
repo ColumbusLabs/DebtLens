@@ -19,7 +19,7 @@ inputs:
     description: Exit with code 1 when any issue meets this severity (info, low, medium, high).
     default: ""
   format:
-    description: Output format (terminal, json, markdown, sarif).
+    description: Output format (terminal, json, markdown, pr-comment, sarif).
     default: terminal
   output:
     description: Write the report to this file instead of stdout.

@@ -38,14 +38,12 @@ Current detectors live in `src/detectors`.
 
 ## Reporters
 
-Reporters convert `ScanResult` to terminal text, JSON, or Markdown.
+Reporters convert `ScanResult` to terminal text, JSON, Markdown, PR-comment Markdown, or SARIF.
 
 Future reporters should use the same `ScanResult` object so downstream integrations can remain stable.
 
 Planned reporters:
 
-- SARIF
-- GitHub PR comment
 - compact CI summary
 
 ## Why JSON config only?

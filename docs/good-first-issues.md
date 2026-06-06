@@ -69,7 +69,7 @@ Allow projects to add/replace the marker patterns
 | 6 | Snapshot test for the Markdown reporter | [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) | **Done** |
 | 7 | Publish the config JSON schema to a stable URL | [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) | **Done** |
 | 16 | JSON reporter contract test | [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) | **Done** |
-| 22 | PR comment reporter for Markdown findings | [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) | Open |
+| 22 | PR comment reporter for Markdown findings | [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) | **Done** |
 
 ### 5. Add `helpUri` to SARIF rules — [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) (closed)
 
@@ -101,9 +101,12 @@ or SchemaStore) and confirm the `$schema` URL in the `init` template resolves.
 - Touch: `src/reporters/jsonReporter.ts`, new `tests/reporters/jsonReporter.test.ts`.
 - Verify: parsed output includes stable `issues`, `summary`, `options` keys.
 
-### 22. PR comment reporter — [#22](https://github.com/ColumbusLabs/DebtLens/issues/22)
+### 22. PR comment reporter — [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) (closed)
 
 Format scan results for GitHub PR comments (roadmap v0.3). Larger than a single rule tweak.
+
+- Touch: `src/reporters/prCommentReporter.ts`, `src/cli/index.ts`, `README.md`, `action.yml`.
+- Verify: reporter and CLI tests cover grouped annotations, empty state, invalid format messaging, and GitHub source links.
 
 ## CLI / DX
 

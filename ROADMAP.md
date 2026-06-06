@@ -21,8 +21,7 @@
 ## v0.3 — Maintainer workflow integrations
 
 - GitHub Action.
-- PR comment mode.
-- Markdown report annotations grouped by file.
+- PR comment mode with Markdown annotations grouped by file.
 - Suggested refactor prompts for each issue.
 - Rule config schema and generated docs.
 - Monorepo/package-aware scanning.

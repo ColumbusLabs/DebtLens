@@ -31,7 +31,7 @@ program.command("scan")
   .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
   .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
   .option("--max-files <count>", "maximum files to scan", parseInteger)
-  .option("--format <format>", "terminal, json, markdown, or sarif", "terminal")
+  .option("--format <format>", "terminal, json, markdown, pr-comment, or sarif", "terminal")
   .option("-o, --output <path>", "write the report to a file instead of stdout")
   .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
   .option("--baseline <path>", "report only issues absent from this baseline file")
@@ -117,7 +117,11 @@ program.command("scan")
         ? applyBaseline(result, loadBaseline(cwd, String(rawOptions.baseline)))
         : result;
 
-      const report = renderReport(reported, format, { color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY, quiet: rawOptions.quiet === true });
+      const report = renderReport(reported, format, {
+        color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY,
+        quiet: rawOptions.quiet === true,
+        sourceUrlBase: format === "pr-comment" ? getGitHubSourceUrlBase(process.env) : undefined,
+      });
 
       if (rawOptions.output) {
         const outputPath = resolve(cwd, String(rawOptions.output));
@@ -215,8 +219,16 @@ function parseInteger(value: string): number {
 }
 
 function parseFormat(value: string): OutputFormat {
-  if (value === "terminal" || value === "json" || value === "markdown" || value === "sarif") return value;
-  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, or sarif.`);
+  if (value === "terminal" || value === "json" || value === "markdown" || value === "pr-comment" || value === "sarif") return value;
+  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, pr-comment, or sarif.`);
+}
+
+function getGitHubSourceUrlBase(env: NodeJS.ProcessEnv): string | undefined {
+  const serverUrl = env.GITHUB_SERVER_URL;
+  const repository = env.GITHUB_REPOSITORY;
+  const sha = env.GITHUB_SHA;
+  if (!serverUrl || !repository || !sha) return undefined;
+  return `${serverUrl.replace(/\/+$/, "")}/${repository}/blob/${sha}`;
 }
 
 function parseRulesFormat(value: string): "terminal" | "json" {

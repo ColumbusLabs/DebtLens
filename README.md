@@ -95,7 +95,7 @@ Options:
 --rules <rules>                comma-separated rule ids
 --threshold <thresholds>       comma-separated key=value threshold overrides
 --max-files <count>            maximum files to scan
---format <format>              terminal, json, markdown, or sarif
+--format <format>              terminal, json, markdown, pr-comment, or sarif
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
 --baseline <path>              report only issues absent from this baseline file
@@ -120,6 +120,9 @@ debtlens scan . --include "app/**/*.{ts,tsx},src/**/*.{ts,tsx}"
 
 # Create a Markdown report for a pull request artifact
 debtlens scan --format markdown --output debtlens-report.md
+
+# Create a compact grouped PR comment body
+debtlens scan --format pr-comment --output debtlens-pr-comment.md
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
 debtlens scan --min-severity medium --fail-on high
@@ -204,11 +207,12 @@ The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/De
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for PR comments, release notes, and maintainer handoffs. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown grouped by file for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards.
 
 ```bash
 debtlens scan --format json
 debtlens scan --format markdown --output reports/debtlens.md
+debtlens scan --format pr-comment --output debtlens-pr-comment.md
 debtlens scan --format sarif --output debtlens.sarif
 ```
 
@@ -246,6 +250,37 @@ jobs:
 ```
 
 Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+
+To post a grouped PR comment instead of uploading SARIF, write the `pr-comment` output and post it with `actions/github-script`:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+
+steps:
+  - uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+  - uses: ColumbusLabs/debtlens@v0
+    with:
+      changed: origin/${{ github.base_ref }}
+      format: pr-comment
+      output: debtlens-pr-comment.md
+      fail-on: high
+  - uses: actions/github-script@v7
+    if: always() && github.event_name == 'pull_request'
+    with:
+      script: |
+        const fs = require('node:fs');
+        const body = fs.readFileSync('debtlens-pr-comment.md', 'utf8');
+        await github.rest.issues.createComment({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: context.issue.number,
+          body,
+        });
+```
 
 ## Development
 

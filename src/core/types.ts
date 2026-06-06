@@ -1,7 +1,7 @@
 import type { Project, SourceFile } from "ts-morph";
 
 export type Severity = "info" | "low" | "medium" | "high";
-export type OutputFormat = "terminal" | "json" | "markdown" | "sarif";
+export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif";
 
 export interface IssueLocation {
   startLine: number;

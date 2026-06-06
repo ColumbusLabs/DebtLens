@@ -4,6 +4,7 @@ import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
+import { applyInlineSuppressions } from "./suppressions.js";
 import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
@@ -37,7 +38,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   }
 
   const detectors = selectDetectors(options.rules);
-  const issues: DebtIssue[] = [];
+  let issues: DebtIssue[] = [];
   const warnings: string[] = [];
   let filteredByMinSeverity = 0;
 
@@ -68,6 +69,18 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     return (a.location?.startLine ?? 0) - (b.location?.startLine ?? 0);
   });
 
+  const validRuleIds = new Set(allDetectors.map((detector) => detector.id));
+  const suppression = applyInlineSuppressions(issues, files, validRuleIds);
+  issues = suppression.issues;
+  for (const warning of suppression.warnings) {
+    if (!warnings.includes(warning)) warnings.push(warning);
+  }
+
+  const filterStats = {
+    ...(filteredByMinSeverity > 0 ? { filteredByMinSeverity } : {}),
+    ...(suppression.suppressedByInline > 0 ? { suppressedByInline: suppression.suppressedByInline } : {}),
+  };
+
   const summary = {
     totalIssues: issues.length,
     bySeverity: {
@@ -84,7 +97,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     rulesRun: detectors.length,
     elapsedMs: Date.now() - startedAt,
     ...(warnings.length ? { warnings } : {}),
-    ...(filteredByMinSeverity > 0 ? { filterStats: { filteredByMinSeverity } } : {}),
+    ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
   };
 
   return {

@@ -4,11 +4,11 @@ Scanned **3** files with **8** rules in **174ms**.
 
 ## Summary
 
-- Total issues: **10**
+- Total issues: **8**
 - High: **2**
 - Medium: **2**
 - Low: **4**
-- Info: **2**
+- Info: **0**
 
 ## High severity
 
@@ -111,31 +111,3 @@ Evidence:
 - { return <footer>{props.region}</footer>; }
 
 Suggestion: Keep the wrapper only if it creates a stable domain boundary. Otherwise inline it or add the missing behavior where this abstraction belongs.
-
-
-## Info severity
-
-### Naming drift — `src/duplicateOne.ts:1`
-
-This file uses 4 competing terms for release timing: date, air, launch, release.
-
-Confidence: **62%**
-
-Evidence:
-- Concept group: time-of-release
-- Variants found: date, air, launch, release
-
-Suggestion: Pick a canonical domain name and rename adapters at system boundaries instead of mixing boundary names throughout the feature.
-
-### Naming drift — `src/duplicateTwo.ts:1`
-
-This file uses 4 competing terms for release timing: date, air, launch, release.
-
-Confidence: **62%**
-
-Evidence:
-- Concept group: time-of-release
-- Variants found: date, air, launch, release
-
-Suggestion: Pick a canonical domain name and rename adapters at system boundaries instead of mixing boundary names throughout the feature.
-

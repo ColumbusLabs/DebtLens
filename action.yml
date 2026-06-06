@@ -27,6 +27,9 @@ inputs:
   changed:
     description: Scan only changed files. Use "true" for changes vs HEAD, or a base ref (e.g. origin/main).
     default: ""
+  respect-gitignore:
+    description: Skip files ignored by git in addition to configured excludes.
+    default: "false"
   baseline:
     description: Report only issues absent from this baseline file.
     default: ""
@@ -72,6 +75,7 @@ runs:
         DL_FORMAT: ${{ inputs.format }}
         DL_OUTPUT: ${{ inputs.output }}
         DL_CHANGED: ${{ inputs.changed }}
+        DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
         DL_CONFIG: ${{ inputs.config }}
         DL_WRITE_BASELINE: ${{ inputs.write-baseline }}
@@ -90,6 +94,7 @@ runs:
         elif [ -n "$DL_CHANGED" ]; then
           args+=(--changed "$DL_CHANGED")
         fi
+        [ "$DL_RESPECT_GITIGNORE" = "true" ] && args+=(--respect-gitignore)
         [ -n "$DL_WRITE_BASELINE" ] && args+=(--write-baseline "$DL_WRITE_BASELINE")
         [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
         [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")

@@ -3,7 +3,7 @@ import { detectorIds } from "../detectors/index.js";
 import { defaultConfig } from "./defaults.js";
 
 export const SCHEMA_ID =
-  "https://raw.githubusercontent.com/ColumbusLabs/debtlens/main/schema/debtlens.config.schema.json";
+  "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json";
 
 /**
  * Build the JSON Schema for `debtlens.config.json`. Generated from the live rule list,
@@ -48,6 +48,10 @@ export function buildConfigSchema(): Record<string, unknown> {
         type: "integer",
         minimum: 1,
         description: "Maximum number of files to scan.",
+      },
+      respectGitignore: {
+        type: "boolean",
+        description: "When true, skip files ignored by git in addition to configured exclude globs.",
       },
       thresholds: {
         type: "object",

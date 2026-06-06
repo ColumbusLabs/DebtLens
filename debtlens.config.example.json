@@ -1,8 +1,9 @@
 {
-  "$schema": "./schema/debtlens.config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
   "include": ["src/**/*.{ts,tsx,js,jsx}"],
   "exclude": ["node_modules/**", "dist/**", "build/**", ".next/**", "coverage/**"],
   "minSeverity": "low",
+  "respectGitignore": false,
   "rules": [
     "large-component",
     "state-sprawl",

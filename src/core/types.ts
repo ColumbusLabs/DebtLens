@@ -42,6 +42,8 @@ export interface DebtLensConfig {
   rules?: string[];
   thresholds?: ScanThresholds;
   maxFiles?: number;
+  /** When true, skip files ignored by git in addition to configured excludes. */
+  respectGitignore?: boolean;
   /** Concept id -> competing term variants, used by the naming-drift rule. */
   vocabulary?: Record<string, string[]>;
   /** Prop-drilling rule configuration. */
@@ -59,6 +61,8 @@ export interface ScanOptions {
   rules?: string[];
   thresholds: ScanThresholds;
   maxFiles?: number;
+  /** When true, skip files ignored by git in addition to configured excludes. */
+  respectGitignore?: boolean;
   vocabulary?: Record<string, string[]>;
   /** When set, only scan files whose absolute path is in this list (--changed mode). */
   changedFiles?: string[];
@@ -76,6 +80,7 @@ export interface CliOptions {
   rules?: string[];
   thresholds?: ScanThresholds;
   maxFiles?: number;
+  respectGitignore?: boolean;
   format?: OutputFormat;
   output?: string;
   failOn?: Severity;

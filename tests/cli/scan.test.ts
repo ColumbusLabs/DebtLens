@@ -128,4 +128,59 @@ describe("debtlens scan git modes", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("supports opt-in gitignore filtering", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-gitignore-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+      writeFileSync(join(dir, "src", "ignored.ts"), "// TODO ignored\nexport const ignored = 1;\n");
+      writeFileSync(join(dir, "src", "kept.ts"), "// TODO kept\nexport const kept = 1;\n");
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--respect-gitignore",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].file, "src/kept.ts");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("supports gitignore filtering from config", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-config-gitignore-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        include: ["**/*.ts"],
+        exclude: [],
+        rules: ["todo-comment"],
+        respectGitignore: true,
+      }));
+      writeFileSync(join(dir, "src", "ignored.ts"), "// TODO ignored\nexport const ignored = 1;\n");
+      writeFileSync(join(dir, "src", "kept.ts"), "// TODO kept\nexport const kept = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].file, "src/kept.ts");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

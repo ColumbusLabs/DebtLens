@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/ColumbusLabs/debtlens/main/schema/debtlens.config.schema.json",
+  "$id": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
   "title": "DebtLens configuration",
   "description": "Configuration for the DebtLens static-analysis CLI.",
   "type": "object",
@@ -53,6 +53,10 @@
       "type": "integer",
       "minimum": 1,
       "description": "Maximum number of files to scan."
+    },
+    "respectGitignore": {
+      "type": "boolean",
+      "description": "When true, skip files ignored by git in addition to configured exclude globs."
     },
     "thresholds": {
       "type": "object",

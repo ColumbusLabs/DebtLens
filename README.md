@@ -102,6 +102,7 @@ Options:
 --write-baseline [path]        write current issues to a baseline file and exit
 --changed [ref]                scan only files changed vs HEAD (or vs <ref> if given)
 --staged                       scan only files staged in git
+--respect-gitignore            skip files ignored by git
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
 --no-color                     disable terminal color
@@ -136,6 +137,9 @@ debtlens scan --changed origin/main --fail-on high
 # Pre-commit scan: only files currently staged in git
 debtlens scan --staged --fail-on high
 
+# Opt in to .gitignore filtering in addition to DebtLens exclude globs
+debtlens scan --respect-gitignore
+
 # List rule ids for config, CI, or --rules
 debtlens rules
 debtlens rules --format json
@@ -156,9 +160,11 @@ Create `debtlens.config.json`:
 
 ```json
 {
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
   "include": ["src/**/*.{ts,tsx,js,jsx}"],
   "exclude": ["node_modules/**", "dist/**", "build/**", ".next/**"],
   "minSeverity": "low",
+  "respectGitignore": false,
   "rules": [
     "large-component",
     "state-sprawl",
@@ -180,6 +186,8 @@ Create `debtlens.config.json`:
   }
 }
 ```
+
+The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json`. `debtlens init` writes this URL into new config files so editors can provide validation and autocomplete.
 
 ### Custom naming vocabulary
 
@@ -237,7 +245,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
 
 ## Development
 
@@ -253,7 +261,7 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 ## Project status
 
-DebtLens is currently a v0.1 proof-of-concept. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md), and starter contribution ideas are tracked in [`docs/good-first-issues.md`](./docs/good-first-issues.md).
+DebtLens is currently in the v0.2 release line. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md), and starter contribution ideas are tracked in [`docs/good-first-issues.md`](./docs/good-first-issues.md).
 
 ## License
 

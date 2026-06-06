@@ -22,6 +22,7 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       ...(cliOptions.thresholds ?? {}),
     },
     maxFiles: cliOptions.maxFiles ?? fileConfig.maxFiles ?? defaultConfig.maxFiles,
+    respectGitignore: cliOptions.respectGitignore ?? fileConfig.respectGitignore ?? defaultConfig.respectGitignore,
     vocabulary: { ...defaultConfig.vocabulary, ...(fileConfig.vocabulary ?? {}) },
     propDrillingIgnoreComponents: [
       ...(defaultConfig.propDrilling?.ignoreComponents ?? []),

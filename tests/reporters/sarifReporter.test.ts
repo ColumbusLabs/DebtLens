@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
+import { allDetectors } from "../../src/detectors/index.js";
 import { renderSarif } from "../../src/reporters/sarifReporter.js";
 import { packageVersion } from "../../src/utils/packageInfo.js";
 
@@ -58,6 +59,13 @@ describe("sarif reporter", () => {
     // All 8 detectors should be present in the rule catalog.
     assert.equal(driver.rules.length, 8);
     assert.ok(driver.rules.some((r: { id: string }) => r.id === "prop-drilling"));
+    for (const detector of allDetectors) {
+      const rule = driver.rules.find((r: { id: string }) => r.id === detector.id);
+      assert.equal(
+        rule?.helpUri,
+        `https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rules.md#${detector.id}`,
+      );
+    }
   });
 
   it("maps severities to SARIF levels and locations correctly", () => {

@@ -3,6 +3,7 @@ import { allDetectors } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 
 const INFORMATION_URI = "https://github.com/ColumbusLabs/debtlens";
+const RULE_DOCS_URI = "https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rules.md";
 
 type SarifLevel = "error" | "warning" | "note" | "none";
 
@@ -20,6 +21,10 @@ function toSarifLevel(severity: Severity): SarifLevel {
   }
 }
 
+function ruleHelpUri(ruleId: string): string {
+  return `${RULE_DOCS_URI}#${ruleId}`;
+}
+
 /**
  * Render a scan result as SARIF 2.1.0 for GitHub code scanning and other tools.
  * The full rule catalog (all detectors) is always emitted under `tool.driver.rules`
@@ -33,6 +38,7 @@ export function renderSarif(result: ScanResult): string {
       id: detector.id,
       name: detector.name,
       shortDescription: { text: detector.description },
+      helpUri: ruleHelpUri(detector.id),
       defaultConfiguration: { level: toSarifLevel(detector.defaultSeverity) },
       properties: { tags: detector.tags },
     };

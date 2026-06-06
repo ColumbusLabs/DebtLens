@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 
 function git(cwd: string, args: string[]): string {
   return gitRaw(cwd, args).trim();
@@ -11,6 +11,15 @@ function gitRaw(cwd: string, args: string[]): string {
     cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
+  });
+}
+
+function gitRawWithInput(cwd: string, args: string[], input: string): string {
+  return execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    input,
+    stdio: ["pipe", "pipe", "ignore"],
   });
 }
 
@@ -50,7 +59,7 @@ export function getChangedFiles(cwd: string, base?: string): ChangedFiles | null
 
   let root: string;
   try {
-    root = git(cwd, ["rev-parse", "--show-toplevel"]);
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
   } catch {
     return null;
   }
@@ -89,7 +98,7 @@ export function getStagedFiles(cwd: string): ChangedFiles | null {
 
   let root: string;
   try {
-    root = git(cwd, ["rev-parse", "--show-toplevel"]);
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
   } catch {
     return null;
   }
@@ -106,6 +115,50 @@ export function getStagedFiles(cwd: string): ChangedFiles | null {
   }));
 
   return { root, files, contents };
+}
+
+/**
+ * Return the canonical absolute paths that git ignores. Returns `null` outside a
+ * work tree so callers can keep scanning normally when git context is unavailable.
+ */
+export function getIgnoredFiles(cwd: string, files: string[]): Set<string> | null {
+  if (!isGitRepo(cwd)) return null;
+  if (files.length === 0) return new Set();
+
+  let root: string;
+  try {
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
+  } catch {
+    return null;
+  }
+
+  const canonicalByRelative = new Map<string, string>();
+  for (const file of files) {
+    const absolute = canonicalize(resolve(file));
+    const relativePath = relative(root, absolute).replaceAll("\\", "/");
+    if (relativePath && !relativePath.startsWith("..")) {
+      canonicalByRelative.set(relativePath, absolute);
+    }
+  }
+
+  if (canonicalByRelative.size === 0) return new Set();
+
+  let output = "";
+  try {
+    output = gitRawWithInput(root, ["check-ignore", "--stdin"], `${[...canonicalByRelative.keys()].join("\n")}\n`);
+  } catch (error) {
+    const status = typeof error === "object" && error !== null && "status" in error
+      ? (error as { status?: number }).status
+      : undefined;
+    if (status !== 1) return new Set();
+  }
+
+  return new Set(
+    output
+      .split("\n")
+      .map((line) => canonicalByRelative.get(line.trim()))
+      .filter((path): path is string => Boolean(path)),
+  );
 }
 
 function canonicalize(path: string): string {

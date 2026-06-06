@@ -38,6 +38,7 @@ program.command("scan")
   .option("--write-baseline [path]", "write current issues to a baseline file and exit")
   .option("--changed [ref]", "scan only files changed vs HEAD (or vs <ref> if given)")
   .option("--staged", "scan only files staged in git")
+  .option("--respect-gitignore", "skip files ignored by git")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
   .option("--no-color", "disable ANSI color in terminal output")
@@ -82,6 +83,7 @@ program.command("scan")
         thresholds: parseThresholds(rawOptions.threshold as string | undefined),
         minSeverity,
         maxFiles: rawOptions.maxFiles as number | undefined,
+        respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
         changedFiles,
         fileContents,
       });

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getChangedFiles, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
+import { getChangedFiles, getIgnoredFiles, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
 
 function git(cwd: string, args: string[]): void {
   execFileSync("git", args, { cwd, stdio: "ignore" });
@@ -36,8 +36,23 @@ describe("git changed-files", () => {
   it("returns null when not a git repo", () => {
     const plain = mkdtempSync(join(tmpdir(), "debtlens-plain-"));
     assert.equal(getChangedFiles(plain), null);
+    assert.equal(getIgnoredFiles(plain, []), null);
     assert.equal(getStagedFiles(plain), null);
     rmSync(plain, { recursive: true, force: true });
+  });
+
+  it("reports ignored files from gitignore rules", () => {
+    writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+    writeFileSync(join(dir, "src", "ignored.ts"), "export const ignored = 1;\n");
+    writeFileSync(join(dir, "src", "kept.ts"), "export const kept = 1;\n");
+
+    const ignored = getIgnoredFiles(dir, [
+      join(dir, "src", "ignored.ts"),
+      join(dir, "src", "kept.ts"),
+    ]);
+
+    assert.ok([...(ignored ?? [])].some((file) => file.endsWith("src/ignored.ts")));
+    assert.ok(![...(ignored ?? [])].some((file) => file.endsWith("src/kept.ts")));
   });
 
   it("reports new untracked files and ignores committed unchanged ones", () => {

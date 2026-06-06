@@ -3,6 +3,7 @@ import { relative } from "node:path";
 import fg from "fast-glob";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
+import { getIgnoredFiles } from "../utils/git.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
@@ -103,6 +104,7 @@ async function resolveFilePaths(options: ScanOptions): Promise<string[]> {
 
   if (isFile) {
     if (changed && !changed.has(canonicalize(options.target))) return [];
+    if (options.respectGitignore && isIgnoredByGit(options.cwd, options.target)) return [];
     return [options.target];
   }
 
@@ -119,7 +121,19 @@ async function resolveFilePaths(options: ScanOptions): Promise<string[]> {
     paths = paths.filter((path) => changed.has(canonicalize(path)));
   }
 
+  if (options.respectGitignore) {
+    const ignored = getIgnoredFiles(options.cwd, paths);
+    if (ignored !== null) {
+      paths = paths.filter((path) => !ignored.has(canonicalize(path)));
+    }
+  }
+
   return paths.slice(0, options.maxFiles ?? paths.length);
+}
+
+function isIgnoredByGit(cwd: string, path: string): boolean {
+  const ignored = getIgnoredFiles(cwd, [path]);
+  return ignored !== null && ignored.has(canonicalize(path));
 }
 
 function canonicalize(path: string): string {

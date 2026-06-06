@@ -65,29 +65,36 @@ Allow projects to add/replace the marker patterns
 
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
-| 5 | Add `helpUri` to SARIF rules | [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) | Open |
-| 6 | Snapshot test for the Markdown reporter | [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) | Open |
-| 7 | Publish the config JSON schema to a stable URL | [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) | Open |
+| 5 | Add `helpUri` to SARIF rules | [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) | **Done** |
+| 6 | Snapshot test for the Markdown reporter | [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) | **Done** |
+| 7 | Publish the config JSON schema to a stable URL | [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) | **Done** |
 | 16 | JSON reporter contract test | [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) | **Done** |
 | 22 | PR comment reporter for Markdown findings | [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) | Open |
 
-### 5. Add `helpUri` to SARIF rules — [#5](https://github.com/ColumbusLabs/DebtLens/issues/5)
+### 5. Add `helpUri` to SARIF rules — [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) (closed)
 
 In [`src/reporters/sarifReporter.ts`](../src/reporters/sarifReporter.ts), point each
 rule's `helpUri` at its section in `docs/rules.md` so code-scanning links to docs.
 
-- Verify: extend `tests/reporters/sarifReporter.test.ts`.
+- Touch: `src/reporters/sarifReporter.ts`, `tests/reporters/sarifReporter.test.ts`.
+- Verify: every SARIF rule descriptor includes a `docs/rules.md` `helpUri`.
 
-### 6. Snapshot test for the Markdown reporter — [#6](https://github.com/ColumbusLabs/DebtLens/issues/6)
+### 6. Snapshot test for the Markdown reporter — [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) (closed)
 
 Add a fixture-based test that scans `examples/react` and asserts the Markdown matches a
 committed snapshot (normalizing the elapsed-ms line), guarding `docs/example-report.md`.
 
-### 7. Publish the config JSON schema to a stable URL — [#7](https://github.com/ColumbusLabs/DebtLens/issues/7)
+- Touch: `tests/reporters/markdownReporter.test.ts`, `docs/example-report.md`.
+- Verify: snapshot test normalizes elapsed time and compares against the committed fixture.
+
+### 7. Publish the config JSON schema to a stable URL — [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) (closed)
 
 The schema is generated to `schema/debtlens.config.schema.json`
 ([`src/config/schema.ts`](../src/config/schema.ts)). Wire up hosting (e.g. GitHub Pages
 or SchemaStore) and confirm the `$schema` URL in the `init` template resolves.
+
+- Touch: `src/config/schema.ts`, `src/config/template.ts`, `schema/debtlens.config.schema.json`, `README.md`.
+- Verify: config tests assert the stable raw GitHub URL and JSON resolution.
 
 ### 16. JSON reporter contract test — [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) (closed)
 
@@ -103,7 +110,7 @@ Format scan results for GitHub PR comments (roadmap v0.3). Larger than a single 
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
 | 8 | Summary-only `--quiet` output mode | [#8](https://github.com/ColumbusLabs/DebtLens/issues/8) | **Done** |
-| 9 | Respect `.gitignore` when resolving files | [#9](https://github.com/ColumbusLabs/DebtLens/issues/9) | Open |
+| 9 | Respect `.gitignore` when resolving files | [#9](https://github.com/ColumbusLabs/DebtLens/issues/9) | **Done** |
 | 10 | False-positive guidance per rule in docs | [#10](https://github.com/ColumbusLabs/DebtLens/issues/10) | **Done** |
 | 14 | Document `--quiet` in README and Action | [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) | **Done** |
 | 17 | Integration test for `scan()` on `examples/react` | [#17](https://github.com/ColumbusLabs/DebtLens/issues/17) | **Done** |
@@ -118,12 +125,13 @@ Format scan results for GitHub PR comments (roadmap v0.3). Larger than a single 
 
 Merged in PR #12. Terminal-only; prints header + summary, suppresses findings.
 
-### 9. Respect `.gitignore` when resolving files — [#9](https://github.com/ColumbusLabs/DebtLens/issues/9)
+### 9. Respect `.gitignore` when resolving files — [#9](https://github.com/ColumbusLabs/DebtLens/issues/9) (closed)
 
 Optionally skip files ignored by git during a scan, in addition to the configured
 `exclude` globs.
 
-- Touch: `src/core/scan.ts`, `src/utils/git.ts`.
+- Touch: `src/core/scan.ts`, `src/utils/git.ts`, `src/cli/index.ts`, `action.yml`, config schema/types.
+- Verify: utility, core scan, and CLI tests cover opt-in filtering plus non-git graceful behavior.
 
 ### 10. Document each rule's false-positive guidance — [#10](https://github.com/ColumbusLabs/DebtLens/issues/10) (closed)
 

@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
+import { defaultConfig } from "../../src/config/defaults.js";
+import { scan } from "../../src/core/scan.js";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
 import { renderMarkdown } from "../../src/reporters/markdownReporter.js";
 
@@ -52,4 +56,27 @@ describe("markdown reporter", () => {
     assert.match(md, /No maintainability debt found/);
     assert.doesNotMatch(md, /## High severity/);
   });
+
+  it("matches the examples/react report fixture", async () => {
+    const result = await scan({
+      cwd: process.cwd(),
+      target: resolve("examples/react"),
+      include: defaultConfig.include,
+      exclude: defaultConfig.exclude,
+      minSeverity: "low",
+      rules: undefined,
+      thresholds: defaultConfig.thresholds,
+      maxFiles: defaultConfig.maxFiles,
+      respectGitignore: defaultConfig.respectGitignore,
+    });
+    const fixture = readFileSync("docs/example-report.md", "utf8");
+
+    assert.equal(normalizeReport(renderMarkdown(result)), normalizeReport(fixture));
+  });
 });
+
+function normalizeReport(markdown: string): string {
+  return markdown
+    .replace(/in \*\*\d+ms\*\*/g, "in **<elapsed>ms**")
+    .replace(/\n+$/g, "\n");
+}

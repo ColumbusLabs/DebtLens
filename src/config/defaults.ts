@@ -37,6 +37,7 @@ export const defaultConfig: Required<DebtLensConfig> = {
     "duplicate-logic.minStructuralSimilarity": 0.6
   },
   maxFiles: 2000,
+  respectGitignore: false,
   vocabulary: {},
   propDrilling: {
     ignoreComponents: [],

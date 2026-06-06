@@ -1,4 +1,5 @@
 import type { DebtLensConfig } from "../core/types.js";
+import { SCHEMA_ID } from "./schema.js";
 
 /**
  * Canonical starter config written by `debtlens init`. Kept in code (not read from
@@ -6,10 +7,11 @@ import type { DebtLensConfig } from "../core/types.js";
  * only `dist/`, `README`, `LICENSE`, and `docs/` are published.
  */
 export const configTemplate: DebtLensConfig & { $schema: string } = {
-  $schema: "https://raw.githubusercontent.com/ColumbusLabs/debtlens/main/schema/debtlens.config.schema.json",
+  $schema: SCHEMA_ID,
   include: ["src/**/*.{ts,tsx,js,jsx}"],
   exclude: ["node_modules/**", "dist/**", "build/**", ".next/**", "coverage/**"],
   minSeverity: "low",
+  respectGitignore: false,
   rules: [
     "large-component",
     "state-sprawl",

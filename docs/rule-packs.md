@@ -62,8 +62,28 @@ separate rule IDs yet.
 | `expo` | Expo config and module boundaries | Planned |
 | `monorepo` | Per-package configs, workspace-aware `--changed` | Planned ([#23](https://github.com/ColumbusLabs/DebtLens/issues/23)) |
 
-Vue, Svelte, and non-JS languages are roadmap direction items, not near-term
-commitments. See [`ROADMAP.md`](../ROADMAP.md).
+Vue and Svelte are planned JS framework packs. See [`ROADMAP.md`](../ROADMAP.md).
+
+## Future language packs
+
+TypeScript and JavaScript are the **first language**. Detection is language-specific; reporting,
+baselines, CI, and the issue contract are not. Future languages plug in via a language pack
+and (eventually) the plugin API ([#26](https://github.com/ColumbusLabs/DebtLens/issues/26)).
+
+| Language | Core rules (examples) | Optional UI / framework packs | Status |
+| --- | --- | --- | --- |
+| **Python** | duplicate logic, dead abstractions, TODO debt, naming drift | Django/Flask route sprawl (TBD) | Roadmap v0.4 |
+| **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
+| **Kotlin** | same core patterns as Swift row | Jetpack Compose, Android UI layers | Direction |
+
+Each language needs its own parser/AST path (today the scanner uses `ts-morph` for TS/JS
+only). Rules that map well across languages — duplication, thin wrappers, deferred TODOs,
+naming inconsistency — ship first; framework-specific packs follow once core coverage is
+solid.
+
+These are intentional direction items, not near-term commitments. Discuss proposals in
+[GitHub Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) or open a
+**Rule pack request** issue for a new language or framework pack.
 
 ## Language-agnostic reporting
 
@@ -102,6 +122,7 @@ List all rule ids with `debtlens rules`.
 | **Core rule** | Any TS/JS project | `duplicate-logic`, import-cycle detector |
 | **React pack** | UI maintainability | extend `large-component`, new hook rules |
 | **Framework pack** | Next.js, RN, Node APIs | server/client boundary rule, route handler size |
+| **Language pack** | Swift, Python, Kotlin, … | duplicate logic, large modules, SwiftUI view size |
 | **Scanner / CI** | All adopters | baselines, monorepo `--changed`, Action inputs |
 | **Reporter** | All adopters | compact CI summary, stable JSON contract tests |
 

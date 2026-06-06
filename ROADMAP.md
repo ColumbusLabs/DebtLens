@@ -1,9 +1,10 @@
 # DebtLens Roadmap
 
-DebtLens is a **maintainability scanner** for TypeScript and JavaScript. React is the
-first serious rule pack; React Native, Next.js, Expo, and plain TS/JS projects are
-supported targets, not the product identity. See [`docs/rule-packs.md`](./docs/rule-packs.md)
-for the core vs pack taxonomy and contribution paths.
+DebtLens is a **maintainability scanner** for TypeScript and JavaScript today, with other
+languages (Python, Swift, Kotlin, …) planned as future language packs. React is the first
+serious rule pack; React Native, Next.js, Expo, and plain TS/JS projects are supported
+targets, not the product identity. See [`docs/rule-packs.md`](./docs/rule-packs.md) for
+the core vs pack taxonomy, future languages, and contribution paths.
 
 ## v0.1 — Runnable proof of concept
 
@@ -35,10 +36,17 @@ for the core vs pack taxonomy and contribution paths.
 
 - Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`).
 - Vue/Svelte detectors where applicable.
-- Python duplicate/dead-abstraction detector (separate language; same reporting contract).
+- **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO/naming rules; same `ScanResult` and SARIF contract as TS/JS.
 - Configurable domain vocabulary for naming drift.
-- Plugin API for third-party rules.
+- Plugin API for third-party rules ([#26](https://github.com/ColumbusLabs/DebtLens/issues/26)).
 - Maintainer-oriented packs: `ai-assisted`, `oss-maintainer`.
+
+## v0.5 — Additional language packs
+
+- **Swift** — core maintainability rules plus optional SwiftUI/UIKit packs (large views, state sprawl, thin wrappers).
+- **Kotlin** — core rules plus optional Jetpack Compose pack (if demand and parser path are clear).
+- Language packs reuse baselines, `--changed`, reporters, and CI; only AST parsing and detectors are language-specific.
+- Documented process for proposing and shipping a new language pack.
 
 ## v1.0 — Stable maintainer tool
 

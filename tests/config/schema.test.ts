@@ -58,4 +58,9 @@ describe("config JSON schema", () => {
     assert.equal(schema.properties.respectGitignore.type, "boolean");
     assert.equal(typeof example.respectGitignore, "boolean");
   });
+
+  it("includes todoComment config shape", () => {
+    const built = buildConfigSchema() as { properties: { todoComment?: { type: string } } };
+    assert.equal(built.properties.todoComment?.type, "object");
+  });
 });

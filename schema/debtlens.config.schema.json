@@ -129,6 +129,54 @@
         }
       },
       "additionalProperties": false
+    },
+    "todoComment": {
+      "type": "object",
+      "description": "Todo-comment rule configuration.",
+      "properties": {
+        "markers": {
+          "type": "array",
+          "description": "Additional or replacement comment marker patterns.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "description": "Case-insensitive regex pattern."
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "description": "Severity when this marker matches."
+              },
+              "label": {
+                "type": "string",
+                "description": "Human-readable marker label for reports."
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          }
+        },
+        "replaceDefaults": {
+          "type": "boolean",
+          "description": "When true, built-in marker patterns are not used."
+        },
+        "disableDefaults": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Built-in marker labels to disable (e.g. \"todo marker\")."
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

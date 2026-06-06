@@ -42,4 +42,9 @@ export const defaultConfig: Required<DebtLensConfig> = {
   propDrilling: {
     ignoreComponents: [],
   },
+  todoComment: {
+    markers: [],
+    replaceDefaults: false,
+    disableDefaults: [],
+  },
 };

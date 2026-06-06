@@ -59,7 +59,7 @@ DebtLens gives maintainers and newer contributors a neutral, explainable report 
 | --- | --- | --- |
 | `large-component` | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | Components/hooks with many local stateful hooks | Medium |
-| `effect-complexity` | Long or overloaded `useEffect` blocks | Medium |
+| `effect-complexity` | Long or overloaded React effect hooks | Medium |
 | `duplicate-logic` | Near-duplicate functions/components using normalized AST/text similarity | Medium |
 | `dead-abstraction` | Thin wrappers that add little behavior | Low |
 | `prop-drilling` | Components that forward many props to children | Medium |
@@ -82,6 +82,7 @@ npx debtlens scan
 
 ```bash
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
+debtlens rules            # list built-in rule ids and descriptions
 debtlens scan [target]
 ```
 
@@ -100,6 +101,7 @@ Options:
 --baseline <path>              report only issues absent from this baseline file
 --write-baseline [path]        write current issues to a baseline file and exit
 --changed [ref]                scan only files changed vs HEAD (or vs <ref> if given)
+--staged                       scan only files staged in git
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
 --no-color                     disable terminal color
@@ -131,13 +133,22 @@ debtlens scan --baseline debtlens-baseline.json --fail-on high
 # Pull-request scan: only the files this branch changed vs main
 debtlens scan --changed origin/main --fail-on high
 
+# Pre-commit scan: only files currently staged in git
+debtlens scan --staged --fail-on high
+
+# List rule ids for config, CI, or --rules
+debtlens rules
+debtlens rules --format json
+
 # Quiet terminal output: hide per-finding detail
 debtlens scan --quiet
 ```
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported.
 
-When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty `--changed` file set. The warning is advisory and does not change the exit code for `--fail-on`.
+When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty git file set from `--changed` / `--staged`. The warning is advisory and does not change the exit code for `--fail-on`.
+
+When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns that duplicate comparisons were capped. JSON output includes the same advisory under `summary.warnings`.
 
 ## Configuration
 

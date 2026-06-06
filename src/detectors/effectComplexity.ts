@@ -3,10 +3,12 @@ import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
+const EFFECT_HOOKS = new Set(["useEffect", "useLayoutEffect", "useInsertionEffect"]);
+
 export const effectComplexityDetector: Detector = {
   id: "effect-complexity",
   name: "Effect complexity",
-  description: "Flags useEffect blocks that are long, branchy, or overloaded with dependencies.",
+  description: "Flags React effect hooks that are long, branchy, or overloaded with dependencies.",
   defaultSeverity: "medium",
   tags: ["react", "effects", "complexity"],
   detect(context: DetectorContext): DebtIssue[] {
@@ -23,7 +25,7 @@ export const effectComplexityDetector: Detector = {
             ? expression.getName()
             : undefined;
 
-        if (expressionName !== "useEffect") continue;
+        if (!expressionName || !EFFECT_HOOKS.has(expressionName)) continue;
 
         const [callback, dependencies] = call.getArguments();
         if (!callback) continue;
@@ -54,7 +56,7 @@ export const effectComplexityDetector: Detector = {
           confidence: 0.8,
           file: file.relativePath,
           location: { startLine: span.startLine, endLine: span.endLine },
-          message: `This useEffect spans ${span.lines} lines, has ${dependencyCount} dependencies, ${branchCount} branches, and ${callCount} nested calls.`,
+          message: `This ${expressionName} spans ${span.lines} lines, has ${dependencyCount} dependencies, ${branchCount} branches, and ${callCount} nested calls.`,
           evidence: [
             `Lines: ${span.lines} / ${maxLines}`,
             `Dependencies: ${dependencyCount} / ${maxDependencies}`,

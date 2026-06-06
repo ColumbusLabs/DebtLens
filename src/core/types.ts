@@ -62,6 +62,8 @@ export interface ScanOptions {
   vocabulary?: Record<string, string[]>;
   /** When set, only scan files whose absolute path is in this list (--changed mode). */
   changedFiles?: string[];
+  /** Absolute file path -> source text override, used when scanning staged git blobs. */
+  fileContents?: Record<string, string>;
   /** Prop-drilling rule configuration. */
   propDrillingIgnoreComponents?: string[];
 }
@@ -80,6 +82,7 @@ export interface CliOptions {
   configPath?: string;
   noColor?: boolean;
   changedFiles?: string[];
+  fileContents?: Record<string, string>;
 }
 
 export interface DetectorContext {
@@ -87,6 +90,7 @@ export interface DetectorContext {
   files: SourceFileInfo[];
   options: ScanOptions;
   getThreshold: (key: string, fallback: number) => number;
+  addWarning: (warning: string) => void;
 }
 
 export interface Detector {
@@ -105,6 +109,7 @@ export interface ScanSummary {
   filesScanned: number;
   rulesRun: number;
   elapsedMs: number;
+  warnings?: string[];
 }
 
 export interface ScanResult {

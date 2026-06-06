@@ -50,7 +50,7 @@ When this is a false positive:
 
 ## `effect-complexity`
 
-Flags long, branchy, or overloaded `useEffect` calls.
+Flags long, branchy, or overloaded `useEffect`, `useLayoutEffect`, and `useInsertionEffect` calls.
 
 Default thresholds:
 
@@ -69,7 +69,7 @@ Good fixes:
 When this is a false positive:
 
 - the callback is small and focused
-- the array literal belongs to another API instead of `useEffect`
+- the array literal belongs to another API instead of a React effect hook
 
 ## `duplicate-logic`
 
@@ -80,6 +80,8 @@ Default thresholds:
 - `duplicate-logic.minSimilarity`: 0.86
 - `duplicate-logic.minLines`: 8
 - `duplicate-logic.maxSnippets`: 450
+
+When more eligible snippets are found than `duplicate-logic.maxSnippets`, DebtLens caps pairwise comparisons and emits an advisory warning instead of silently truncating the search space.
 
 Why it matters: AI assistants can produce plausible variants of the same logic in multiple files. Duplicate implementations make bug fixes and behavior changes harder.
 

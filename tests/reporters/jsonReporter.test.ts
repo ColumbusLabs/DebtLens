@@ -70,4 +70,18 @@ describe("json reporter", () => {
     assert.equal(parsed.summary.rulesRun, 8);
     assert.equal(parsed.summary.elapsedMs, 12);
   });
+
+  it("includes optional summary warnings for integration consumers", () => {
+    const parsed = JSON.parse(renderJson({
+      ...result,
+      summary: {
+        ...result.summary,
+        warnings: ["duplicate-logic inspected 2 of 4 eligible snippets because duplicate-logic.maxSnippets is capped."],
+      },
+    }));
+
+    assert.deepEqual(parsed.summary.warnings, [
+      "duplicate-logic inspected 2 of 4 eligible snippets because duplicate-logic.maxSnippets is capped.",
+    ]);
+  });
 });

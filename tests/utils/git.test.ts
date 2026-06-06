@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getChangedFiles, isGitRepo } from "../../src/utils/git.js";
+import { getChangedFiles, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
 
 function git(cwd: string, args: string[]): void {
   execFileSync("git", args, { cwd, stdio: "ignore" });
@@ -36,6 +36,7 @@ describe("git changed-files", () => {
   it("returns null when not a git repo", () => {
     const plain = mkdtempSync(join(tmpdir(), "debtlens-plain-"));
     assert.equal(getChangedFiles(plain), null);
+    assert.equal(getStagedFiles(plain), null);
     rmSync(plain, { recursive: true, force: true });
   });
 
@@ -55,5 +56,29 @@ describe("git changed-files", () => {
 
   it("throws a clear error for an unknown base ref", () => {
     assert.throws(() => getChangedFiles(dir, "no-such-ref"), /Could not diff against base ref/);
+  });
+
+  it("reports staged files and ignores unstaged-only files", () => {
+    writeFileSync(join(dir, "src", "staged.ts"), "export const staged = 1;\n");
+    writeFileSync(join(dir, "src", "unstaged.ts"), "export const unstaged = 1;\n");
+    git(dir, ["add", "src/staged.ts"]);
+
+    const staged = getStagedFiles(dir);
+
+    assert.ok(staged?.files.some((f) => f.endsWith("src/staged.ts")));
+    assert.ok(!staged?.files.some((f) => f.endsWith("src/unstaged.ts")));
+  });
+
+  it("returns staged blob contents instead of working-tree contents", () => {
+    const file = join(dir, "src", "committed.ts");
+    writeFileSync(file, "export const staged = 2;\n");
+    git(dir, ["add", "src/committed.ts"]);
+    writeFileSync(file, "export const staged = 2;\n// TODO unstaged only\n");
+
+    const staged = getStagedFiles(dir);
+    const stagedPath = staged?.files.find((f) => f.endsWith("src/committed.ts"));
+
+    assert.ok(stagedPath);
+    assert.equal(staged?.contents?.[stagedPath], "export const staged = 2;\n");
   });
 });

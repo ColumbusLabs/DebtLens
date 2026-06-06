@@ -71,6 +71,7 @@ export async function runDetector(
     options: scanOptions,
     getThreshold: (key, fallback) =>
       Number.isFinite(thresholds[key]) ? (thresholds[key] as number) : fallback,
+    addWarning: () => undefined,
   });
 
   return issues;

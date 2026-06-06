@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
 import { renderSarif } from "../../src/reporters/sarifReporter.js";
+import { packageVersion } from "../../src/utils/packageInfo.js";
 
 function makeResult(issues: DebtIssue[]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
@@ -53,6 +54,7 @@ describe("sarif reporter", () => {
     assert.ok(sarif.$schema.includes("sarif-2.1.0"));
     const driver = sarif.runs[0].tool.driver;
     assert.equal(driver.name, "DebtLens");
+    assert.equal(driver.version, packageVersion);
     // All 8 detectors should be present in the rule catalog.
     assert.equal(driver.rules.length, 8);
     assert.ok(driver.rules.some((r: { id: string }) => r.id === "prop-drilling"));

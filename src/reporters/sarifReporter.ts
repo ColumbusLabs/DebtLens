@@ -1,7 +1,7 @@
 import type { ScanResult, Severity } from "../core/types.js";
 import { allDetectors } from "../detectors/index.js";
+import { packageVersion } from "../utils/packageInfo.js";
 
-const TOOL_VERSION = "0.1.1";
 const INFORMATION_URI = "https://github.com/ColumbusLabs/debtlens";
 
 type SarifLevel = "error" | "warning" | "note" | "none";
@@ -72,7 +72,7 @@ export function renderSarif(result: ScanResult): string {
           driver: {
             name: "DebtLens",
             informationUri: INFORMATION_URI,
-            version: TOOL_VERSION,
+            version: packageVersion,
             rules,
           },
         },

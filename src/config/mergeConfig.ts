@@ -28,5 +28,6 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       ...(fileConfig.propDrilling?.ignoreComponents ?? []),
     ],
     changedFiles: cliOptions.changedFiles,
+    fileContents: cliOptions.fileContents,
   };
 }

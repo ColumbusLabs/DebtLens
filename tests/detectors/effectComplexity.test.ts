@@ -19,12 +19,51 @@ export function Widget() {
     assert.match(issues[0]?.message ?? "", /8 dependencies/);
   });
 
+  it("flags a useLayoutEffect with the same thresholds", async () => {
+    const src = `
+export function Widget() {
+  useLayoutEffect(() => {
+    measure();
+    if (ready) {
+      syncLayout();
+    }
+    if (width > 100) {
+      resize();
+    }
+    if (height > 100) {
+      resizeAgain();
+    }
+    if (mode === "full") {
+      expand();
+    }
+  }, [ready]);
+  return null;
+}
+`;
+    const issues = await runDetector(effectComplexityDetector, { "Widget.tsx": src });
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /useLayoutEffect/);
+  });
+
   it("does NOT flag a small, focused useEffect", async () => {
     const src = `
 export function Widget() {
   useEffect(() => {
     subscribe();
   }, [id]);
+  return null;
+}
+`;
+    const issues = await runDetector(effectComplexityDetector, { "Widget.tsx": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("does NOT flag a small, focused useInsertionEffect", async () => {
+    const src = `
+export function Widget() {
+  useInsertionEffect(() => {
+    insertCriticalCss();
+  }, [theme]);
   return null;
 }
 `;

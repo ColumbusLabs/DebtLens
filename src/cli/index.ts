@@ -6,10 +6,11 @@ import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
-import { getChangedFiles } from "../utils/git.js";
+import { getChangedFiles, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
 import type { OutputFormat } from "../core/types.js";
-import { detectorIds } from "../detectors/index.js";
+import { allDetectors, detectorIds } from "../detectors/index.js";
+import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
 import { runInit } from "./init.js";
 import { parseCommaList, parseThresholds } from "./parseList.js";
@@ -19,7 +20,7 @@ const program = new Command();
 program
   .name("debtlens")
   .description("Find maintainability debt common in fast-moving AI-assisted TypeScript and React codebases.")
-  .version("0.1.1");
+  .version(packageVersion);
 
 program.command("scan")
   .description("Scan a project, directory, or file for maintainability debt.")
@@ -36,6 +37,7 @@ program.command("scan")
   .option("--baseline <path>", "report only issues absent from this baseline file")
   .option("--write-baseline [path]", "write current issues to a baseline file and exit")
   .option("--changed [ref]", "scan only files changed vs HEAD (or vs <ref> if given)")
+  .option("--staged", "scan only files staged in git")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
   .option("--no-color", "disable ANSI color in terminal output")
@@ -49,6 +51,11 @@ program.command("scan")
       const failOn = rawOptions.failOn ? parseSeverity(String(rawOptions.failOn), "high") : undefined;
 
       let changedFiles: string[] | undefined;
+      let fileContents: Record<string, string> | undefined;
+      if (rawOptions.staged === true && rawOptions.changed !== undefined) {
+        throw new Error("Use either --staged or --changed, not both.");
+      }
+
       if (rawOptions.changed) {
         const base = rawOptions.changed === true ? undefined : String(rawOptions.changed);
         const changed = getChangedFiles(cwd, base);
@@ -56,6 +63,14 @@ program.command("scan")
           process.stderr.write("DebtLens: --changed ignored (not a git repository).\n");
         } else {
           changedFiles = changed.files;
+        }
+      } else if (rawOptions.staged === true) {
+        const staged = getStagedFiles(cwd);
+        if (staged === null) {
+          process.stderr.write("DebtLens: --staged ignored (not a git repository).\n");
+        } else {
+          changedFiles = staged.files;
+          fileContents = staged.contents;
         }
       }
 
@@ -68,6 +83,7 @@ program.command("scan")
         minSeverity,
         maxFiles: rawOptions.maxFiles as number | undefined,
         changedFiles,
+        fileContents,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
@@ -77,7 +93,13 @@ program.command("scan")
       const result = await scan(options);
 
       if (result.summary.filesScanned === 0) {
-        process.stderr.write(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined));
+        process.stderr.write(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined || rawOptions.staged === true));
+      }
+
+      if (result.summary.warnings?.length) {
+        for (const warning of result.summary.warnings) {
+          process.stderr.write(`DebtLens warning: ${warning}\n`);
+        }
       }
 
       if (rawOptions.writeBaseline) {
@@ -106,6 +128,32 @@ program.command("scan")
       if (failOn && reported.issues.some((issue) => severityRank[issue.severity] >= severityRank[failOn])) {
         process.exitCode = 1;
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program.command("rules")
+  .description("List built-in DebtLens rule ids.")
+  .option("--format <format>", "terminal or json", "terminal")
+  .action((rawOptions: Record<string, unknown>) => {
+    try {
+      const format = parseRulesFormat(String(rawOptions.format ?? "terminal"));
+      const rules = allDetectors.map((detector) => ({
+        id: detector.id,
+        name: detector.name,
+        defaultSeverity: detector.defaultSeverity,
+        description: detector.description,
+      }));
+
+      if (format === "json") {
+        process.stdout.write(`${JSON.stringify({ rules }, null, 2)}\n`);
+        return;
+      }
+
+      process.stdout.write(renderRulesTable(rules));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);
@@ -169,14 +217,31 @@ function parseFormat(value: string): OutputFormat {
   throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, or sarif.`);
 }
 
-function buildZeroFilesScannedWarning(target: string, include: string[], usedChangedFilter: boolean): string {
+function parseRulesFormat(value: string): "terminal" | "json" {
+  if (value === "terminal" || value === "json") return value;
+  throw new Error(`Invalid rules format "${value}". Expected terminal or json.`);
+}
+
+function renderRulesTable(rules: Array<{ id: string; name: string; defaultSeverity: string; description: string }>): string {
+  const idWidth = Math.max("Rule".length, ...rules.map((rule) => rule.id.length));
+  const severityWidth = Math.max("Severity".length, ...rules.map((rule) => rule.defaultSeverity.length));
+  const lines = [
+    `${"Rule".padEnd(idWidth)}  ${"Severity".padEnd(severityWidth)}  Description`,
+    `${"-".repeat(idWidth)}  ${"-".repeat(severityWidth)}  -----------`,
+    ...rules.map((rule) => `${rule.id.padEnd(idWidth)}  ${rule.defaultSeverity.padEnd(severityWidth)}  ${rule.description}`),
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
+function buildZeroFilesScannedWarning(target: string, include: string[], usedGitFileFilter: boolean): string {
   const hints = [
     "check your include/exclude globs",
     "verify the target path or --cwd",
   ];
 
-  if (usedChangedFilter) {
-    hints.push("confirm the git ref used with --changed resolves to tracked files");
+  if (usedGitFileFilter) {
+    hints.push("confirm the git file filter resolves to tracked files");
   }
 
   return [

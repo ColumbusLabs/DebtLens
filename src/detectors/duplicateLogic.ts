@@ -50,6 +50,10 @@ export const duplicateLogicDetector: Detector = {
       }
     }
 
+    if (snippets.length > maxSnippets) {
+      context.addWarning(`duplicate-logic inspected ${maxSnippets} of ${snippets.length} eligible snippets because duplicate-logic.maxSnippets is capped.`);
+    }
+
     const limited = snippets.slice(0, maxSnippets);
     const seenPairs = new Set<string>();
 

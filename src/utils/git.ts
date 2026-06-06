@@ -1,12 +1,17 @@
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 function git(cwd: string, args: string[]): string {
+  return gitRaw(cwd, args).trim();
+}
+
+function gitRaw(cwd: string, args: string[]): string {
   return execFileSync("git", args, {
     cwd,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
-  }).trim();
+  });
 }
 
 function gitSafe(cwd: string, args: string[]): string {
@@ -28,6 +33,7 @@ export function isGitRepo(cwd: string): boolean {
 export interface ChangedFiles {
   root: string;
   files: string[];
+  contents?: Record<string, string>;
 }
 
 /**
@@ -72,4 +78,40 @@ export function getChangedFiles(cwd: string, base?: string): ChangedFiles | null
   add(gitSafe(cwd, ["ls-files", "--others", "--exclude-standard"]));
 
   return { root, files: [...relative].map((path) => resolve(root, path)) };
+}
+
+/**
+ * Collect staged files as absolute paths for pre-commit scans. Returns `null` when
+ * `cwd` is not inside a git work tree, matching `getChangedFiles` graceful behavior.
+ */
+export function getStagedFiles(cwd: string): ChangedFiles | null {
+  if (!isGitRepo(cwd)) return null;
+
+  let root: string;
+  try {
+    root = git(cwd, ["rev-parse", "--show-toplevel"]);
+  } catch {
+    return null;
+  }
+
+  const output = git(cwd, ["diff", "--cached", "--name-only", "--diff-filter=d"]);
+  const relativePaths = output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const files = relativePaths.map((path) => resolve(root, path));
+  const contents = Object.fromEntries(relativePaths.map((path) => {
+    const absolutePath = resolve(root, path);
+    return [canonicalize(absolutePath), gitRaw(cwd, ["show", `:${path}`])];
+  }));
+
+  return { root, files, contents };
+}
+
+function canonicalize(path: string): string {
+  try {
+    return realpathSync.native(path);
+  } catch {
+    return path;
+  }
 }

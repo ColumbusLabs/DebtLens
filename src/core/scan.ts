@@ -23,18 +23,22 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   const files: SourceFileInfo[] = [];
   for (const absolutePath of filePaths) {
-    const sourceFile = project.addSourceFileAtPathIfExists(absolutePath);
+    const contentOverride = getContentOverride(options, absolutePath);
+    const sourceFile = contentOverride === undefined
+      ? project.addSourceFileAtPathIfExists(absolutePath)
+      : project.createSourceFile(absolutePath, contentOverride, { overwrite: true });
     if (!sourceFile) continue;
     files.push({
       absolutePath,
       relativePath: relative(options.target, absolutePath).replaceAll("\\", "/"),
-      content: readFileSync(absolutePath, "utf8"),
+      content: contentOverride ?? readFileSync(absolutePath, "utf8"),
       sourceFile,
     });
   }
 
   const detectors = selectDetectors(options.rules);
   const issues: DebtIssue[] = [];
+  const warnings: string[] = [];
 
   for (const detector of detectors) {
     const detectorIssues = await detector.detect({
@@ -42,6 +46,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       files,
       options,
       getThreshold: (key, fallback) => getThreshold(options, key, fallback),
+      addWarning: (warning) => {
+        if (!warnings.includes(warning)) warnings.push(warning);
+      },
     });
     issues.push(...detectorIssues.filter((issue) => meetsMinSeverity(issue.severity, options.minSeverity)));
   }
@@ -54,24 +61,27 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     return (a.location?.startLine ?? 0) - (b.location?.startLine ?? 0);
   });
 
+  const summary = {
+    totalIssues: issues.length,
+    bySeverity: {
+      info: issues.filter((issue) => issue.severity === "info").length,
+      low: issues.filter((issue) => issue.severity === "low").length,
+      medium: issues.filter((issue) => issue.severity === "medium").length,
+      high: issues.filter((issue) => issue.severity === "high").length,
+    },
+    byRule: issues.reduce<Record<string, number>>((accumulator, issue) => {
+      accumulator[issue.ruleId] = (accumulator[issue.ruleId] ?? 0) + 1;
+      return accumulator;
+    }, {}),
+    filesScanned: files.length,
+    rulesRun: detectors.length,
+    elapsedMs: Date.now() - startedAt,
+    ...(warnings.length ? { warnings } : {}),
+  };
+
   return {
     issues,
-    summary: {
-      totalIssues: issues.length,
-      bySeverity: {
-        info: issues.filter((issue) => issue.severity === "info").length,
-        low: issues.filter((issue) => issue.severity === "low").length,
-        medium: issues.filter((issue) => issue.severity === "medium").length,
-        high: issues.filter((issue) => issue.severity === "high").length,
-      },
-      byRule: issues.reduce<Record<string, number>>((accumulator, issue) => {
-        accumulator[issue.ruleId] = (accumulator[issue.ruleId] ?? 0) + 1;
-        return accumulator;
-      }, {}),
-      filesScanned: files.length,
-      rulesRun: detectors.length,
-      elapsedMs: Date.now() - startedAt,
-    },
+    summary,
     options: {
       target: options.target,
       include: options.include,
@@ -118,6 +128,11 @@ function canonicalize(path: string): string {
   } catch {
     return path;
   }
+}
+
+function getContentOverride(options: ScanOptions, absolutePath: string): string | undefined {
+  if (!options.fileContents) return undefined;
+  return options.fileContents[canonicalize(absolutePath)] ?? options.fileContents[absolutePath];
 }
 
 function selectDetectors(ruleIds: string[] | undefined): Detector[] {

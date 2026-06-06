@@ -31,6 +31,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:tests": "tsc -p tsconfig.tests.json",
     "schema:generate": "node --import tsx scripts/generate-schema.mjs",
+    "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:ci": "node scripts/benchmark.mjs --small-only",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

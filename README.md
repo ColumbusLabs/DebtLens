@@ -91,6 +91,7 @@ npx debtlens scan
 ```bash
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
 debtlens init --pack core # starter config using the core rule pack preset
+debtlens adopt            # adoption report (dry run; recommends minSeverity)
 debtlens packs            # list built-in rule pack presets
 debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
@@ -166,6 +167,17 @@ debtlens rules --format json
 # Quiet terminal output: hide per-finding detail
 debtlens scan --quiet
 ```
+
+## Recommended adoption path
+
+Preview findings and get a `minSeverity` recommendation before committing config or baseline files:
+
+```bash
+debtlens adopt --cwd . --rules todo-comment   # dry-run report (default)
+debtlens adopt --write-config --write-baseline --force
+```
+
+The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). After adoption, use `debtlens scan --baseline debtlens-baseline.json --fail-on high` in CI to gate only newly introduced debt.
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported.
 

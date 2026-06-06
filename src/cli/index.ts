@@ -15,6 +15,7 @@ import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
 import { runInit } from "./init.js";
 import { runDoctor } from "./doctor.js";
+import { runAdopt } from "./adopt.js";
 import { parseCommaList, parseThresholds } from "./parseList.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
@@ -287,6 +288,48 @@ program.command("init")
       const pack = rawOptions.pack ? String(rawOptions.pack) : undefined;
       const result = runInit(cwd, rawOptions.force === true, pack);
       process.stdout.write(`${result.overwritten ? "Overwrote" : "Created"} ${result.path}\n`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program.command("adopt")
+  .description("Scan and print an adoption summary; optionally write config and baseline.")
+  .argument("[target]", "directory or file to scan", ".")
+  .option("-i, --include <patterns>", "comma-separated glob patterns to include")
+  .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
+  .option("--min-severity <severity>", "info, low, medium, or high", "low")
+  .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
+  .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
+  .option("--config <path>", "path to debtlens.config.json")
+  .option("--cwd <path>", "working directory", process.cwd())
+  .option("--write-config", "write debtlens.config.json")
+  .option("--force", "overwrite an existing config file (required with --write-config)")
+  .option("--write-baseline [path]", "write baseline file (skipped when 0 issues)")
+  .action(async (target: string, rawOptions: Record<string, unknown>) => {
+    try {
+      const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
+      const report = await runAdopt({
+        target,
+        cwd,
+        configPath: rawOptions.config ? String(rawOptions.config) : undefined,
+        pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+        writeConfig: rawOptions.writeConfig === true,
+        force: rawOptions.force === true,
+        writeBaseline: rawOptions.writeBaseline as boolean | string | undefined,
+        cliOptions: {
+          cwd,
+          include: parseCommaList(rawOptions.include as string | undefined),
+          exclude: parseCommaList(rawOptions.exclude as string | undefined),
+          rules: parseRuleList(rawOptions.rules as string | undefined),
+          pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+          minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
+        },
+      });
+
+      process.stdout.write(report.text);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);

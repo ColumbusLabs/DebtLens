@@ -90,6 +90,8 @@ npx debtlens scan
 
 ```bash
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
+debtlens init --pack core # starter config using the core rule pack preset
+debtlens packs            # list built-in rule pack presets
 debtlens rules            # list built-in rule ids and descriptions
 debtlens scan [target]
 ```
@@ -199,6 +201,27 @@ Create `debtlens.config.json`:
 ```
 
 The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json`. `debtlens init` writes this URL into new config files so editors can provide validation and autocomplete.
+
+### Rule packs
+
+Built-in presets select a rule set without hand-picking every rule id. See [`docs/rule-packs.md`](./docs/rule-packs.md).
+
+| Pack | Rules |
+| --- | --- |
+| `core` | duplicate-logic, dead-abstraction, todo-comment, naming-drift |
+| `react` | core + large-component, state-sprawl, effect-complexity, prop-drilling |
+| `react-native` | same as `react` |
+| `next` | same as `react` |
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
+  "pack": "core",
+  "include": ["src/**/*.{ts,tsx,js,jsx}"]
+}
+```
+
+Explicit `rules` in config override the pack. Use `debtlens packs` to list presets.
 
 ### Custom naming vocabulary
 

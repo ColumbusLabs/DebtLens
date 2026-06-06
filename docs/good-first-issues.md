@@ -184,5 +184,4 @@ issue body before starting and comment if you plan to own one.
 | # | Task | Layer | Issue |
 | --- | --- | --- | --- |
 | 23 | Monorepo and package-aware scanning | scanner / CI | [#23](https://github.com/ColumbusLabs/DebtLens/issues/23) |
-| 25 | Rule packs (`core`, `react`, `react-native`, `next`) | config / packs | [#25](https://github.com/ColumbusLabs/DebtLens/issues/25) |
 | 26 | Plugin API for third-party rules | scanner / extensibility | [#26](https://github.com/ColumbusLabs/DebtLens/issues/26) |

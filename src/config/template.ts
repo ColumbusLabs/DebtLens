@@ -31,6 +31,11 @@ export const configTemplate: DebtLensConfig & { $schema: string } = {
   },
 };
 
-export function renderConfigFile(): string {
+export function renderConfigFile(pack?: string): string {
+  if (pack) {
+    const { rules: _rules, ...base } = configTemplate;
+    return `${JSON.stringify({ ...base, pack }, null, 2)}\n`;
+  }
+
   return `${JSON.stringify(configTemplate, null, 2)}\n`;
 }

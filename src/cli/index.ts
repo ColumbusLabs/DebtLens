@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { Command } from "commander";
 import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
+import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getStagedFiles } from "../utils/git.js";
@@ -28,6 +29,7 @@ program.command("scan")
   .option("-i, --include <patterns>", "comma-separated glob patterns to include")
   .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
   .option("--min-severity <severity>", "info, low, medium, or high", "low")
+  .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
   .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
   .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
   .option("--max-files <count>", "maximum files to scan", parseInteger)
@@ -80,6 +82,7 @@ program.command("scan")
         include: parseCommaList(rawOptions.include as string | undefined),
         exclude: parseCommaList(rawOptions.exclude as string | undefined),
         rules: parseRuleList(rawOptions.rules as string | undefined),
+        pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
         thresholds: parseThresholds(rawOptions.threshold as string | undefined),
         minSeverity,
         maxFiles: rawOptions.maxFiles as number | undefined,
@@ -141,6 +144,31 @@ program.command("scan")
     }
   });
 
+program.command("packs")
+  .description("List built-in rule pack presets.")
+  .option("--format <format>", "terminal or json", "terminal")
+  .action((rawOptions: Record<string, unknown>) => {
+    try {
+      const format = parseRulesFormat(String(rawOptions.format ?? "terminal"));
+      const packs = listRulePacks().map((pack) => ({
+        id: pack.id,
+        description: pack.description,
+        rules: pack.rules,
+      }));
+
+      if (format === "json") {
+        process.stdout.write(`${JSON.stringify({ packs }, null, 2)}\n`);
+        return;
+      }
+
+      process.stdout.write(renderPacksTable(packs));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 program.command("rules")
   .description("List built-in DebtLens rule ids.")
   .option("--format <format>", "terminal or json", "terminal")
@@ -170,11 +198,13 @@ program.command("rules")
 program.command("init")
   .description("Create a starter debtlens.config.json in the current directory.")
   .option("--force", "overwrite an existing config file")
+  .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
   .option("--cwd <path>", "working directory", process.cwd())
   .action((rawOptions: Record<string, unknown>) => {
     try {
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
-      const result = runInit(cwd, rawOptions.force === true);
+      const pack = rawOptions.pack ? String(rawOptions.pack) : undefined;
+      const result = runInit(cwd, rawOptions.force === true, pack);
       process.stdout.write(`${result.overwritten ? "Overwrote" : "Created"} ${result.path}\n`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -243,6 +273,17 @@ function renderRulesTable(rules: Array<{ id: string; name: string; defaultSeveri
     `${"Rule".padEnd(idWidth)}  ${"Severity".padEnd(severityWidth)}  Description`,
     `${"-".repeat(idWidth)}  ${"-".repeat(severityWidth)}  -----------`,
     ...rules.map((rule) => `${rule.id.padEnd(idWidth)}  ${rule.defaultSeverity.padEnd(severityWidth)}  ${rule.description}`),
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
+function renderPacksTable(packs: Array<{ id: string; description: string; rules: string[] }>): string {
+  const idWidth = Math.max("Pack".length, ...packs.map((pack) => pack.id.length));
+  const lines = [
+    `${"Pack".padEnd(idWidth)}  Rules  Description`,
+    `${"-".repeat(idWidth)}  -----  -----------`,
+    ...packs.map((pack) => `${pack.id.padEnd(idWidth)}  ${String(pack.rules.length).padEnd(5)}  ${pack.description}`),
   ];
 
   return `${lines.join("\n")}\n`;

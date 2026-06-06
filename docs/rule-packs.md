@@ -11,7 +11,9 @@ The product splits into layers:
 3. **Framework packs** — optional rule groups and tuning for React, React Native, Next.js,
    Expo, Node APIs, monorepos, and (later) Vue, Svelte, and other ecosystems.
 
-Today all built-in rules run together. Pack selection in config is planned ([#25](https://github.com/ColumbusLabs/DebtLens/issues/25)). Until then, use `--rules` to opt into a subset.
+Today all built-in rules run together by default. Select a pack in config or use
+`debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config or
+`--rules` on the CLI override the pack.
 
 ## Current built-in rules
 
@@ -103,7 +105,7 @@ and CI do not need to change.
 
 ## Scanning only what you need
 
-Until pack config lands, filter rules explicitly:
+You can also filter rules explicitly with `--rules`:
 
 ```bash
 # Core maintainability rules only (no React-specific checks)

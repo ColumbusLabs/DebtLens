@@ -43,4 +43,17 @@ describe("debtlens init", () => {
     assert.equal(parsed.stale, undefined);
     assert.equal(parsed.minSeverity, "low");
   });
+
+  it("writes a pack preset when --pack is provided", () => {
+    const result = runInit(dir, false, "core");
+    assert.equal(result.overwritten, false);
+
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+    assert.equal(parsed.pack, "core");
+    assert.equal(parsed.rules, undefined);
+  });
+
+  it("rejects unknown pack ids", () => {
+    assert.throws(() => runInit(dir, false, "vue"), /Unknown rule pack "vue"/);
+  });
 });

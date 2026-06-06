@@ -1,0 +1,32 @@
+name: Good first contribution
+description: Suggest a scoped starter task for new contributors.
+title: "Good first issue: "
+labels: ["good first issue", "help wanted"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: Describe the small, self-contained improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where to start
+      description: List the likely files or docs sections.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List the expected behavior, tests, and docs.
+    validations:
+      required: true
+  - type: input
+    id: test_command
+    attributes:
+      label: Suggested test command
+      placeholder: "npm test -- tests/detectors/example.test.ts"
+

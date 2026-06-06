@@ -282,6 +282,15 @@ steps:
         });
 ```
 
+## Contributing
+
+Want to help make DebtLens better? Start with the
+[first-PR guide](./docs/contributing-first-pr.md), the
+[good first issues list](./docs/good-first-issues.md), and the
+[contributor roadmap](https://github.com/ColumbusLabs/DebtLens/projects). Use
+[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) for open-ended
+ideas, rule proposals, and usage questions.
+
 ## Development
 
 ```bash

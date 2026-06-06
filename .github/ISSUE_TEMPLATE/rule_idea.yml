@@ -1,0 +1,36 @@
+name: Rule idea
+description: Propose a new maintainability rule or detector improvement.
+title: "Rule idea: "
+labels: ["enhancement", "area: detector"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Maintainer problem
+      description: What review burden or debt pattern would this rule help catch?
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Code examples
+      description: Include one example that should fire and one near-miss that should not.
+      render: tsx
+    validations:
+      required: true
+  - type: textarea
+    id: signal
+    attributes:
+      label: Signal and confidence
+      description: What evidence should make this high-confidence rather than noisy?
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration or thresholds
+      description: Note any threshold, severity, or project-specific tuning needed.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What tests and docs should exist when this is implemented?
+

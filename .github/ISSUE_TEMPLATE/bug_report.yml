@@ -1,0 +1,52 @@
+name: Bug report
+description: Report something that is broken or surprising in DebtLens.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve DebtLens. Please include enough detail for someone else to reproduce the behavior.
+  - type: input
+    id: version
+    attributes:
+      label: DebtLens version
+      description: Run `debtlens --version` or include the npm/package version.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and config
+      description: Paste the command, relevant `debtlens.config.json`, and any Action inputs.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction context
+      description: Include a minimal fixture, file shape, repo link, or steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should DebtLens have done?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead? Include output or error text.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, package manager, OS, CI provider, and anything else relevant.
+

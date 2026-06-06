@@ -1,0 +1,48 @@
+name: Rule false positive
+description: Report a finding that should not fire for a rule.
+title: "False positive: "
+labels: ["bug", "type: false-positive"]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      placeholder: "large-component"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: DebtLens version
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Minimal code sample
+      description: Paste the smallest code sample that reproduces the finding.
+      render: tsx
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and config
+      description: Include command, thresholds, min severity, and config settings.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: why_false
+    attributes:
+      label: Why this is a false positive
+      description: Explain the legitimate pattern DebtLens should allow.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What fixture or test should pass once this is fixed?
+

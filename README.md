@@ -244,12 +244,6 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 DebtLens is currently a v0.1 proof-of-concept. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md), and starter contribution ideas are tracked in [`docs/good-first-issues.md`](./docs/good-first-issues.md).
 
-## Positioning
-
-DebtLens should be pitched as open-source maintainer infrastructure:
-
-> AI-assisted development increases code throughput, but also increases review burden and architectural drift. DebtLens gives maintainers an explainable, open-source way to find maintainability debt before it ships.
-
 ## License
 
 MIT

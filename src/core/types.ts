@@ -66,6 +66,8 @@ export interface DebtLensConfig {
     /** Built-in labels to disable (e.g. "todo marker"). */
     disableDefaults?: string[];
   };
+  /** Exit with code 1 only when a reported issue meets `--fail-on` and this confidence floor. */
+  failOnConfidence?: number;
 }
 
 export interface ScanOptions {
@@ -108,6 +110,7 @@ export interface CliOptions {
   format?: OutputFormat;
   output?: string;
   failOn?: Severity;
+  failOnConfidence?: number;
   configPath?: string;
   noColor?: boolean;
   changedFiles?: string[];

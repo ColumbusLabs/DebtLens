@@ -5,16 +5,20 @@ issue with acceptance criteria. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for 
 
 **Labels:** `good first issue` (general) · `good-first-rule` (detector/rule work)
 
+Statuses reflect the current repository surface. **Done** means the GitHub issue is
+closed; **Implemented on main** means the work has landed locally/on `main` and the
+issue may still be awaiting closure.
+
 ## Rules
 
-| # | Task | Issue |
-| --- | --- | --- |
-| 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) |
-| 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) |
-| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) |
-| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) |
-| 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) |
-| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) |
+| # | Task | Issue | Status |
+| --- | --- | --- | --- |
+| 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) | Open |
+| 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | Open |
+| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
+| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
+| 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Implemented on main** |
+| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Implemented on main** |
 
 ### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1)
 
@@ -49,25 +53,25 @@ Allow projects to add/replace the marker patterns
 
 - Verify: a custom marker fires; a removed default does not.
 
-### 15. Extend `effect-complexity` to layout/insertion effects — [#15](https://github.com/ColumbusLabs/DebtLens/issues/15)
+### 15. Extend `effect-complexity` to layout/insertion effects — [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) (implemented on main)
 
 - Touch: `src/detectors/effectComplexity.ts`, `tests/detectors/effectComplexity.test.ts`.
 - Verify: long `useLayoutEffect` fires; small `useInsertionEffect` does not.
 
-### 27. Warn when `duplicate-logic` truncates comparisons — [#27](https://github.com/ColumbusLabs/DebtLens/issues/27)
+### 27. Warn when `duplicate-logic` truncates comparisons — [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) (implemented on main)
 
 - Touch: `src/detectors/duplicateLogic.ts`.
 - Verify: exceeding `maxSnippets` emits a single clear warning.
 
 ## Reporters & integrations
 
-| # | Task | Issue |
-| --- | --- | --- |
-| 5 | Add `helpUri` to SARIF rules | [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) |
-| 6 | Snapshot test for the Markdown reporter | [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) |
-| 7 | Publish the config JSON schema to a stable URL | [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) |
-| 16 | JSON reporter contract test | [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) |
-| 22 | PR comment reporter for Markdown findings | [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) |
+| # | Task | Issue | Status |
+| --- | --- | --- | --- |
+| 5 | Add `helpUri` to SARIF rules | [#5](https://github.com/ColumbusLabs/DebtLens/issues/5) | Open |
+| 6 | Snapshot test for the Markdown reporter | [#6](https://github.com/ColumbusLabs/DebtLens/issues/6) | Open |
+| 7 | Publish the config JSON schema to a stable URL | [#7](https://github.com/ColumbusLabs/DebtLens/issues/7) | Open |
+| 16 | JSON reporter contract test | [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) | **Done** |
+| 22 | PR comment reporter for Markdown findings | [#22](https://github.com/ColumbusLabs/DebtLens/issues/22) | Open |
 
 ### 5. Add `helpUri` to SARIF rules — [#5](https://github.com/ColumbusLabs/DebtLens/issues/5)
 
@@ -87,7 +91,7 @@ The schema is generated to `schema/debtlens.config.schema.json`
 ([`src/config/schema.ts`](../src/config/schema.ts)). Wire up hosting (e.g. GitHub Pages
 or SchemaStore) and confirm the `$schema` URL in the `init` template resolves.
 
-### 16. JSON reporter contract test — [#16](https://github.com/ColumbusLabs/DebtLens/issues/16)
+### 16. JSON reporter contract test — [#16](https://github.com/ColumbusLabs/DebtLens/issues/16) (closed)
 
 - Touch: `src/reporters/jsonReporter.ts`, new `tests/reporters/jsonReporter.test.ts`.
 - Verify: parsed output includes stable `issues`, `summary`, `options` keys.
@@ -103,14 +107,14 @@ Format scan results for GitHub PR comments (roadmap v0.3). Larger than a single 
 | 8 | Summary-only `--quiet` output mode | [#8](https://github.com/ColumbusLabs/DebtLens/issues/8) | **Done** |
 | 9 | Respect `.gitignore` when resolving files | [#9](https://github.com/ColumbusLabs/DebtLens/issues/9) | Open |
 | 10 | False-positive guidance per rule in docs | [#10](https://github.com/ColumbusLabs/DebtLens/issues/10) | **Done** |
-| 14 | Document `--quiet` in README and Action | [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) | Open |
-| 17 | Integration test for `scan()` on `examples/react` | [#17](https://github.com/ColumbusLabs/DebtLens/issues/17) | Open |
-| 18 | Read CLI/SARIF version from `package.json` | [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) | Open |
-| 19 | `debtlens rules` command | [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) | Open |
-| 20 | Warn when scan resolves zero files | [#20](https://github.com/ColumbusLabs/DebtLens/issues/20) | Open |
-| 21 | `--staged` mode for pre-commit scans | [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) | Open |
-| 24 | Action: `write-baseline`, `thresholds`, `max-files` | [#24](https://github.com/ColumbusLabs/DebtLens/issues/24) | Open |
-| 28 | CI smoke scan for RN and Next examples | [#28](https://github.com/ColumbusLabs/DebtLens/issues/28) | Open |
+| 14 | Document `--quiet` in README and Action | [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) | **Implemented on main** |
+| 17 | Integration test for `scan()` on `examples/react` | [#17](https://github.com/ColumbusLabs/DebtLens/issues/17) | **Done** |
+| 18 | Read CLI/SARIF version from `package.json` | [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) | **Implemented on main** |
+| 19 | `debtlens rules` command | [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) | **Implemented on main** |
+| 20 | Warn when scan resolves zero files | [#20](https://github.com/ColumbusLabs/DebtLens/issues/20) | **Done** |
+| 21 | `--staged` mode for pre-commit scans | [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) | **Implemented on main** |
+| 24 | Action: `write-baseline`, `thresholds`, `max-files` | [#24](https://github.com/ColumbusLabs/DebtLens/issues/24) | **Done** |
+| 28 | CI smoke scan for RN and Next examples | [#28](https://github.com/ColumbusLabs/DebtLens/issues/28) | **Done** |
 
 ### 8. Add a summary-only / `--quiet` output mode — [#8](https://github.com/ColumbusLabs/DebtLens/issues/8) (closed)
 
@@ -128,35 +132,35 @@ Optionally skip files ignored by git during a scan, in addition to the configure
 Expand [`docs/rules.md`](./rules.md) with a "When this is a false positive" note per
 rule, mirroring the guards in the detector tests.
 
-### 14. Document `--quiet` in README and GitHub Action — [#14](https://github.com/ColumbusLabs/DebtLens/issues/14)
+### 14. Document `--quiet` in README and GitHub Action — [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) (implemented on main)
 
 - Touch: `README.md`, `action.yml`.
 
-### 17. Integration test for `scan()` — [#17](https://github.com/ColumbusLabs/DebtLens/issues/17)
+### 17. Integration test for `scan()` — [#17](https://github.com/ColumbusLabs/DebtLens/issues/17) (closed)
 
 - Touch: `tests/core/scan.test.ts`, `examples/react/`.
 
-### 18. Single source of truth for version — [#18](https://github.com/ColumbusLabs/DebtLens/issues/18)
+### 18. Single source of truth for version — [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) (implemented on main)
 
 - Touch: `src/cli/index.ts`, `src/reporters/sarifReporter.ts`, `package.json`.
 
-### 19. `debtlens rules` command — [#19](https://github.com/ColumbusLabs/DebtLens/issues/19)
+### 19. `debtlens rules` command — [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) (implemented on main)
 
 List rule ids, names, default severities, and descriptions.
 
-### 20. Warn on zero files scanned — [#20](https://github.com/ColumbusLabs/DebtLens/issues/20)
+### 20. Warn on zero files scanned — [#20](https://github.com/ColumbusLabs/DebtLens/issues/20) (closed)
 
 - Touch: `src/core/scan.ts`, `src/cli/index.ts`.
 
-### 21. `--staged` git mode — [#21](https://github.com/ColumbusLabs/DebtLens/issues/21)
+### 21. `--staged` git mode — [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) (implemented on main)
 
 - Touch: `src/utils/git.ts`, `src/cli/index.ts`.
 
-### 24. GitHub Action input gaps — [#24](https://github.com/ColumbusLabs/DebtLens/issues/24)
+### 24. GitHub Action input gaps — [#24](https://github.com/ColumbusLabs/DebtLens/issues/24) (closed)
 
 Expose `write-baseline`, `thresholds`, and `max-files` in `action.yml`.
 
-### 28. CI example coverage — [#28](https://github.com/ColumbusLabs/DebtLens/issues/28)
+### 28. CI example coverage — [#28](https://github.com/ColumbusLabs/DebtLens/issues/28) (closed)
 
 Scan `examples/react-native` and `examples/next` in `.github/workflows/ci.yml`.
 

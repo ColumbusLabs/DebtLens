@@ -3,6 +3,24 @@
 All notable changes to DebtLens are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-06-06
+
+### Added
+- **`debtlens rules`** command to list built-in rule ids, default severities, and
+  descriptions in terminal or JSON format.
+- **`--staged`** scan mode for pre-commit workflows. Staged scans read staged git blob
+  contents, so unstaged edits in the same file are not reported.
+- `effect-complexity` now covers `useLayoutEffect` and `useInsertionEffect` in addition
+  to `useEffect`.
+- `duplicate-logic` now emits an advisory warning when `duplicate-logic.maxSnippets`
+  caps comparison coverage. JSON reports include the same warning under
+  `summary.warnings`.
+
+### Changed
+- CLI `--version` and SARIF `tool.driver.version` now share the package version from
+  `package.json`.
+- Contributor issue docs now reflect completed issue status after the `0.2.0` batch.
+
 ## [0.1.1] - 2026-06-01
 
 ### Added

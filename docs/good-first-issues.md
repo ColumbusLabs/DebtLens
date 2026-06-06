@@ -5,9 +5,7 @@ issue with acceptance criteria. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for 
 
 **Labels:** `good first issue` (general) · `good-first-rule` (detector/rule work)
 
-Statuses reflect the current repository surface. **Done** means the GitHub issue is
-closed; **Implemented on main** means the work has landed locally/on `main` and the
-issue may still be awaiting closure.
+Statuses reflect the current repository surface. **Done** means the GitHub issue is closed.
 
 ## Rules
 
@@ -17,8 +15,8 @@ issue may still be awaiting closure.
 | 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | Open |
 | 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
 | 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
-| 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Implemented on main** |
-| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Implemented on main** |
+| 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Done** |
+| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Done** |
 
 ### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1)
 
@@ -53,12 +51,12 @@ Allow projects to add/replace the marker patterns
 
 - Verify: a custom marker fires; a removed default does not.
 
-### 15. Extend `effect-complexity` to layout/insertion effects — [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) (implemented on main)
+### 15. Extend `effect-complexity` to layout/insertion effects — [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) (closed)
 
 - Touch: `src/detectors/effectComplexity.ts`, `tests/detectors/effectComplexity.test.ts`.
 - Verify: long `useLayoutEffect` fires; small `useInsertionEffect` does not.
 
-### 27. Warn when `duplicate-logic` truncates comparisons — [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) (implemented on main)
+### 27. Warn when `duplicate-logic` truncates comparisons — [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) (closed)
 
 - Touch: `src/detectors/duplicateLogic.ts`.
 - Verify: exceeding `maxSnippets` emits a single clear warning.
@@ -107,12 +105,12 @@ Format scan results for GitHub PR comments (roadmap v0.3). Larger than a single 
 | 8 | Summary-only `--quiet` output mode | [#8](https://github.com/ColumbusLabs/DebtLens/issues/8) | **Done** |
 | 9 | Respect `.gitignore` when resolving files | [#9](https://github.com/ColumbusLabs/DebtLens/issues/9) | Open |
 | 10 | False-positive guidance per rule in docs | [#10](https://github.com/ColumbusLabs/DebtLens/issues/10) | **Done** |
-| 14 | Document `--quiet` in README and Action | [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) | **Implemented on main** |
+| 14 | Document `--quiet` in README and Action | [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) | **Done** |
 | 17 | Integration test for `scan()` on `examples/react` | [#17](https://github.com/ColumbusLabs/DebtLens/issues/17) | **Done** |
-| 18 | Read CLI/SARIF version from `package.json` | [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) | **Implemented on main** |
-| 19 | `debtlens rules` command | [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) | **Implemented on main** |
+| 18 | Read CLI/SARIF version from `package.json` | [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) | **Done** |
+| 19 | `debtlens rules` command | [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) | **Done** |
 | 20 | Warn when scan resolves zero files | [#20](https://github.com/ColumbusLabs/DebtLens/issues/20) | **Done** |
-| 21 | `--staged` mode for pre-commit scans | [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) | **Implemented on main** |
+| 21 | `--staged` mode for pre-commit scans | [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) | **Done** |
 | 24 | Action: `write-baseline`, `thresholds`, `max-files` | [#24](https://github.com/ColumbusLabs/DebtLens/issues/24) | **Done** |
 | 28 | CI smoke scan for RN and Next examples | [#28](https://github.com/ColumbusLabs/DebtLens/issues/28) | **Done** |
 
@@ -132,7 +130,7 @@ Optionally skip files ignored by git during a scan, in addition to the configure
 Expand [`docs/rules.md`](./rules.md) with a "When this is a false positive" note per
 rule, mirroring the guards in the detector tests.
 
-### 14. Document `--quiet` in README and GitHub Action — [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) (implemented on main)
+### 14. Document `--quiet` in README and GitHub Action — [#14](https://github.com/ColumbusLabs/DebtLens/issues/14) (closed)
 
 - Touch: `README.md`, `action.yml`.
 
@@ -140,11 +138,11 @@ rule, mirroring the guards in the detector tests.
 
 - Touch: `tests/core/scan.test.ts`, `examples/react/`.
 
-### 18. Single source of truth for version — [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) (implemented on main)
+### 18. Single source of truth for version — [#18](https://github.com/ColumbusLabs/DebtLens/issues/18) (closed)
 
 - Touch: `src/cli/index.ts`, `src/reporters/sarifReporter.ts`, `package.json`.
 
-### 19. `debtlens rules` command — [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) (implemented on main)
+### 19. `debtlens rules` command — [#19](https://github.com/ColumbusLabs/DebtLens/issues/19) (closed)
 
 List rule ids, names, default severities, and descriptions.
 
@@ -152,7 +150,7 @@ List rule ids, names, default severities, and descriptions.
 
 - Touch: `src/core/scan.ts`, `src/cli/index.ts`.
 
-### 21. `--staged` git mode — [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) (implemented on main)
+### 21. `--staged` git mode — [#21](https://github.com/ColumbusLabs/DebtLens/issues/21) (closed)
 
 - Touch: `src/utils/git.ts`, `src/cli/index.ts`.
 

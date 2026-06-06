@@ -1,0 +1,6 @@
+{
+  "name": "debtlens-fixture-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"]
+}

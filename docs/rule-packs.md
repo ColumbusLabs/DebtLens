@@ -62,7 +62,7 @@ separate rule IDs yet.
 | `next` | App Router boundaries, server/client splits, data loading | Planned |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | Planned |
 | `expo` | Expo config and module boundaries | Planned |
-| `monorepo` | Per-package configs, workspace-aware `--changed` | Planned ([#23](https://github.com/ColumbusLabs/DebtLens/issues/23)) |
+| `monorepo` | `--package` for single-level npm workspaces (`packages/*`); per-package configs planned | Partial ([#23](https://github.com/ColumbusLabs/DebtLens/issues/23)) |
 
 Vue and Svelte are planned JS framework packs. See [`ROADMAP.md`](../ROADMAP.md).
 

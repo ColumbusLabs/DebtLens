@@ -7,6 +7,7 @@ export interface PrCommentOptions {
 
 export function renderPrComment(result: ScanResult, options: PrCommentOptions = {}): string {
   const lines: string[] = [];
+  lines.push("<!-- debtlens-report -->");
   lines.push("## DebtLens findings");
   lines.push("");
   lines.push("| Files scanned | Rules run | Total issues | High | Medium | Low | Info |");

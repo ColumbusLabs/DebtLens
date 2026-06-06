@@ -18,6 +18,9 @@ inputs:
   fail-on:
     description: Exit with code 1 when any issue meets this severity (info, low, medium, high).
     default: ""
+  fail-on-confidence:
+    description: With fail-on, require at least this confidence (0-1) to exit with code 1.
+    default: ""
   format:
     description: Output format (terminal, json, markdown, pr-comment, sarif).
     default: terminal
@@ -72,6 +75,7 @@ runs:
         DL_MIN_SEVERITY: ${{ inputs.min-severity }}
         DL_RULES: ${{ inputs.rules }}
         DL_FAIL_ON: ${{ inputs.fail-on }}
+        DL_FAIL_ON_CONFIDENCE: ${{ inputs.fail-on-confidence }}
         DL_FORMAT: ${{ inputs.format }}
         DL_OUTPUT: ${{ inputs.output }}
         DL_CHANGED: ${{ inputs.changed }}
@@ -86,6 +90,7 @@ runs:
         args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$DL_FORMAT")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
         [ -n "$DL_FAIL_ON" ] && args+=(--fail-on "$DL_FAIL_ON")
+        [ -n "$DL_FAIL_ON_CONFIDENCE" ] && args+=(--fail-on-confidence "$DL_FAIL_ON_CONFIDENCE")
         [ -n "$DL_OUTPUT" ] && args+=(--output "$DL_OUTPUT")
         [ -n "$DL_BASELINE" ] && args+=(--baseline "$DL_BASELINE")
         [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")

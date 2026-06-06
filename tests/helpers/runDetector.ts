@@ -1,11 +1,6 @@
 import { Project, ScriptTarget, ts } from "ts-morph";
-import type {
-  DebtIssue,
-  Detector,
-  ScanOptions,
-  ScanThresholds,
-  SourceFileInfo,
-} from "../../src/core/types.js";
+import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo } from "../../src/core/types.js";
+import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
 export interface RunDetectorOptions {
   /** Threshold overrides, e.g. `{ "state-sprawl.maxStatefulHooks": 6 }`. */
@@ -16,6 +11,12 @@ export interface RunDetectorOptions {
   vocabulary?: Record<string, string[]>;
   /** Prop-drilling custom ignore components. */
   propDrillingIgnoreComponents?: string[];
+  /** Todo-comment: replace built-in marker patterns. */
+  todoCommentReplaceDefaults?: boolean;
+  /** Todo-comment: built-in marker labels to disable. */
+  todoCommentDisableDefaults?: string[];
+  /** Todo-comment: custom marker patterns. */
+  todoCommentMarkers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
 }
 
 /**
@@ -63,6 +64,11 @@ export async function runDetector(
     maxFiles: undefined,
     vocabulary: options.vocabulary,
     propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
+    todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
+    todoCommentDisableDefaults: options.todoCommentDisableDefaults,
+    todoCommentMarkers: options.todoCommentMarkers
+      ? compileTodoCommentMarkers(options.todoCommentMarkers)
+      : undefined,
   };
 
   const issues = await detector.detect({

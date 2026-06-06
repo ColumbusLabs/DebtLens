@@ -50,6 +50,15 @@ export interface DebtLensConfig {
   propDrilling?: {
     ignoreComponents?: string[];
   };
+  /** Todo-comment rule configuration. */
+  todoComment?: {
+    /** Extra marker patterns (regex strings). */
+    markers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
+    /** When true, built-in patterns are not used. */
+    replaceDefaults?: boolean;
+    /** Built-in labels to disable (e.g. "todo marker"). */
+    disableDefaults?: string[];
+  };
 }
 
 export interface ScanOptions {
@@ -70,6 +79,10 @@ export interface ScanOptions {
   fileContents?: Record<string, string>;
   /** Prop-drilling rule configuration. */
   propDrillingIgnoreComponents?: string[];
+  /** Todo-comment rule configuration. */
+  todoCommentReplaceDefaults?: boolean;
+  todoCommentDisableDefaults?: string[];
+  todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
 }
 
 export interface CliOptions {

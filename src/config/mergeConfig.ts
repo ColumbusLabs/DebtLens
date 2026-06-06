@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { defaultConfig } from "./defaults.js";
+import { compileTodoCommentMarkers } from "../detectors/todoComment.js";
 import type { CliOptions, DebtLensConfig, ScanOptions } from "../core/types.js";
 
 export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptions: CliOptions): ScanOptions {
@@ -28,6 +29,11 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       ...(defaultConfig.propDrilling?.ignoreComponents ?? []),
       ...(fileConfig.propDrilling?.ignoreComponents ?? []),
     ],
+    todoCommentReplaceDefaults: fileConfig.todoComment?.replaceDefaults ?? defaultConfig.todoComment.replaceDefaults,
+    todoCommentDisableDefaults: fileConfig.todoComment?.disableDefaults ?? defaultConfig.todoComment.disableDefaults,
+    todoCommentMarkers: fileConfig.todoComment?.markers?.length
+      ? compileTodoCommentMarkers(fileConfig.todoComment.markers)
+      : undefined,
     changedFiles: cliOptions.changedFiles,
     fileContents: cliOptions.fileContents,
   };

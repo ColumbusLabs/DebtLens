@@ -1,22 +1,29 @@
 # Good first issues
 
 Scoped, self-contained tasks for new contributors. Each entry links to a tracked GitHub
-issue with acceptance criteria. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for setup.
+issue with acceptance criteria. See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for setup and
+[`docs/rule-packs.md`](./rule-packs.md) for **core rules**, **framework packs**, and
+contribution layers.
 
 **Labels:** `good first issue` (general) · `good-first-rule` (detector/rule work)
 
 Statuses reflect the current repository surface. **Done** means the GitHub issue is closed.
 
-## Rules
+## Core rules (any TS/JS project)
+
+| # | Task | Issue | Status |
+| --- | --- | --- | --- |
+| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
+| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
+| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Done** |
+
+## React pack rules
 
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
 | 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) | **Done** |
 | 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | Open |
-| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
-| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
 | 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Done** |
-| 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Done** |
 
 ### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) (closed)
 
@@ -171,11 +178,11 @@ Scan `examples/react-native` and `examples/next` in `.github/workflows/ci.yml`.
 
 ## Roadmap / larger work
 
-| # | Task | Issue |
-| --- | --- | --- |
-| 23 | Monorepo and package-aware scanning | [#23](https://github.com/ColumbusLabs/DebtLens/issues/23) |
-| 25 | Rule packs (`react`, `react-native`, `next`) | [#25](https://github.com/ColumbusLabs/DebtLens/issues/25) |
-| 26 | Plugin API for third-party rules | [#26](https://github.com/ColumbusLabs/DebtLens/issues/26) |
+Framework packs, monorepo support, and plugin loading are multi-PR efforts. Read the
+issue body before starting and comment if you plan to own one.
 
-These are multi-PR efforts; read the issue body before starting and comment if you plan
-to own one.
+| # | Task | Layer | Issue |
+| --- | --- | --- | --- |
+| 23 | Monorepo and package-aware scanning | scanner / CI | [#23](https://github.com/ColumbusLabs/DebtLens/issues/23) |
+| 25 | Rule packs (`core`, `react`, `react-native`, `next`) | config / packs | [#25](https://github.com/ColumbusLabs/DebtLens/issues/25) |
+| 26 | Plugin API for third-party rules | scanner / extensibility | [#26](https://github.com/ColumbusLabs/DebtLens/issues/26) |

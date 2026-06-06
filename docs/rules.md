@@ -2,6 +2,8 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
+Rules are grouped into **core** and **react** packs. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy and planned framework packs.
+
 ## `large-component`
 
 Flags React-style PascalCase functions that exceed line, hook, or branch thresholds.

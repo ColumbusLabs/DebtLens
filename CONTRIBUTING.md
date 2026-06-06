@@ -1,6 +1,10 @@
 # Contributing to DebtLens
 
-DebtLens is built around small, explainable rules. A good rule should make maintainers say, "yes, I would want to review that before merging."
+DebtLens is a maintainability scanner with optional rule packs. A good rule should make
+maintainers say, "yes, I would want to review that before merging."
+
+Read [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework
+packs**, and **reporting/CI** fit together before proposing new detectors.
 
 ## Local setup
 
@@ -19,13 +23,13 @@ For a guided first contribution, start with
 
 ## Contribution workflow
 
-1. Pick an issue from [`docs/good-first-issues.md`](./docs/good-first-issues.md) or the
-   contributor roadmap project.
+1. Pick a layer and issue from [`docs/rule-packs.md`](./docs/rule-packs.md) and
+   [`docs/good-first-issues.md`](./docs/good-first-issues.md), or the contributor roadmap project.
 2. Comment before starting medium, large, or RFC-style work so maintainers can help
    shape the approach.
 3. Keep the PR focused on one issue or one tightly related batch.
 4. Add or update tests for behavior changes.
-5. Update docs when CLI flags, config, reporters, rules, or Action behavior changes.
+5. Update docs when CLI flags, config, reporters, rules, packs, or Action behavior changes.
 6. Before opening the PR, run:
 
 ```bash
@@ -37,11 +41,14 @@ npm run build
 
 ## Adding a rule
 
-1. Add a detector in `src/detectors/<ruleName>.ts`.
-2. Export it from `src/detectors/index.ts`.
-3. Add default thresholds in `src/config/defaults.ts` if needed.
-4. Document the rule in `docs/rules.md`.
-5. Add a test in `tests/detectors/<ruleName>.test.ts` using the `runDetector` helper —
+1. Decide whether the rule belongs in the **core** pack or a **framework pack** (see
+   [`docs/rule-packs.md`](./docs/rule-packs.md)).
+2. Add a detector in `src/detectors/<ruleName>.ts`.
+3. Export it from `src/detectors/index.ts`.
+4. Add default thresholds in `src/config/defaults.ts` if needed.
+5. Document the rule in `docs/rules.md` and note its pack in `docs/rule-packs.md` when
+   adding a new id.
+6. Add a test in `tests/detectors/<ruleName>.test.ts` using the `runDetector` helper —
    include a true positive **and** a near-miss that must not fire.
 
 A detector must return issues with:

@@ -3,6 +3,24 @@ description: Propose a new maintainability rule or detector improvement.
 title: "Rule idea: "
 labels: ["enhancement", "area: detector"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        See [docs/rule-packs.md](https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rule-packs.md) for core vs framework pack taxonomy.
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Rule layer
+      description: Where does this rule belong?
+      options:
+        - core (any TS/JS project)
+        - react pack (components, hooks, props)
+        - react-native pack
+        - next pack
+        - node pack
+        - other framework pack
+    validations:
+      required: true
   - type: textarea
     id: problem
     attributes:

@@ -1,7 +1,7 @@
 {
   "name": "debtlens",
   "version": "0.2.0",
-  "description": "Find maintainability debt common in fast-moving AI-assisted TypeScript, React, React Native, Expo, and Next.js codebases.",
+  "description": "Maintainability scanner for TypeScript and JavaScript codebases; React rule pack is the first supported target.",
   "type": "module",
   "homepage": "https://github.com/ColumbusLabs/DebtLens#readme",
   "repository": {

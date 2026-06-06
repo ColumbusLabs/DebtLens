@@ -1,5 +1,10 @@
 # DebtLens Roadmap
 
+DebtLens is a **maintainability scanner** for TypeScript and JavaScript. React is the
+first serious rule pack; React Native, Next.js, Expo, and plain TS/JS projects are
+supported targets, not the product identity. See [`docs/rule-packs.md`](./docs/rule-packs.md)
+for the core vs pack taxonomy and contribution paths.
+
 ## v0.1 — Runnable proof of concept
 
 - TypeScript CLI with `debtlens scan`.
@@ -28,11 +33,12 @@
 
 ## v0.4 — Ecosystem expansion
 
+- Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`).
 - Vue/Svelte detectors where applicable.
-- Python duplicate/dead-abstraction detector.
+- Python duplicate/dead-abstraction detector (separate language; same reporting contract).
 - Configurable domain vocabulary for naming drift.
 - Plugin API for third-party rules.
-- Rule packs: `react`, `react-native`, `next`, `ai-assisted`, `oss-maintainer`.
+- Maintainer-oriented packs: `ai-assisted`, `oss-maintainer`.
 
 ## v1.0 — Stable maintainer tool
 

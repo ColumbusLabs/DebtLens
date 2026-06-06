@@ -3,6 +3,24 @@ description: Suggest a scoped starter task for new contributors.
 title: "Good first issue: "
 labels: ["good first issue", "help wanted"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        See [docs/rule-packs.md](https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rule-packs.md) for contribution layers.
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Contribution layer
+      description: Which part of DebtLens does this task touch?
+      options:
+        - core rule (TS/JS detector)
+        - react pack rule
+        - framework pack (next, RN, node, …)
+        - scanner / CI (baselines, monorepo, git modes)
+        - reporter (terminal, JSON, SARIF, PR comment)
+        - CLI / config / docs
+    validations:
+      required: true
   - type: textarea
     id: goal
     attributes:

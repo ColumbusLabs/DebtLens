@@ -5,9 +5,14 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-DebtLens is a static-analysis CLI for finding maintainability debt common in fast-moving AI-assisted TypeScript, React, React Native, Expo, and Next.js codebases.
+**DebtLens is a maintainability scanner for TypeScript and JavaScript codebases.** The first
+supported rule pack targets React (including React Native, Expo, and Next.js apps), but the
+core idea applies broadly: catch duplicated logic, bloated modules, weak boundaries, TODO
+debt, and naming drift before it becomes permanent.
 
-It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants: duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
+It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
+
+See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework packs**, and **language-agnostic reporting** fit together.
 
 ```bash
 npx debtlens scan
@@ -43,7 +48,7 @@ HIGH (2)
   - src/duplicateTwo.ts:1-18 (18 lines)
 ```
 
-See [`docs/showcase-expensify-app.md`](./docs/showcase-expensify-app.md) for a curated run against a large production React Native codebase.
+See [`docs/showcase-expensify-app.md`](./docs/showcase-expensify-app.md) for a curated run against a large production React Native codebase — one supported target, not the sole identity of the tool.
 
 ## Why this matters
 
@@ -55,16 +60,19 @@ DebtLens gives maintainers and newer contributors a neutral, explainable report 
 
 ## Current rule set
 
-| Rule | What it catches | Default severity |
-| --- | --- | --- |
-| `large-component` | React-style components with too many lines, hooks, or branch points | Medium |
-| `state-sprawl` | Components/hooks with many local stateful hooks | Medium |
-| `effect-complexity` | Long or overloaded React effect hooks | Medium |
-| `duplicate-logic` | Near-duplicate functions/components using normalized AST/text similarity | Medium |
-| `dead-abstraction` | Thin wrappers that add little behavior | Low |
-| `prop-drilling` | Components that forward many props to children | Medium |
-| `todo-comment` | TODO/FIXME/HACK/temporary implementation comments | Low |
-| `naming-drift` | Files with multiple competing names for the same domain concept | Info |
+Built-in rules are grouped into a **core** pack (any TS/JS project) and a **react** pack
+(components and hooks). Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
+
+| Rule | Pack | What it catches | Default severity |
+| --- | --- | --- | --- |
+| `duplicate-logic` | core | Near-duplicate functions/components using normalized AST/text similarity | Medium |
+| `dead-abstraction` | core | Thin wrappers that add little behavior | Low |
+| `todo-comment` | core | TODO/FIXME/HACK/temporary implementation comments | Low |
+| `naming-drift` | core | Files with multiple competing names for the same domain concept | Info |
+| `large-component` | react | React-style components with too many lines, hooks, or branch points | Medium |
+| `state-sprawl` | react | Components/hooks with many local stateful hooks | Medium |
+| `effect-complexity` | react | Long or overloaded React effect hooks | Medium |
+| `prop-drilling` | react | Components that forward many props to children | Medium |
 
 ## Install
 
@@ -286,10 +294,14 @@ steps:
 
 Want to help make DebtLens better? Start with the
 [first-PR guide](./docs/contributing-first-pr.md), the
+[rule pack taxonomy](./docs/rule-packs.md), the
 [good first issues list](./docs/good-first-issues.md), and the
 [contributor roadmap](https://github.com/ColumbusLabs/DebtLens/projects). Use
 [Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) for open-ended
 ideas, rule proposals, and usage questions.
+
+Contribution paths: **core TS/JS rules**, **React pack rules**, **framework packs**
+(Next.js, RN, Node), **scanner/CI** (baselines, monorepos), and **reporters**.
 
 ## Development
 
@@ -305,7 +317,10 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 ## Project status
 
-DebtLens is currently in the v0.2 release line. The architecture is intentionally simple so maintainers can add rules quickly. The next milestones are documented in [`ROADMAP.md`](./ROADMAP.md), and starter contribution ideas are tracked in [`docs/good-first-issues.md`](./docs/good-first-issues.md).
+DebtLens is currently in the v0.2 release line. The architecture is intentionally simple:
+a language-agnostic scan and reporting layer, with pluggable rule packs on top. React is
+the first serious pack; React Native, Next.js, and broader TS/JS rules expand from there.
+See [`ROADMAP.md`](./ROADMAP.md) and [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 ## License
 

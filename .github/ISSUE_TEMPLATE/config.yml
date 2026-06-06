@@ -3,6 +3,9 @@ contact_links:
   - name: Ask a question or discuss an idea
     url: https://github.com/ColumbusLabs/DebtLens/discussions
     about: Use Discussions for open-ended support, design ideas, and early rule proposals.
+  - name: Rule packs and contribution paths
+    url: https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rule-packs.md
+    about: Core rules vs framework packs, and where to contribute.
   - name: Good first issues
     url: https://github.com/ColumbusLabs/DebtLens/blob/main/docs/good-first-issues.md
     about: Start here if you want a scoped starter task.

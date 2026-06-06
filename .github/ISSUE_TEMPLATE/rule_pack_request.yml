@@ -1,0 +1,60 @@
+name: Rule pack request
+description: Propose a new optional framework or domain rule pack.
+title: "Rule pack: "
+labels: ["enhancement", "area: rule-pack"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        DebtLens is a maintainability scanner with optional rule packs on top of core TS/JS rules.
+        See [docs/rule-packs.md](https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rule-packs.md) for the current taxonomy.
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Proposed pack id
+      description: Short kebab-case id for the pack (e.g. next, node, monorepo).
+      options:
+        - react-native
+        - next
+        - expo
+        - node
+        - monorepo
+        - other
+    validations:
+      required: true
+  - type: input
+    id: pack_name
+    attributes:
+      label: Pack name (if other)
+      description: Required when pack id is "other".
+      placeholder: "vue"
+  - type: textarea
+    id: problem
+    attributes:
+      label: Maintainer problem
+      description: What debt patterns does this pack target that core or react rules miss?
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Candidate rules
+      description: List rule ids or ideas this pack would include. Note which are new vs extensions of existing rules.
+    validations:
+      required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Code examples
+      description: One or two real patterns that should fire once the pack exists.
+      render: tsx
+  - type: textarea
+    id: config
+    attributes:
+      label: Config and tuning
+      description: Thresholds, ignore lists, or per-framework defaults the pack needs.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What docs, tests, and config shape should exist when the first slice ships?

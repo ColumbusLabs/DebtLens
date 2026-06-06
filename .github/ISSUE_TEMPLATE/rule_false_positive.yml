@@ -3,6 +3,10 @@ description: Report a finding that should not fire for a rule.
 title: "False positive: "
 labels: ["bug", "type: false-positive"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Rule taxonomy: [docs/rule-packs.md](https://github.com/ColumbusLabs/DebtLens/blob/main/docs/rule-packs.md)
   - type: input
     id: rule
     attributes:

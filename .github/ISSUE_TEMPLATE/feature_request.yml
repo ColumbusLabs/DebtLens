@@ -16,12 +16,17 @@ body:
       label: Area
       multiple: true
       options:
+        - core rule
+        - react pack
+        - rule pack (framework)
         - detector
         - cli
         - config
         - docs
         - github-action
         - reporter
+        - baseline / changed modes
+        - monorepo
         - performance
     validations:
       required: true

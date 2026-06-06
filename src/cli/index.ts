@@ -14,7 +14,9 @@ import { allDetectors, detectorIds } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
 import { runInit } from "./init.js";
+import { runDoctor } from "./doctor.js";
 import { parseCommaList, parseThresholds } from "./parseList.js";
+import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
 const program = new Command();
 
@@ -137,6 +139,85 @@ program.command("scan")
       if (failOn && reported.issues.some((issue) => severityRank[issue.severity] >= severityRank[failOn])) {
         process.exitCode = 1;
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program.command("doctor")
+  .description("Inspect resolved config and file matching without running detectors.")
+  .argument("[target]", "directory or file to inspect", ".")
+  .option("-i, --include <patterns>", "comma-separated glob patterns to include")
+  .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
+  .option("--min-severity <severity>", "info, low, medium, or high", "low")
+  .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
+  .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
+  .option("--max-files <count>", "maximum files to scan", parseInteger)
+  .option("--baseline <path>", "baseline path to report (not loaded)")
+  .option("--changed [ref]", "include git changed-file diagnostics")
+  .option("--staged", "include git staged-file diagnostics")
+  .option("--respect-gitignore", "skip files ignored by git")
+  .option("--config <path>", "path to debtlens.config.json")
+  .option("--cwd <path>", "working directory", process.cwd())
+  .action(async (target: string, rawOptions: Record<string, unknown>) => {
+    try {
+      const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
+      if (rawOptions.staged === true && rawOptions.changed !== undefined) {
+        throw new Error("Use either --staged or --changed, not both.");
+      }
+
+      let changedFiles: string[] | undefined;
+      let changedIgnored = false;
+      let stagedIgnored = false;
+      let gitChangedCount: number | undefined;
+      let gitStagedCount: number | undefined;
+
+      if (rawOptions.changed) {
+        const base = rawOptions.changed === true ? undefined : String(rawOptions.changed);
+        const changed = getChangedFiles(cwd, base);
+        if (changed === null) {
+          changedIgnored = true;
+        } else {
+          changedFiles = changed.files;
+          gitChangedCount = changed.files.length;
+        }
+      } else if (rawOptions.staged === true) {
+        const staged = getStagedFiles(cwd);
+        if (staged === null) {
+          stagedIgnored = true;
+        } else {
+          changedFiles = staged.files;
+          gitStagedCount = staged.files.length;
+        }
+      }
+
+      const report = await runDoctor({
+        target,
+        cwd,
+        configPath: rawOptions.config ? String(rawOptions.config) : undefined,
+        baselinePath: rawOptions.baseline ? String(rawOptions.baseline) : undefined,
+        usedChanged: rawOptions.changed !== undefined,
+        usedStaged: rawOptions.staged === true,
+        changedIgnored,
+        stagedIgnored,
+        gitChangedCount,
+        gitStagedCount,
+        cliOptions: {
+          cwd,
+          include: parseCommaList(rawOptions.include as string | undefined),
+          exclude: parseCommaList(rawOptions.exclude as string | undefined),
+          rules: parseRuleList(rawOptions.rules as string | undefined),
+          pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+          minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
+          maxFiles: rawOptions.maxFiles as number | undefined,
+          respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
+          changedFiles,
+        },
+      });
+
+      process.stdout.write(report.text);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);
@@ -287,23 +368,4 @@ function renderPacksTable(packs: Array<{ id: string; description: string; rules:
   ];
 
   return `${lines.join("\n")}\n`;
-}
-
-function buildZeroFilesScannedWarning(target: string, include: string[], usedGitFileFilter: boolean): string {
-  const hints = [
-    "check your include/exclude globs",
-    "verify the target path or --cwd",
-  ];
-
-  if (usedGitFileFilter) {
-    hints.push("confirm the git file filter resolves to tracked files");
-  }
-
-  return [
-    "DebtLens warning: scanned 0 files.",
-    `Target: ${target}`,
-    `Include globs: ${include.join(", ")}`,
-    `Likely causes: ${hints.join("; ")}.`,
-    "",
-  ].join("\n");
 }

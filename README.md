@@ -92,6 +92,7 @@ npx debtlens scan
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
 debtlens init --pack core # starter config using the core rule pack preset
 debtlens packs            # list built-in rule pack presets
+debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
 debtlens scan [target]
 ```
@@ -152,6 +153,10 @@ debtlens scan --staged --fail-on high
 
 # Opt in to .gitignore filtering in addition to DebtLens exclude globs
 debtlens scan --respect-gitignore
+
+# Debug config and file matching without running detectors
+debtlens doctor --pack core
+debtlens doctor --include "src/**/*.{ts,tsx}" --changed
 
 # List rule ids for config, CI, or --rules
 debtlens rules

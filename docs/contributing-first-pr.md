@@ -42,7 +42,7 @@ Good starter areas by layer:
 - **React pack** — component size, hooks, prop drilling, effects
 - **Scanner / CI** — baselines, `--changed`, monorepo file resolution
 - **Reporters** — snapshot tests, SARIF help links, PR comment formatting
-- **CLI / config / docs** — help text, schema, Action inputs
+- **CLI / config / docs** — help text, schema, Action inputs, `debtlens doctor`
 
 ## Adding or changing a detector
 

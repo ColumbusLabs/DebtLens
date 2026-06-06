@@ -7,10 +7,16 @@ const configNames = [
   ".debtlensrc.json"
 ];
 
+export function findConfigPath(cwd: string, explicitPath?: string): string | undefined {
+  if (explicitPath) {
+    return resolve(cwd, explicitPath);
+  }
+
+  return configNames.map((name) => resolve(cwd, name)).find((candidate) => existsSync(candidate));
+}
+
 export function loadConfig(cwd: string, explicitPath?: string): DebtLensConfig {
-  const configPath = explicitPath
-    ? resolve(cwd, explicitPath)
-    : configNames.map((name) => resolve(cwd, name)).find((candidate) => existsSync(candidate));
+  const configPath = findConfigPath(cwd, explicitPath);
 
   if (!configPath || !existsSync(configPath)) {
     return {};

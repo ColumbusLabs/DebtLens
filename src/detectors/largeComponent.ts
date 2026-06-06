@@ -1,5 +1,5 @@
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
-import { collectFunctionLikes, countBranches, countHookCalls, getFunctionBody } from "../utils/ast.js";
+import { collectComponentLikes, countBranches, countHookCalls, getComponentBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
@@ -16,12 +16,12 @@ export const largeComponentDetector: Detector = {
     const maxHooks = context.getThreshold("large-component.maxHooks", 10);
 
     for (const file of context.files) {
-      for (const fn of collectFunctionLikes(file)) {
+      for (const fn of collectComponentLikes(file)) {
         if (fn.classification !== "component") continue;
-        const body = getFunctionBody(fn.node) ?? fn.node;
+        const body = getComponentBody(fn);
         const span = nodeLineSpan(body);
         const branchCount = countBranches(body);
-        const hookCount = countHookCalls(body);
+        const hookCount = fn.kind === "class" ? 0 : countHookCalls(body);
         const isOverLineBudget = span.lines >= maxLines;
         const isOverComplexityBudget = branchCount >= maxBranches || hookCount >= maxHooks;
 

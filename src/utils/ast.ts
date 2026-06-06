@@ -1,5 +1,15 @@
 import { Node, SyntaxKind } from "ts-morph";
-import type { ArrowFunction, CallExpression, FunctionDeclaration, FunctionExpression, Node as MorphNode, SourceFile, VariableDeclaration } from "ts-morph";
+import type {
+  ArrowFunction,
+  CallExpression,
+  ClassDeclaration,
+  Expression,
+  FunctionDeclaration,
+  FunctionExpression,
+  Node as MorphNode,
+  SourceFile,
+  VariableDeclaration,
+} from "ts-morph";
 import type { SourceFileInfo } from "../core/types.js";
 import { isHookName, isPascalCase } from "./identifiers.js";
 
@@ -11,7 +21,21 @@ export interface FunctionLikeInfo {
   declaration: FunctionDeclaration | VariableDeclaration;
   file: SourceFileInfo;
   classification: "component" | "hook" | "function";
+  kind: "function";
 }
+
+export interface ClassComponentInfo {
+  name: string;
+  node: ClassDeclaration;
+  declaration: ClassDeclaration;
+  file: SourceFileInfo;
+  classification: "component";
+  kind: "class";
+}
+
+export type ComponentLikeInfo = FunctionLikeInfo | ClassComponentInfo;
+
+const REACT_WRAPPER_NAMES = new Set(["memo", "forwardRef"]);
 
 export function collectFunctionLikes(file: SourceFileInfo): FunctionLikeInfo[] {
   const results: FunctionLikeInfo[] = [];
@@ -25,6 +49,7 @@ export function collectFunctionLikes(file: SourceFileInfo): FunctionLikeInfo[] {
       declaration,
       file,
       classification: classifyFunctionName(name),
+      kind: "function",
     });
   }
 
@@ -32,18 +57,73 @@ export function collectFunctionLikes(file: SourceFileInfo): FunctionLikeInfo[] {
     const name = declaration.getName();
     const initializer = declaration.getInitializer();
     if (!initializer) continue;
-    if (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer)) {
-      results.push({
-        name,
-        node: initializer,
-        declaration,
-        file,
-        classification: classifyFunctionName(name),
-      });
-    }
+
+    const unwrapped = unwrapReactWrapper(initializer);
+    const functionNode = unwrapped ?? (Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer)
+      ? initializer
+      : undefined);
+
+    if (!functionNode) continue;
+
+    results.push({
+      name,
+      node: functionNode,
+      declaration,
+      file,
+      classification: classifyFunctionName(name),
+      kind: "function",
+    });
   }
 
   return results;
+}
+
+export function collectClassComponents(file: SourceFileInfo): ClassComponentInfo[] {
+  const results: ClassComponentInfo[] = [];
+
+  for (const declaration of file.sourceFile.getClasses()) {
+    const name = declaration.getName();
+    if (!name || !isPascalCase(name) || !isReactClassComponent(declaration)) continue;
+
+    results.push({
+      name,
+      node: declaration,
+      declaration,
+      file,
+      classification: "component",
+      kind: "class",
+    });
+  }
+
+  return results;
+}
+
+export function collectComponentLikes(file: SourceFileInfo): ComponentLikeInfo[] {
+  return [...collectFunctionLikes(file), ...collectClassComponents(file)];
+}
+
+function unwrapReactWrapper(initializer: Expression): FunctionNode | undefined {
+  if (!Node.isCallExpression(initializer)) return undefined;
+
+  const calleeText = initializer.getExpression().getText();
+  const calleeName = calleeText.includes(".") ? calleeText.split(".").pop() : calleeText;
+  if (!calleeName || !REACT_WRAPPER_NAMES.has(calleeName)) return undefined;
+
+  for (const argument of initializer.getArguments()) {
+    if (Node.isArrowFunction(argument) || Node.isFunctionExpression(argument)) {
+      return argument;
+    }
+  }
+
+  return undefined;
+}
+
+function isReactClassComponent(declaration: ClassDeclaration): boolean {
+  const heritage = declaration.getExtends()?.getText() ?? "";
+  return /(?:^|\.)Component$/.test(heritage)
+    || /(?:^|\.)PureComponent$/.test(heritage)
+    || heritage === "React.Component"
+    || heritage === "React.PureComponent";
 }
 
 export function classifyFunctionName(name: string): FunctionLikeInfo["classification"] {
@@ -57,6 +137,14 @@ export function getFunctionBody(node: FunctionNode): MorphNode | undefined {
     return node.getBody();
   }
   return undefined;
+}
+
+export function getComponentBody(component: ComponentLikeInfo): MorphNode {
+  if (component.kind === "class") {
+    return component.node;
+  }
+
+  return getFunctionBody(component.node) ?? component.node;
 }
 
 export function countHookCalls(node: MorphNode): number {

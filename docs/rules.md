@@ -6,7 +6,8 @@ Rules are grouped into **core** and **react** packs. See [`rule-packs.md`](./rul
 
 ## `large-component`
 
-Flags React-style PascalCase functions that exceed line, hook, or branch thresholds.
+Flags React-style PascalCase functions, `memo`/`forwardRef` wrappers, and class components
+that extend `Component`/`PureComponent` when they exceed line, hook, or branch thresholds.
 
 Default thresholds:
 

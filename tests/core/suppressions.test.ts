@@ -59,4 +59,15 @@ describe("inline suppressions", () => {
     assert.equal(result.issues.length, 0);
     assert.equal(result.suppressedByInline, 1);
   });
+
+  it("does not suppress a different rule on the suppressed line", () => {
+    const files = [file("src/a.ts", "// debtlens-disable-next-line todo-comment -- tracked in JIRA-1\nconst movie = 1;\n")];
+    const result = applyInlineSuppressions([
+      issue({ ruleId: "todo-comment", location: { startLine: 2 } }),
+      issue({ ruleId: "naming-drift", ruleName: "Naming drift", location: { startLine: 2 } }),
+    ], files, validRuleIds);
+    assert.equal(result.issues.length, 1);
+    assert.equal(result.issues[0]?.ruleId, "naming-drift");
+    assert.equal(result.suppressedByInline, 1);
+  });
 });

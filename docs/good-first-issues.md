@@ -7,14 +7,22 @@ contribution layers.
 
 **Labels:** `good first issue` (general) · `good-first-rule` (detector/rule work)
 
-Statuses reflect the current repository surface. **Done** means the GitHub issue is closed.
+## Roadmap status (v0.3.0)
+
+The original contributor roadmap batch is **complete**. There are no open good-first
+implementation issues. New work should start in
+[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), the
+[rule request template](../.github/ISSUE_TEMPLATE/rule_request.md), or the plugin API RFC
+([`docs/plugin-api-rfc.md`](./plugin-api-rfc.md)).
+
+Statuses below are historical. **Done** means the GitHub issue is closed.
 
 ## Core rules (any TS/JS project)
 
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
-| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | Open |
-| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | Open |
+| 3 | Reduce `naming-drift` false positives on domain-rich apps | [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) | **Done** |
+| 4 | Configurable markers for `todo-comment` | [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) | **Done** |
 | 27 | Warn when `duplicate-logic` hits `maxSnippets` cap | [#27](https://github.com/ColumbusLabs/DebtLens/issues/27) | **Done** |
 
 ## React pack rules
@@ -22,7 +30,7 @@ Statuses reflect the current repository surface. **Done** means the GitHub issue
 | # | Task | Issue | Status |
 | --- | --- | --- | --- |
 | 1 | Make the `prop-drilling` host-component list configurable | [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) | **Done** |
-| 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | Open |
+| 2 | Teach `large-component` to recognize `memo`, `forwardRef`, and class components | [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) | **Done** |
 | 15 | Extend `effect-complexity` to `useLayoutEffect` / `useInsertionEffect` | [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) | **Done** |
 
 ### 1. Make the `prop-drilling` host-component list configurable — [#1](https://github.com/ColumbusLabs/DebtLens/issues/1) (closed)
@@ -30,29 +38,21 @@ Statuses reflect the current repository surface. **Done** means the GitHub issue
 Implemented via `propDrilling.ignoreComponents`, config/schema support, and detector
 tests covering custom ignored components.
 
-### 2. Teach `large-component` to recognize more component forms — [#2](https://github.com/ColumbusLabs/DebtLens/issues/2)
+### 2. Teach `large-component` to recognize more component forms — [#2](https://github.com/ColumbusLabs/DebtLens/issues/2) (closed)
 
-Today it only classifies PascalCase function/arrow components
-([`src/utils/ast.ts`](../src/utils/ast.ts) `collectFunctionLikes`). It misses
-`memo(function X(){})`, `forwardRef(...)`, and class components.
+`memo`, `forwardRef`, and class components are classified in
+[`src/utils/ast.ts`](../src/utils/ast.ts) with fixtures in
+`tests/detectors/largeComponent.test.ts`.
 
-- Verify: fixtures for each form in `tests/detectors/largeComponent.test.ts`.
+### 3. Reduce `naming-drift` false positives on domain-rich apps — [#3](https://github.com/ColumbusLabs/DebtLens/issues/3) (closed)
 
-### 3. Reduce `naming-drift` false positives on domain-rich apps — [#3](https://github.com/ColumbusLabs/DebtLens/issues/3)
+`namingDrift.disableBuiltInVocabulary` and calibrated media fixtures reduce noise on
+domain-rich apps. See [`src/detectors/namingDrift.ts`](../src/detectors/namingDrift.ts).
 
-The built-in media vocabulary treats distinct domain entities (e.g. `movie` vs `show`)
-as "competing names." Options: raise the default `minVariants`, add a config switch to
-disable the built-in pack, or require co-occurrence in the same identifier.
+### 4. Configurable markers for `todo-comment` — [#4](https://github.com/ColumbusLabs/DebtLens/issues/4) (closed)
 
-- Touch: [`src/detectors/namingDrift.ts`](../src/detectors/namingDrift.ts).
-- Verify: a media-style fixture that should NOT fire by default.
-
-### 4. Configurable markers for `todo-comment` — [#4](https://github.com/ColumbusLabs/DebtLens/issues/4)
-
-Allow projects to add/replace the marker patterns
-([`src/detectors/todoComment.ts`](../src/detectors/todoComment.ts)) via config.
-
-- Verify: a custom marker fires; a removed default does not.
+Custom markers, disabled defaults, and `replaceDefaults` are supported via config and
+documented in the schema. See [`src/detectors/todoComment.ts`](../src/detectors/todoComment.ts).
 
 ### 15. Extend `effect-complexity` to layout/insertion effects — [#15](https://github.com/ColumbusLabs/DebtLens/issues/15) (closed)
 
@@ -176,12 +176,20 @@ Expose `write-baseline`, `thresholds`, and `max-files` in `action.yml`.
 
 Scan `examples/react-native` and `examples/next` in `.github/workflows/ci.yml`.
 
-## Roadmap / larger work
+## Adoption and CI (v0.3)
 
-Framework packs, monorepo support, and plugin loading are multi-PR efforts. Read the
-issue body before starting and comment if you plan to own one.
-
-| # | Task | Layer | Issue |
+| # | Task | Issue | Status |
 | --- | --- | --- | --- |
-| 23 | Monorepo and package-aware scanning | scanner / CI | [#23](https://github.com/ColumbusLabs/DebtLens/issues/23) |
-| 26 | Plugin API for third-party rules | scanner / extensibility | [#26](https://github.com/ColumbusLabs/DebtLens/issues/26) |
+| 23 | Monorepo and package-aware scanning | [#23](https://github.com/ColumbusLabs/DebtLens/issues/23) | **Done** |
+| 33 | Inline suppressions with required reasons | [#33](https://github.com/ColumbusLabs/DebtLens/issues/33) | **Done** |
+| 37 | `debtlens doctor` for config debugging | [#37](https://github.com/ColumbusLabs/DebtLens/issues/37) | **Done** |
+| 38 | First-run adoption wizard | [#38](https://github.com/ColumbusLabs/DebtLens/issues/38) | **Done** |
+| 39 | Confidence-aware exit-code policy | [#39](https://github.com/ColumbusLabs/DebtLens/issues/39) | **Done** |
+
+## Forward-looking work
+
+Multi-PR or RFC efforts for future releases:
+
+| # | Task | Layer | Issue | Status |
+| --- | --- | --- | --- | --- |
+| 26 | Plugin API for third-party rules | scanner / extensibility | [#26](https://github.com/ColumbusLabs/DebtLens/issues/26) | RFC closed — see [`docs/plugin-api-rfc.md`](./plugin-api-rfc.md) |

@@ -43,6 +43,7 @@ export const todoCommentDetector: Detector = {
       for (let index = 0; index < lines.length; index += 1) {
         const line = lines[index] ?? "";
         if (!line.includes("//") && !line.includes("/*") && !line.includes("*")) continue;
+        if (/debtlens-disable-(?:next-line|file)/i.test(line)) continue;
         const match = patterns.find((pattern) => pattern.regex.test(line));
         if (!match) continue;
 

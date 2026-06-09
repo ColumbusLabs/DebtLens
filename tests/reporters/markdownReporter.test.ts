@@ -78,5 +78,6 @@ describe("markdown reporter", () => {
 function normalizeReport(markdown: string): string {
   return markdown
     .replace(/in \*\*\d+ms\*\*/g, "in **<elapsed>ms**")
+    .replace(/^Review prompt: .+\n\n/gm, "")
     .replace(/\n+$/g, "\n");
 }

@@ -5,6 +5,7 @@ import { Command } from "commander";
 import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
+import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
@@ -47,6 +48,7 @@ program.command("scan")
   .option("--respect-gitignore", "skip files ignored by git")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
+  .option("--package <name>", "scan a single workspace package by name")
   .option("--no-color", "disable ANSI color in terminal output")
   .option("-q, --quiet", "print only the summary line, suppress individual findings")
   .option("--profile", "print per-rule timing without changing findings")
@@ -83,7 +85,13 @@ program.command("scan")
         }
       }
 
-      const options = mergeConfig(target, fileConfig, {
+      let scanTarget = target;
+      if (rawOptions.package) {
+        const workspacePackage = resolveWorkspacePackage(cwd, String(rawOptions.package));
+        scanTarget = workspacePackage.directory;
+      }
+
+      const options = mergeConfig(scanTarget, fileConfig, {
         cwd,
         include: parseCommaList(rawOptions.include as string | undefined),
         exclude: parseCommaList(rawOptions.exclude as string | undefined),

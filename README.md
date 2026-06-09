@@ -139,6 +139,7 @@ Options:
 --respect-gitignore            skip files ignored by git
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
+--package <name>               scan a single npm workspace package (MVP: `packages/*` layouts)
 --no-color                     disable terminal color
 -q, --quiet                    terminal only: suppress per-finding detail
 --profile                      print per-rule timing to stderr without changing findings

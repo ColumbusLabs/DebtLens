@@ -1,5 +1,6 @@
 import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import { getReviewPrompt } from "./ruleGuidance.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -49,6 +50,11 @@ export function renderMarkdown(result: ScanResult): string {
       if (issue.suggestion) {
         lines.push("");
         lines.push(`Suggestion: ${issue.suggestion}`);
+      }
+      const reviewPrompt = getReviewPrompt(issue.ruleId);
+      if (reviewPrompt) {
+        lines.push("");
+        lines.push(`Review prompt: ${reviewPrompt}`);
       }
       lines.push("");
     }

@@ -51,5 +51,6 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       : undefined,
     changedFiles: cliOptions.changedFiles,
     fileContents: cliOptions.fileContents,
+    profile: cliOptions.profile,
   };
 }

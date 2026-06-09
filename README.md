@@ -74,6 +74,26 @@ Built-in rules are grouped into a **core** pack (any TS/JS project) and a **reac
 | `effect-complexity` | react | Long or overloaded React effect hooks | Medium |
 | `prop-drilling` | react | Components that forward many props to children | Medium |
 
+## Performance benchmarks
+
+Synthetic fixtures under `tests/benchmarks/fixtures/` exercise small (5 files), medium (30), and large (100) scan sizes.
+
+```bash
+npm run build
+npm run benchmark        # all fixtures + local budget check
+npm run benchmark:ci     # small fixture only (used in CI)
+```
+
+Local budgets (generous; CI enforces small `< 5000ms` only):
+
+| Fixture | Files | Budget |
+| --- | ---: | ---: |
+| small | 5 | 5s |
+| medium | 30 | 30s |
+| large | 100 | 120s |
+
+Per-rule timing is available via `--profile` in [PR #62](https://github.com/ColumbusLabs/DebtLens/pull/62) once merged.
+
 ## Install
 
 ```bash

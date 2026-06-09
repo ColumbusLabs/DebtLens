@@ -24,17 +24,22 @@ the core vs pack taxonomy, future languages, and contribution paths.
 - Add `--changed` mode for pull request scanning.
 - Add `--sarif` output for GitHub code scanning.
 
-## v0.3 — Maintainer workflow integrations
+## v0.3 — Maintainer workflow integrations (shipped)
 
-- GitHub Action.
+- GitHub Action with SARIF, step summary, PR comment upsert, and `fail-on-confidence`.
 - PR comment mode with Markdown annotations grouped by file.
-- Suggested refactor prompts for each issue.
-- Rule config schema and generated docs.
-- Monorepo/package-aware scanning.
+- Suggested refactor prompts and rule fix guidance in reports.
+- Rule config schema, rule packs, and `debtlens doctor`.
+- Monorepo/package-aware scanning (`--package` MVP).
+- First-run adoption workflow (`debtlens adopt`).
+- Inline suppressions with required reasons.
+- Filter stats in scan summaries (baseline, min-severity, inline suppressions).
+- `--diff-base` for branch-introduced findings.
+- Scan profiling (`--profile`) and calibrated quality fixtures.
 
 ## v0.4 — Ecosystem expansion
 
-- Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`).
+- Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`) — **partially shipped in v0.3**.
 - Vue/Svelte detectors where applicable.
 - **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO/naming rules; same `ScanResult` and SARIF contract as TS/JS.
 - Configurable domain vocabulary for naming drift.

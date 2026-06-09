@@ -3,6 +3,41 @@
 All notable changes to DebtLens are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-06-09
+
+### Added
+
+- **`debtlens adopt`** first-run adoption workflow with dry-run recommendations and optional
+  config/baseline writes.
+- **`debtlens doctor`** command to inspect resolved config and matched files without scanning.
+- **Rule packs** (`core`, `react`, `react-native`, `next`) as config presets via `--pack` and
+  `debtlens init --pack`.
+- **Configurable `todo-comment` markers** with custom patterns, disabled defaults, and
+  `replaceDefaults`.
+- **Inline suppressions** via `debtlens-disable-next-line` and `debtlens-disable-file`
+  comments with required reasons after `--`.
+- **`--fail-on-confidence`** CLI flag, config field, and GitHub Action input for
+  confidence-aware CI exit codes.
+- **`--diff-base`** mode to report findings introduced since a git ref.
+- **`--package`** monorepo scanning MVP for `packages/*` workspace layouts.
+- **`--profile`** per-rule timing output without changing findings.
+- **Filter stats** in scan summaries (`suppressedByBaseline`, `filteredByMinSeverity`,
+  `suppressedByInline`) across terminal, JSON, Markdown, and PR-comment reporters.
+- **GitHub Action** step summary output, PR comment upsert mode, and `fail-on-confidence` input.
+- **Calibrated quality fixtures** for representative app shapes.
+- **Performance benchmark suite** for scan fixtures.
+- **Rule fix guidance** and refactor prompts in Markdown reports.
+- **Plugin API RFC** in `docs/plugin-api-rfc.md`.
+
+### Changed
+
+- **`large-component`** now recognizes `memo`, `forwardRef`, and class components.
+- **`naming-drift`** is quieter on domain-rich apps via `disableBuiltInVocabulary` and
+  calibrated defaults.
+- **`todo-comment`** skips `debtlens-disable-*` directive lines so suppression comments do
+  not self-trigger findings.
+- Contributor docs refreshed for completed roadmap; good-first issue queue is now historical.
+
 ## [0.2.0] - 2026-06-06
 
 ### Added

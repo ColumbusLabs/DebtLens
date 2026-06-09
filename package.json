@@ -1,6 +1,6 @@
 {
   "name": "debtlens",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Maintainability scanner for TypeScript and JavaScript codebases; React rule pack is the first supported target.",
   "type": "module",
   "homepage": "https://github.com/ColumbusLabs/DebtLens#readme",

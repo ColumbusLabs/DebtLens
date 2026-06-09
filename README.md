@@ -209,6 +209,33 @@ When a scan reads zero files, DebtLens prints a stderr warning with likely cause
 
 When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns that duplicate comparisons were capped. JSON output includes the same advisory under `summary.warnings`.
 
+## Inline suppressions
+
+Suppress intentional findings in source with an explicit, auditable reason. Suppressions apply during the scan; baseline and `--diff-base` filtering run afterward on the remaining issues.
+
+**Next-line** — hides a finding on the line immediately below the comment:
+
+```ts
+// debtlens-disable-next-line todo-comment -- tracked in PROJ-123
+// TODO: remove after migration ships
+```
+
+**File-level** — hides all findings for that rule in the file:
+
+```ts
+// debtlens-disable-file naming-drift -- domain vocabulary is intentional here
+```
+
+Rules:
+
+- A non-empty reason is required after `--`. Suppressions without a reason are ignored and emit a warning.
+- Unknown rule ids emit a warning and do not suppress.
+- Only the matching rule (and line, for next-line) is suppressed; other rules on the same line still report.
+
+Terminal output includes inline suppression counts in the filter stats line (for example, `1 inline suppressed`). JSON reports expose the same count under `summary.filterStats.suppressedByInline`.
+
+Prefer baselines for legacy debt, config tuning for false positives, and inline suppressions for rare, documented exceptions. See [`docs/rules.md`](./docs/rules.md#suppressing-findings) for guidance.
+
 ## Configuration
 
 Create `debtlens.config.json`:
@@ -386,14 +413,16 @@ steps:
 
 Want to help make DebtLens better? Start with the
 [first-PR guide](./docs/contributing-first-pr.md), the
-[rule pack taxonomy](./docs/rule-packs.md), the
-[good first issues list](./docs/good-first-issues.md), and the
-[contributor roadmap](https://github.com/ColumbusLabs/DebtLens/projects). Use
-[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) for open-ended
-ideas, rule proposals, and usage questions.
+[rule pack taxonomy](./docs/rule-packs.md), and
+[CONTRIBUTING.md](./CONTRIBUTING.md). The v0.3 contributor roadmap batch is complete;
+see [`docs/good-first-issues.md`](./docs/good-first-issues.md) for a historical index of
+shipped tasks. Propose new work in
+[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), via the rule request
+template, or the [plugin API RFC](./docs/plugin-api-rfc.md).
 
 Contribution paths: **core TS/JS rules**, **React pack rules**, **framework packs**
-(Next.js, RN, Node), **scanner/CI** (baselines, monorepos), and **reporters**.
+(Next.js, RN, Node), **scanner/CI** (baselines, monorepos, inline suppressions), and
+**reporters**.
 
 ## Development
 
@@ -409,10 +438,15 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 ## Project status
 
-DebtLens is currently in the v0.2 release line. The architecture is intentionally simple:
-a language-agnostic scan and reporting layer, with pluggable rule packs on top. React is
-the first serious pack; React Native, Next.js, and broader TS/JS rules expand from there.
-See [`ROADMAP.md`](./ROADMAP.md) and [`docs/rule-packs.md`](./docs/rule-packs.md).
+DebtLens is in the **v0.3** release line. Recent capabilities include `debtlens adopt`
+and `debtlens doctor`, rule packs, inline suppressions with required reasons,
+confidence-aware `--fail-on`, monorepo `--package` scanning, GitHub Action step summaries
+and PR comment upsert, and `--diff-base` branch comparisons.
+
+The architecture stays intentionally simple: a language-agnostic scan and reporting
+layer with pluggable rule packs on top. React is the first serious pack; React Native,
+Next.js, and broader TS/JS rules expand from there. See [`ROADMAP.md`](./ROADMAP.md) and
+[`docs/rule-packs.md`](./docs/rule-packs.md).
 
 ## License
 

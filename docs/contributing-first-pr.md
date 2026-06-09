@@ -30,13 +30,19 @@ Use a focused test while iterating, then run the full commands before opening a 
 - `tests/` mirrors the production areas with focused `node:test` coverage.
 - `examples/` contains small projects used for smoke tests and report fixtures.
 
-## Pick an issue
+## Pick a contribution
 
-Start with [`docs/good-first-issues.md`](./good-first-issues.md), then comment on the
-GitHub issue before taking medium or large work. Small docs and test-only fixes usually
-do not need a long design thread.
+The original good-first issue queue is complete as of v0.3.0. Use
+[`docs/good-first-issues.md`](./good-first-issues.md) as a historical index of shipped
+work, then propose new changes through
+[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), the
+[rule request template](../.github/ISSUE_TEMPLATE/rule_request.md), or the plugin API RFC
+([`docs/plugin-api-rfc.md`](./plugin-api-rfc.md)).
 
-Good starter areas by layer:
+Comment before starting medium or large work so maintainers can help shape the approach.
+Small docs and test-only fixes usually do not need a long design thread.
+
+Good contribution areas by layer:
 
 - **Core rules** — duplication, abstractions, naming, TODO markers
 - **React pack** — component size, hooks, prop drilling, effects

@@ -187,6 +187,84 @@ describe("debtlens scan fail-on confidence", () => {
   });
 });
 
+describe("debtlens scan inline suppressions", () => {
+  function withTempProject(run: (dir: string) => void) {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-suppress-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("suppresses a matching next-line finding when a reason is provided", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Control.ts"), "// TODO remove after launch\n");
+      writeFileSync(
+        join(dir, "src", "Widget.ts"),
+        "// debtlens-disable-next-line todo-comment -- tracked in PROJ-1\n// TODO remove after launch\n",
+      );
+
+      const control = JSON.parse(
+        runScan(["src/Control.ts", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]).stdout,
+      );
+      const suppressed = JSON.parse(
+        runScan(["src/Widget.ts", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]).stdout,
+      );
+
+      assert.equal(control.summary.totalIssues, 1);
+      assert.equal(suppressed.summary.totalIssues, 0);
+      assert.equal(suppressed.summary.filterStats?.suppressedByInline, 1);
+    });
+  });
+
+  it("does not suppress when the reason is missing", () => {
+    withTempProject((dir) => {
+      writeFileSync(
+        join(dir, "src", "Widget.ts"),
+        "// debtlens-disable-next-line todo-comment\n// TODO remove after launch\n",
+      );
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.match(result.stderr, /reason is missing/);
+    });
+  });
+
+  it("does not suppress when the rule id does not match", () => {
+    withTempProject((dir) => {
+      writeFileSync(
+        join(dir, "src", "Widget.ts"),
+        "// debtlens-disable-next-line naming-drift -- wrong rule\n// TODO remove after launch\n",
+      );
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(parsed.summary.totalIssues, 1);
+    });
+  });
+
+  it("suppresses all matching file-level findings for the configured rule", () => {
+    withTempProject((dir) => {
+      writeFileSync(
+        join(dir, "src", "Widget.ts"),
+        "// debtlens-disable-file todo-comment -- legacy rollout debt\n// TODO one\n// TODO two\n",
+      );
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.equal(parsed.summary.filterStats?.suppressedByInline, 2);
+    });
+  });
+});
+
 describe("debtlens scan diff-base", () => {
   it("rejects --diff-base and --baseline together", () => {
     const result = runScan(["examples/react", "--diff-base", "HEAD~1", "--baseline", "baseline.json"]);

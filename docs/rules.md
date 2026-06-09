@@ -17,6 +17,25 @@ Every finding includes a **confidence** score from 0 to 1. Confidence reflects h
 
 Use confidence for triage and CI policy (for example, `--fail-on high --fail-on-confidence 0.8`) when you want to gate on high-severity findings that are also well-supported.
 
+## Suppressing findings
+
+DebtLens supports three layers for managing noise. Pick the narrowest tool that fits:
+
+| Approach | Best for |
+| --- | --- |
+| **Config / thresholds** | Project-wide false positives (ignore components, custom TODO markers, naming vocabulary) |
+| **Baseline** | Legacy debt you accept today but want to block newly introduced issues in CI |
+| **Inline suppression** | Rare, file-local exceptions with an auditable reason |
+
+Inline suppressions use comment directives:
+
+```ts
+// debtlens-disable-next-line <rule-id> -- <reason>
+// debtlens-disable-file <rule-id> -- <reason>
+```
+
+The reason after `--` is required. Unknown rule ids and missing reasons produce warnings and do not suppress. Suppressions run inside `scan()` before baseline or `--diff-base` filtering, so baselines still track only the issues that remain after inline suppressions.
+
 ## `large-component`
 
 Flags React-style PascalCase functions, `memo`/`forwardRef` wrappers, and class components

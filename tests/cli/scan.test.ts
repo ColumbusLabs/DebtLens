@@ -187,6 +187,14 @@ describe("debtlens scan fail-on confidence", () => {
   });
 });
 
+describe("debtlens scan diff-base", () => {
+  it("rejects --diff-base and --baseline together", () => {
+    const result = runScan(["examples/react", "--diff-base", "HEAD~1", "--baseline", "baseline.json"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Use either --diff-base or --baseline, not both/);
+  });
+});
+
 describe("debtlens scan git modes", () => {
   it("rejects --changed and --staged together", () => {
     const result = runScan(["examples/react", "--changed", "--staged"]);

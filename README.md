@@ -287,7 +287,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `fail-on-confidence`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `fail-on-confidence`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
 
 To post a grouped PR comment instead of uploading SARIF, write the `pr-comment` output and post it with `actions/github-script`:
 

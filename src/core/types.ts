@@ -52,6 +52,11 @@ export interface DebtLensConfig {
   propDrilling?: {
     ignoreComponents?: string[];
   };
+  /** Naming-drift rule configuration. */
+  namingDrift?: {
+    /** When true, skip built-in concept groups; only user `vocabulary` applies. */
+    disableBuiltInVocabulary?: boolean;
+  };
   /** Todo-comment rule configuration. */
   todoComment?: {
     /** Extra marker patterns (regex strings). */
@@ -76,6 +81,8 @@ export interface ScanOptions {
   /** When true, skip files ignored by git in addition to configured excludes. */
   respectGitignore?: boolean;
   vocabulary?: Record<string, string[]>;
+  /** When true, naming-drift uses only user `vocabulary`, not built-in concept groups. */
+  namingDriftDisableBuiltInVocabulary?: boolean;
   /** When set, only scan files whose absolute path is in this list (--changed mode). */
   changedFiles?: string[];
   /** Absolute file path -> source text override, used when scanning staged git blobs. */

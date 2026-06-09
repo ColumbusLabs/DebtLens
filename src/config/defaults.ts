@@ -1,6 +1,6 @@
 import type { DebtLensConfig } from "../core/types.js";
 
-export const defaultConfig: Required<Omit<DebtLensConfig, "pack">> = {
+export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOnConfidence">> = {
   include: ["**/*.{ts,tsx,js,jsx}"],
   exclude: [
     "node_modules/**",
@@ -33,7 +33,7 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack">> = {
     "duplicate-logic.maxSnippets": 450,
     "dead-abstraction.maxWrapperLines": 8,
     "prop-drilling.maxForwardedProps": 4,
-    "naming-drift.minVariants": 4,
+    "naming-drift.minVariants": 5,
     "duplicate-logic.minStructuralSimilarity": 0.6
   },
   maxFiles: 2000,
@@ -46,5 +46,8 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack">> = {
     markers: [],
     replaceDefaults: false,
     disableDefaults: [],
+  },
+  namingDrift: {
+    disableBuiltInVocabulary: false,
   },
 };

@@ -1,5 +1,6 @@
 import type { ScanResult, Severity } from "../core/types.js";
 import { createColorizer } from "../utils/color.js";
+import { formatFilterStats } from "./filterStats.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -10,6 +11,10 @@ export function renderTerminal(result: ScanResult, options: { color: boolean; qu
   lines.push(color.bold("DebtLens Report"));
   lines.push(`Scanned ${result.summary.filesScanned} files with ${result.summary.rulesRun} rules in ${result.summary.elapsedMs}ms.`);
   lines.push(`Issues: ${result.summary.totalIssues} | high ${result.summary.bySeverity.high} | medium ${result.summary.bySeverity.medium} | low ${result.summary.bySeverity.low} | info ${result.summary.bySeverity.info}`);
+  const filterStats = formatFilterStats(result.summary.filterStats);
+  if (filterStats) {
+    lines.push(`Filtered: ${filterStats}`);
+  }
 
   if (options.quiet) {
     return `${lines.join("\n")}\n`;

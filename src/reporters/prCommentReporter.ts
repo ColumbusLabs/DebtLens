@@ -1,4 +1,5 @@
 import type { DebtIssue, ScanResult } from "../core/types.js";
+import { formatFilterStats } from "./filterStats.js";
 
 export interface PrCommentOptions {
   sourceUrlBase?: string;
@@ -11,6 +12,11 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
   lines.push("| Files scanned | Rules run | Total issues | High | Medium | Low | Info |");
   lines.push("| ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   lines.push(`| ${result.summary.filesScanned} | ${result.summary.rulesRun} | ${result.summary.totalIssues} | ${result.summary.bySeverity.high} | ${result.summary.bySeverity.medium} | ${result.summary.bySeverity.low} | ${result.summary.bySeverity.info} |`);
+  const filterStats = formatFilterStats(result.summary.filterStats);
+  if (filterStats) {
+    lines.push("");
+    lines.push(`Filtered: ${filterStats}`);
+  }
 
   if (result.issues.length === 0) {
     lines.push("");

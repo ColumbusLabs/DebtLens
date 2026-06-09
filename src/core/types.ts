@@ -52,6 +52,11 @@ export interface DebtLensConfig {
   propDrilling?: {
     ignoreComponents?: string[];
   };
+  /** Naming-drift rule configuration. */
+  namingDrift?: {
+    /** When true, skip built-in concept groups; only user `vocabulary` applies. */
+    disableBuiltInVocabulary?: boolean;
+  };
   /** Todo-comment rule configuration. */
   todoComment?: {
     /** Extra marker patterns (regex strings). */
@@ -61,6 +66,8 @@ export interface DebtLensConfig {
     /** Built-in labels to disable (e.g. "todo marker"). */
     disableDefaults?: string[];
   };
+  /** Exit with code 1 only when a reported issue meets `--fail-on` and this confidence floor. */
+  failOnConfidence?: number;
 }
 
 export interface ScanOptions {
@@ -76,6 +83,8 @@ export interface ScanOptions {
   /** When true, skip files ignored by git in addition to configured excludes. */
   respectGitignore?: boolean;
   vocabulary?: Record<string, string[]>;
+  /** When true, naming-drift uses only user `vocabulary`, not built-in concept groups. */
+  namingDriftDisableBuiltInVocabulary?: boolean;
   /** When set, only scan files whose absolute path is in this list (--changed mode). */
   changedFiles?: string[];
   /** Absolute file path -> source text override, used when scanning staged git blobs. */
@@ -101,6 +110,7 @@ export interface CliOptions {
   format?: OutputFormat;
   output?: string;
   failOn?: Severity;
+  failOnConfidence?: number;
   configPath?: string;
   noColor?: boolean;
   changedFiles?: string[];
@@ -124,6 +134,12 @@ export interface Detector {
   detect: (context: DetectorContext) => Promise<DebtIssue[]> | DebtIssue[];
 }
 
+export interface ScanFilterStats {
+  filteredByMinSeverity?: number;
+  suppressedByBaseline?: number;
+  suppressedByInline?: number;
+}
+
 export interface ScanSummary {
   totalIssues: number;
   bySeverity: Record<Severity, number>;
@@ -132,6 +148,7 @@ export interface ScanSummary {
   rulesRun: number;
   elapsedMs: number;
   warnings?: string[];
+  filterStats?: ScanFilterStats;
 }
 
 export interface ScanResult {

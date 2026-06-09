@@ -102,7 +102,7 @@ describe("debtlens scan output formats", () => {
     const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"]);
 
     assert.equal(result.status, 0);
-    assert.match(result.stdout, /^## DebtLens findings/);
+    assert.match(result.stdout, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(result.stdout, /### Grouped annotations/);
     assert.match(result.stdout, /#### `src\/Dashboard\.tsx`/);
     assert.match(result.stdout, /\*\*Low\*\* Debt marker comment \(`todo-comment`\)/);

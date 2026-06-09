@@ -55,7 +55,7 @@ A detector must return issues with:
 
 - clear message
 - severity
-- confidence
+- confidence (0–1; see [`docs/rules.md`](./docs/rules.md#confidence-scoring) for how scores are interpreted and assigned per rule)
 - file and line
 - evidence
 - suggestion

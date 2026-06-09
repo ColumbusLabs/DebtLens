@@ -63,7 +63,7 @@ describe("pr-comment reporter", () => {
   it("renders grouped Markdown annotations by file", () => {
     const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]));
 
-    assert.match(markdown, /^## DebtLens findings/);
+    assert.match(markdown, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(markdown, /\| Files scanned \| Rules run \| Total issues \| High \| Medium \| Low \| Info \|/);
     assert.match(markdown, /\| 3 \| 8 \| 3 \| 1 \| 1 \| 0 \| 1 \|/);
     assert.match(markdown, /#### `src\/Parent\.tsx`/);

@@ -9,6 +9,8 @@ export interface RunDetectorOptions {
   minSeverity?: ScanOptions["minSeverity"];
   /** Naming-drift vocabulary override. */
   vocabulary?: Record<string, string[]>;
+  /** Naming-drift: skip built-in concept groups. */
+  namingDriftDisableBuiltInVocabulary?: boolean;
   /** Prop-drilling custom ignore components. */
   propDrillingIgnoreComponents?: string[];
   /** Todo-comment: replace built-in marker patterns. */
@@ -63,6 +65,7 @@ export async function runDetector(
     rules: undefined,
     maxFiles: undefined,
     vocabulary: options.vocabulary,
+    namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
     propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
     todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
     todoCommentDisableDefaults: options.todoCommentDisableDefaults,

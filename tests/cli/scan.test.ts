@@ -132,6 +132,61 @@ describe("debtlens scan output formats", () => {
   });
 });
 
+describe("debtlens scan fail-on confidence", () => {
+  it("does not fail when high-severity issues are below the confidence threshold", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "prop-drilling",
+      "--fail-on",
+      "high",
+      "--fail-on-confidence",
+      "0.8",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(result.status, 0);
+  });
+
+  it("fails when high-severity issues meet the confidence threshold", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "prop-drilling",
+      "--fail-on",
+      "high",
+      "--fail-on-confidence",
+      "0.7",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(result.status, 1);
+  });
+
+  it("preserves severity-only fail-on when confidence threshold is omitted", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "prop-drilling",
+      "--fail-on",
+      "high",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(result.status, 1);
+  });
+
+  it("rejects invalid confidence thresholds", () => {
+    const result = runScan(["examples/react", "--fail-on", "high", "--fail-on-confidence", "1.5"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Expected a confidence between 0 and 1/);
+  });
+});
+
 describe("debtlens scan git modes", () => {
   it("rejects --changed and --staged together", () => {
     const result = runScan(["examples/react", "--changed", "--staged"]);

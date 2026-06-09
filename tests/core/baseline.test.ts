@@ -89,4 +89,11 @@ describe("applyBaseline", () => {
     assert.equal(out.summary.filesScanned, 2);
     assert.equal(out.summary.rulesRun, 8);
   });
+
+  it("records suppressed baseline counts in filter stats", () => {
+    const baselined = issue();
+    const fresh = issue({ ruleId: "state-sprawl", file: "src/z.ts" });
+    const out = applyBaseline(resultOf([baselined, fresh]), createBaseline([baselined]));
+    assert.equal(out.summary.filterStats?.suppressedByBaseline, 1);
+  });
 });

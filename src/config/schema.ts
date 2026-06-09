@@ -114,6 +114,23 @@ export function buildConfigSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      namingDrift: {
+        type: "object",
+        description: "Naming-drift rule configuration.",
+        properties: {
+          disableBuiltInVocabulary: {
+            type: "boolean",
+            description: "When true, skip built-in concept groups; only user vocabulary applies.",
+          },
+        },
+        additionalProperties: false,
+      },
+      failOnConfidence: {
+        type: "number",
+        minimum: 0,
+        maximum: 1,
+        description: "With fail-on severity policy, require at least this confidence to exit with code 1.",
+      },
     },
   };
 }

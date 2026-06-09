@@ -111,6 +111,7 @@ Options:
 --format <format>              terminal, json, markdown, pr-comment, or sarif
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
+--fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
 --baseline <path>              report only issues absent from this baseline file
 --write-baseline [path]        write current issues to a baseline file and exit
 --changed [ref]                scan only files changed vs HEAD (or vs <ref> if given)
@@ -138,7 +139,7 @@ debtlens scan --format markdown --output debtlens-report.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
-debtlens scan --min-severity medium --fail-on high
+debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
 
 # Tune component-size threshold
 debtlens scan --threshold "large-component.maxLines=320,state-sprawl.maxStatefulHooks=8"
@@ -298,7 +299,20 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `step-summary`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+
+Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    format: sarif
+    output: debtlens.sarif
+    step-summary: true
+    quiet: true
+    fail-on: high
+```
 
 To post a grouped PR comment instead of uploading SARIF, write the `pr-comment` output and post it with `actions/github-script`:
 

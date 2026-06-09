@@ -9,7 +9,7 @@ import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline,
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { OutputFormat } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, OutputFormat, Severity } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
@@ -39,6 +39,7 @@ program.command("scan")
   .option("--format <format>", "terminal, json, markdown, pr-comment, or sarif", "terminal")
   .option("-o, --output <path>", "write the report to a file instead of stdout")
   .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
+  .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
   .option("--baseline <path>", "report only issues absent from this baseline file")
   .option("--write-baseline [path]", "write current issues to a baseline file and exit")
   .option("--changed [ref]", "scan only files changed vs HEAD (or vs <ref> if given)")
@@ -55,6 +56,7 @@ program.command("scan")
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
       const failOn = rawOptions.failOn ? parseSeverity(String(rawOptions.failOn), "high") : undefined;
+      const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
 
       let changedFiles: string[] | undefined;
       let fileContents: Record<string, string> | undefined;
@@ -137,7 +139,7 @@ program.command("scan")
         process.stdout.write(report);
       }
 
-      if (failOn && reported.issues.some((issue) => severityRank[issue.severity] >= severityRank[failOn])) {
+      if (failOn && reported.issues.some((issue) => shouldFailOnIssue(issue, failOn, failOnConfidence))) {
         process.exitCode = 1;
       }
     } catch (error) {
@@ -370,6 +372,30 @@ function parseInteger(value: string): number {
     throw new Error(`Expected a positive integer, received "${value}".`);
   }
   return parsed;
+}
+
+function parseConfidence(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1) {
+    throw new Error(`Expected a confidence between 0 and 1, received "${value}".`);
+  }
+  return parsed;
+}
+
+function resolveFailOnConfidence(
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): number | undefined {
+  if (rawOptions.failOnConfidence !== undefined) {
+    return parseConfidence(String(rawOptions.failOnConfidence));
+  }
+  return fileConfig.failOnConfidence;
+}
+
+function shouldFailOnIssue(issue: DebtIssue, failOn: Severity, failOnConfidence: number | undefined): boolean {
+  if (severityRank[issue.severity] < severityRank[failOn]) return false;
+  if (failOnConfidence === undefined) return true;
+  return issue.confidence >= failOnConfidence;
 }
 
 function parseFormat(value: string): OutputFormat {

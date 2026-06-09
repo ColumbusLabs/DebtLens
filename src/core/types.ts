@@ -95,6 +95,8 @@ export interface ScanOptions {
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
+  /** When true, collect per-rule timing in `summary.profile`. */
+  profile?: boolean;
 }
 
 export interface CliOptions {
@@ -115,6 +117,7 @@ export interface CliOptions {
   noColor?: boolean;
   changedFiles?: string[];
   fileContents?: Record<string, string>;
+  profile?: boolean;
 }
 
 export interface DetectorContext {
@@ -140,6 +143,10 @@ export interface ScanFilterStats {
   suppressedByInline?: number;
 }
 
+export interface ScanProfile {
+  ruleTimingsMs: Record<string, number>;
+}
+
 export interface ScanSummary {
   totalIssues: number;
   bySeverity: Record<Severity, number>;
@@ -149,6 +156,7 @@ export interface ScanSummary {
   elapsedMs: number;
   warnings?: string[];
   filterStats?: ScanFilterStats;
+  profile?: ScanProfile;
 }
 
 export interface ScanResult {

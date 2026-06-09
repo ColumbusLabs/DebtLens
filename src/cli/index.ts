@@ -7,9 +7,9 @@ import { mergeConfig } from "../config/mergeConfig.js";
 import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
-import { getChangedFiles, getStagedFiles } from "../utils/git.js";
+import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { DebtIssue, DebtLensConfig, OutputFormat, Severity } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
@@ -40,6 +40,7 @@ program.command("scan")
   .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
   .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
   .option("--baseline <path>", "report only issues absent from this baseline file")
+  .option("--diff-base <ref>", "report only findings introduced since this git ref")
   .option("--write-baseline [path]", "write current issues to a baseline file and exit")
   .option("--changed [ref]", "scan only files changed vs HEAD (or vs <ref> if given)")
   .option("--staged", "scan only files staged in git")
@@ -48,6 +49,7 @@ program.command("scan")
   .option("--cwd <path>", "working directory", process.cwd())
   .option("--no-color", "disable ANSI color in terminal output")
   .option("-q, --quiet", "print only the summary line, suppress individual findings")
+  .option("--profile", "print per-rule timing without changing findings")
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
@@ -93,10 +95,14 @@ program.command("scan")
         respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
         changedFiles,
         fileContents,
+        profile: rawOptions.profile === true,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
         throw new Error("Use either --write-baseline or --baseline, not both.");
+      }
+      if (rawOptions.diffBase && rawOptions.baseline) {
+        throw new Error("Use either --diff-base or --baseline, not both.");
       }
 
       const result = await scan(options);
@@ -111,6 +117,10 @@ program.command("scan")
         }
       }
 
+      if (rawOptions.profile === true && result.summary.profile) {
+        process.stderr.write(formatProfileReport(result.summary.profile.ruleTimingsMs));
+      }
+
       if (rawOptions.writeBaseline) {
         const baselinePath = rawOptions.writeBaseline === true
           ? DEFAULT_BASELINE_FILENAME
@@ -120,9 +130,12 @@ program.command("scan")
         return;
       }
 
-      const reported = rawOptions.baseline
-        ? applyBaseline(result, loadBaseline(cwd, String(rawOptions.baseline)))
-        : result;
+      const reported = await resolveReportedIssues(result, {
+        cwd,
+        baselinePath: rawOptions.baseline ? String(rawOptions.baseline) : undefined,
+        diffBase: rawOptions.diffBase ? String(rawOptions.diffBase) : undefined,
+        scanOptions: options,
+      });
 
       const report = renderReport(reported, format, {
         color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY,
@@ -393,5 +406,44 @@ function renderPacksTable(packs: Array<{ id: string; description: string; rules:
     ...packs.map((pack) => `${pack.id.padEnd(idWidth)}  ${String(pack.rules.length).padEnd(5)}  ${pack.description}`),
   ];
 
+  return `${lines.join("\n")}\n`;
+}
+
+async function resolveReportedIssues(
+  result: ScanResult,
+  context: {
+    cwd: string;
+    baselinePath?: string;
+    diffBase?: string;
+    scanOptions: ScanOptions;
+  },
+): Promise<ScanResult> {
+  if (context.baselinePath) {
+    return applyBaseline(result, loadBaseline(context.cwd, context.baselinePath));
+  }
+
+  if (!context.diffBase) return result;
+
+  const snapshot = getRefSnapshot(context.cwd, context.diffBase);
+  if (!snapshot) {
+    process.stderr.write("DebtLens: --diff-base ignored (not a git repository).\n");
+    return result;
+  }
+
+  const baseResult = await scan({
+    ...context.scanOptions,
+    cwd: context.cwd,
+    target: snapshot.root,
+    changedFiles: snapshot.files,
+    fileContents: snapshot.contents,
+  });
+  return applyBaseline(result, createBaseline(baseResult.issues));
+}
+
+function formatProfileReport(ruleTimingsMs: Record<string, number>): string {
+  const lines = ["DebtLens profile (per-rule ms):"];
+  for (const [ruleId, elapsedMs] of Object.entries(ruleTimingsMs).sort((left, right) => right[1] - left[1])) {
+    lines.push(`  ${ruleId}: ${elapsedMs}ms`);
+  }
   return `${lines.join("\n")}\n`;
 }

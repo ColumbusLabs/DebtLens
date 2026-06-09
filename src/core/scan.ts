@@ -41,8 +41,10 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   let issues: DebtIssue[] = [];
   const warnings: string[] = [];
   let filteredByMinSeverity = 0;
+  const ruleTimingsMs: Record<string, number> = {};
 
   for (const detector of detectors) {
+    const detectorStartedAt = options.profile ? Date.now() : 0;
     const detectorIssues = await detector.detect({
       project,
       files,
@@ -58,6 +60,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       } else {
         filteredByMinSeverity += 1;
       }
+    }
+    if (options.profile) {
+      ruleTimingsMs[detector.id] = Date.now() - detectorStartedAt;
     }
   }
 
@@ -98,6 +103,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     elapsedMs: Date.now() - startedAt,
     ...(warnings.length ? { warnings } : {}),
     ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
+    ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
   };
 
   return {

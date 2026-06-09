@@ -117,6 +117,39 @@ export function getStagedFiles(cwd: string): ChangedFiles | null {
   return { root, files, contents };
 }
 
+const scannableRefPattern = /\.(tsx?|jsx?)$/i;
+
+/**
+ * Snapshot scannable source files at a git ref for diff-base scanning.
+ * Returns `null` outside a git work tree.
+ */
+export function getRefSnapshot(cwd: string, ref: string): ChangedFiles | null {
+  if (!isGitRepo(cwd)) return null;
+
+  let root: string;
+  try {
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
+    git(cwd, ["rev-parse", "--verify", ref]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not resolve diff base ref "${ref}": ${message}`);
+  }
+
+  const output = git(cwd, ["ls-tree", "-r", "--name-only", ref]);
+  const relativePaths = output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((path) => path && scannableRefPattern.test(path));
+
+  const files = relativePaths.map((path) => resolve(root, path));
+  const contents = Object.fromEntries(relativePaths.map((path) => {
+    const absolutePath = resolve(root, path);
+    return [canonicalize(absolutePath), gitRaw(cwd, ["show", `${ref}:${path}`])];
+  }));
+
+  return { root, files, contents };
+}
+
 /**
  * Return the canonical absolute paths that git ignores. Returns `null` outside a
  * work tree so callers can keep scanning normally when git context is unavailable.

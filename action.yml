@@ -54,6 +54,9 @@ inputs:
   step-summary:
     description: Append a compact Markdown summary to the GitHub Actions step summary.
     default: "false"
+  comment:
+    description: Post or update a pull request comment with the scan report.
+    default: "false"
 
 runs:
   using: composite
@@ -86,11 +89,19 @@ runs:
         DL_MAX_FILES: ${{ inputs.max-files }}
         DL_QUIET: ${{ inputs.quiet }}
         DL_STEP_SUMMARY: ${{ inputs.step-summary }}
+        DL_COMMENT: ${{ inputs.comment }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
-        args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$DL_FORMAT")
+        report_format="$DL_FORMAT"
+        report_output="$DL_OUTPUT"
+        if [ "$DL_COMMENT" = "true" ]; then
+          report_format="pr-comment"
+          report_output="${DL_OUTPUT:-$RUNNER_TEMP/debtlens-pr-comment.md}"
+        fi
+        args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$report_format")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
         [ -n "$DL_FAIL_ON" ] && args+=(--fail-on "$DL_FAIL_ON")
-        [ -n "$DL_OUTPUT" ] && args+=(--output "$DL_OUTPUT")
+        [ -n "$report_output" ] && args+=(--output "$report_output")
         [ -n "$DL_BASELINE" ] && args+=(--baseline "$DL_BASELINE")
         [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")
         if [ "$DL_CHANGED" = "true" ]; then
@@ -120,4 +131,7 @@ runs:
           [ -n "$DL_MAX_FILES" ] && summary_args+=(--max-files "$DL_MAX_FILES")
           node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${summary_args[@]}"
           node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$summary_json"
+        fi
+        if [ "$DL_COMMENT" = "true" ] && [ -n "$report_output" ]; then
+          node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$report_output"
         fi

@@ -102,7 +102,7 @@ describe("debtlens scan output formats", () => {
     const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"]);
 
     assert.equal(result.status, 0);
-    assert.match(result.stdout, /^## DebtLens findings/);
+    assert.match(result.stdout, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(result.stdout, /### Grouped annotations/);
     assert.match(result.stdout, /#### `src\/Dashboard\.tsx`/);
     assert.match(result.stdout, /\*\*Low\*\* Debt marker comment \(`todo-comment`\)/);
@@ -184,6 +184,27 @@ describe("debtlens scan fail-on confidence", () => {
 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Expected a confidence between 0 and 1/);
+  });
+});
+
+describe("debtlens scan diff-base", () => {
+  it("rejects --diff-base and --baseline together", () => {
+    const result = runScan(["examples/react", "--diff-base", "HEAD~1", "--baseline", "baseline.json"]);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Use either --diff-base or --baseline, not both/);
+  });
+});
+
+describe("debtlens scan profile", () => {
+  it("prints per-rule timing to stderr without changing findings", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--profile", "--format", "json"]);
+    const parsed = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stderr, /DebtLens profile \(per-rule ms\):/);
+    assert.match(result.stderr, /todo-comment: \d+ms/);
+    assert.ok(parsed.summary.profile?.ruleTimingsMs["todo-comment"] !== undefined);
+    assert.equal(parsed.summary.totalIssues, parsed.issues.length);
   });
 });
 

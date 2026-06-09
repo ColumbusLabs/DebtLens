@@ -63,6 +63,13 @@ maintainability outcomes, not authorship.
 3. Add snapshot-like tests for empty state, a representative finding, and optional fields.
 4. If the CLI exposes a new format, update CLI parsing, README usage, and Action docs.
 
+## Calibration fixtures
+
+Cross-rule quality cases live in `tests/fixtures/quality/calibration.test.ts`. Each case
+declares a fixture target plus minimum/maximum finding counts per rule. Add a new case when
+you introduce a representative app shape or fix a false-positive regression that should stay
+fixed.
+
 ## PR checklist
 
 - The issue has clear acceptance criteria.

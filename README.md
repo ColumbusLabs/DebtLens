@@ -286,7 +286,20 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `fail-on`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `step-summary`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+
+Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    format: sarif
+    output: debtlens.sarif
+    step-summary: true
+    quiet: true
+    fail-on: high
+```
 
 To post a grouped PR comment instead of uploading SARIF, write the `pr-comment` output and post it with `actions/github-script`:
 

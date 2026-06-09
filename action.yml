@@ -51,6 +51,9 @@ inputs:
   quiet:
     description: Terminal only - suppress per-finding detail.
     default: "false"
+  step-summary:
+    description: Append a compact Markdown summary to the GitHub Actions step summary.
+    default: "false"
 
 runs:
   using: composite
@@ -82,6 +85,7 @@ runs:
         DL_THRESHOLDS: ${{ inputs.thresholds }}
         DL_MAX_FILES: ${{ inputs.max-files }}
         DL_QUIET: ${{ inputs.quiet }}
+        DL_STEP_SUMMARY: ${{ inputs.step-summary }}
       run: |
         args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$DL_FORMAT")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
@@ -100,3 +104,20 @@ runs:
         [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
         [ "$DL_QUIET" = "true" ] && args+=(--quiet)
         node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"
+        if [ "$DL_STEP_SUMMARY" = "true" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
+          summary_json="$RUNNER_TEMP/debtlens-step-summary.json"
+          summary_args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format json --output "$summary_json" --quiet)
+          [ -n "$DL_RULES" ] && summary_args+=(--rules "$DL_RULES")
+          [ -n "$DL_BASELINE" ] && summary_args+=(--baseline "$DL_BASELINE")
+          [ -n "$DL_CONFIG" ] && summary_args+=(--config "$DL_CONFIG")
+          if [ "$DL_CHANGED" = "true" ]; then
+            summary_args+=(--changed)
+          elif [ -n "$DL_CHANGED" ]; then
+            summary_args+=(--changed "$DL_CHANGED")
+          fi
+          [ "$DL_RESPECT_GITIGNORE" = "true" ] && summary_args+=(--respect-gitignore)
+          [ -n "$DL_THRESHOLDS" ] && summary_args+=(--threshold "$DL_THRESHOLDS")
+          [ -n "$DL_MAX_FILES" ] && summary_args+=(--max-files "$DL_MAX_FILES")
+          node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${summary_args[@]}"
+          node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$summary_json"
+        fi

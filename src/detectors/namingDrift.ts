@@ -40,9 +40,14 @@ function humanizeId(id: string): string {
 }
 
 /** Merge the built-in pack with user-supplied vocabulary; config groups win on id. */
-export function resolveConceptGroups(vocabulary?: Record<string, string[]>): ConceptGroup[] {
+export function resolveConceptGroups(
+  vocabulary?: Record<string, string[]>,
+  disableBuiltInVocabulary = false,
+): ConceptGroup[] {
   const groups = new Map<string, ConceptGroup>();
-  for (const group of defaultConceptGroups) groups.set(group.id, group);
+  if (!disableBuiltInVocabulary) {
+    for (const group of defaultConceptGroups) groups.set(group.id, group);
+  }
   if (vocabulary) {
     for (const [id, variants] of Object.entries(vocabulary)) {
       groups.set(id, {
@@ -63,8 +68,11 @@ export const namingDriftDetector: Detector = {
   tags: ["naming", "architecture", "domain-modeling"],
   detect(context: DetectorContext): DebtIssue[] {
     const issues: DebtIssue[] = [];
-    const minVariants = context.getThreshold("naming-drift.minVariants", 4);
-    const conceptGroups = resolveConceptGroups(context.options.vocabulary);
+    const minVariants = context.getThreshold("naming-drift.minVariants", 5);
+    const conceptGroups = resolveConceptGroups(
+      context.options.vocabulary,
+      context.options.namingDriftDisableBuiltInVocabulary,
+    );
 
     for (const file of context.files) {
       const identifiers = file.sourceFile

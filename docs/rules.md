@@ -4,6 +4,19 @@ DebtLens rules are heuristics. They should produce review prompts, not absolute 
 
 Rules are grouped into **core** and **react** packs. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy and planned framework packs.
 
+## Confidence scoring
+
+Every finding includes a **confidence** score from 0 to 1. Confidence reflects how strongly the evidence supports the finding — it is separate from **severity**, which reflects how costly the debt would be if real.
+
+| Range | Meaning | How to use it |
+| --- | --- | --- |
+| 0.85–1.0 | Near-certain | Strong signal; prioritize in review or CI gates |
+| 0.70–0.84 | Strong | Worth fixing or tracking; usually not a false positive |
+| 0.50–0.69 | Advisory | Review context; may be intentional architecture |
+| below 0.50 | Weak | Rare in built-in rules; treat as a hint only |
+
+Use confidence for triage and CI policy (for example, `--fail-on high --fail-on-confidence 0.8`) when you want to gate on high-severity findings that are also well-supported.
+
 ## `large-component`
 
 Flags React-style PascalCase functions, `memo`/`forwardRef` wrappers, and class components
@@ -29,6 +42,8 @@ When this is a false positive:
 - the file is not actually a React-style component
 - the component stays within the configured line, hook, and branch budgets
 
+Confidence: **0.86** when the line budget is exceeded; **0.74** when only hook or branch budgets are exceeded. Line count is the strongest structural signal.
+
 ## `state-sprawl`
 
 Flags components/hooks with many calls to local stateful hooks such as `useState`, `useReducer`, and `useRef`.
@@ -50,6 +65,8 @@ When this is a false positive:
 
 - the function is not classified as a component or hook
 - the file stays at or below the configured stateful-hook threshold
+
+Confidence: **0.82**. Hook counts are a direct, countable signal with limited ambiguity.
 
 ## `effect-complexity`
 
@@ -73,6 +90,8 @@ When this is a false positive:
 
 - the callback is small and focused
 - the array literal belongs to another API instead of a React effect hook
+
+Confidence: **0.80**. Effect length and dependency count are measurable, but some complex effects are intentional.
 
 ## `duplicate-logic`
 
@@ -100,6 +119,8 @@ When this is a false positive:
 - the compared snippets do materially different work after normalization
 - the shared shape is too short to clear the minimum line-count threshold
 
+Confidence: **dynamic** — set to the structural similarity score (typically 0.86–1.0 for reported pairs). Higher similarity means stronger evidence of duplication.
+
 ## `dead-abstraction`
 
 Flags short wrappers that delegate to one call, return one value, or render one JSX element without meaningful behavior.
@@ -120,6 +141,8 @@ When this is a false positive:
 
 - the wrapper adds meaningful behavior beyond a single pass-through statement
 - the file is a route module or a hook wrapper that is intentionally thin by convention
+
+Confidence: **0.68–0.80** depending on the wrapper pattern — delegation to one call (**0.80**), single return (**0.72–0.76**), or single JSX element (**0.68**). Thinner wrappers score lower because the abstraction may still carry naming value.
 
 ## `prop-drilling`
 
@@ -143,6 +166,8 @@ When this is a false positive:
 - the component forwards only a small number of props
 - the props are passed only to host primitives instead of user-defined child components
 
+Confidence: **0.73**. Prop counts are objective, but some drilling is acceptable when boundaries are stable.
+
 ## `todo-comment`
 
 Flags debt markers in comments, including TODO, FIXME, HACK, temporary, placeholder, and assistant-generation markers.
@@ -165,13 +190,19 @@ When this is a false positive:
 - the word appears in executable code or identifiers instead of a comment
 - the comment is already paired with explicit tracking and removal criteria
 
+Confidence: **0.90**. Comment markers are literal text matches with little interpretation.
+
 ## `naming-drift`
 
 Flags files where related domain concepts are represented by many competing names.
 
 Default threshold:
 
-- `naming-drift.minVariants`: 4
+- `naming-drift.minVariants`: 5
+
+Configuration:
+
+- `namingDrift.disableBuiltInVocabulary`: when `true`, skip the built-in media/release vocabulary pack and use only your `vocabulary` groups. Useful for domain-heavy apps where built-in terms are legitimate product language, not drift.
 
 Why it matters: inconsistent names create translation work for every maintainer and can hide duplicate domain models.
 
@@ -186,3 +217,5 @@ When this is a false positive:
 
 - the file uses fewer distinct variants than the configured threshold
 - the competing names belong to separate concepts rather than one overloaded domain term
+
+Confidence: **0.62**. Co-occurring domain synonyms are often legitimate vocabulary, so this rule stays advisory.

@@ -108,12 +108,17 @@ export function filterIssues(issues: DebtIssue[], baseline: Baseline): DebtIssue
 /** Apply a baseline to a scan result, returning a new result with a recomputed summary. */
 export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResult {
   const issues = filterIssues(result.issues, baseline);
+  const suppressedByBaseline = result.issues.length - issues.length;
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   const byRule: Record<string, number> = {};
   for (const issue of issues) {
     bySeverity[issue.severity] += 1;
     byRule[issue.ruleId] = (byRule[issue.ruleId] ?? 0) + 1;
   }
+  const filterStats = {
+    ...result.summary.filterStats,
+    ...(suppressedByBaseline > 0 ? { suppressedByBaseline } : {}),
+  };
   return {
     ...result,
     issues,
@@ -122,6 +127,7 @@ export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResul
       totalIssues: issues.length,
       bySeverity,
       byRule,
+      ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
     },
   };
 }

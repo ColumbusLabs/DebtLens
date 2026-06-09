@@ -1,4 +1,5 @@
 import type { ScanResult, Severity } from "../core/types.js";
+import { formatFilterStats } from "./filterStats.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -13,6 +14,10 @@ export function renderMarkdown(result: ScanResult): string {
   lines.push(`- Total issues: **${result.summary.totalIssues}**`);
   for (const severity of severityOrder) {
     lines.push(`- ${capitalize(severity)}: **${result.summary.bySeverity[severity]}**`);
+  }
+  const filterStats = formatFilterStats(result.summary.filterStats);
+  if (filterStats) {
+    lines.push(`- Filtered: **${filterStats}**`);
   }
 
   if (result.issues.length === 0) {

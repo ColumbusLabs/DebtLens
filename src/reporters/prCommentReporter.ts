@@ -1,5 +1,6 @@
 import type { DebtIssue, ScanResult } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import { getReviewPrompt } from "./ruleGuidance.js";
 
 export interface PrCommentOptions {
   sourceUrlBase?: string;
@@ -43,6 +44,10 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
 
       if (issue.suggestion) {
         lines.push(`  - Suggestion: ${issue.suggestion}`);
+      }
+      const reviewPrompt = getReviewPrompt(issue.ruleId);
+      if (reviewPrompt) {
+        lines.push(`  - Review prompt: ${reviewPrompt}`);
       }
     }
   }

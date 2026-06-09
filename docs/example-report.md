@@ -9,7 +9,6 @@ Scanned **3** files with **8** rules in **174ms**.
 - Medium: **2**
 - Low: **4**
 - Info: **0**
-- Filtered: **2 below min severity**
 
 ## High severity
 

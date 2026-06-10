@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { loadConfig } from "../config/loadConfig.js";
+import { findConfigPath, loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
@@ -10,10 +10,12 @@ import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline,
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { DebtIssue, DebtLensConfig, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
+import { loadPlugins } from "../plugins/loadPlugins.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
+import { runExplain } from "./explain.js";
 import { runInit } from "./init.js";
 import { runDoctor } from "./doctor.js";
 import { runAdopt } from "./adopt.js";
@@ -58,8 +60,9 @@ program.command("scan")
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
+      const pluginDetectors = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
-      const failOn = rawOptions.failOn ? parseSeverity(String(rawOptions.failOn), "high") : undefined;
+      const failOn = resolveFailOn(rawOptions, fileConfig);
       const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
 
       let changedFiles: string[] | undefined;
@@ -105,6 +108,7 @@ program.command("scan")
         changedFiles,
         fileContents,
         profile: rawOptions.profile === true,
+        pluginDetectors,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
@@ -300,6 +304,19 @@ program.command("rules")
     }
   });
 
+program.command("explain")
+  .description("Print rule documentation, default thresholds, and false-positive guidance.")
+  .argument("<rule>", "rule id, e.g. prop-drilling")
+  .action((rule: string) => {
+    try {
+      process.stdout.write(runExplain(rule));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 program.command("init")
   .description("Create a starter debtlens.config.json in the current directory.")
   .option("--force", "overwrite an existing config file")
@@ -401,6 +418,35 @@ function parseConfidence(value: string): number {
     throw new Error(`Expected a confidence between 0 and 1, received "${value}".`);
   }
   return parsed;
+}
+
+async function loadConfiguredPlugins(
+  cwd: string,
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): Promise<Detector[] | undefined> {
+  if (!fileConfig.plugins?.length) return undefined;
+
+  const configPath = findConfigPath(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
+  const configDir = configPath ? dirname(configPath) : cwd;
+  const loaded = await loadPlugins(configDir, fileConfig, new Set(detectorIds));
+  for (const warning of loaded.warnings) {
+    process.stderr.write(`DebtLens: ${warning}\n`);
+  }
+  return loaded.detectors.length > 0 ? loaded.detectors : undefined;
+}
+
+function resolveFailOn(
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): Severity | undefined {
+  if (rawOptions.failOn) {
+    return parseSeverity(String(rawOptions.failOn), "high");
+  }
+  if (fileConfig.failOn !== undefined) {
+    return parseSeverity(String(fileConfig.failOn), "high");
+  }
+  return undefined;
 }
 
 function resolveFailOnConfidence(

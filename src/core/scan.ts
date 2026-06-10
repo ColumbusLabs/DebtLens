@@ -5,6 +5,7 @@ import { allDetectors } from "../detectors/index.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
+import { suggestClosest } from "../utils/didYouMean.js";
 import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
@@ -37,7 +38,8 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     });
   }
 
-  const detectors = selectDetectors(options.rules);
+  const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
+  const detectors = selectDetectors(registry, options.rules);
   let issues: DebtIssue[] = [];
   const warnings: string[] = [];
   let filteredByMinSeverity = 0;
@@ -74,7 +76,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     return (a.location?.startLine ?? 0) - (b.location?.startLine ?? 0);
   });
 
-  const validRuleIds = new Set(allDetectors.map((detector) => detector.id));
+  const validRuleIds = new Set(registry.map((detector) => detector.id));
   const suppression = applyInlineSuppressions(issues, files, validRuleIds);
   issues = suppression.issues;
   for (const warning of suppression.warnings) {
@@ -124,17 +126,22 @@ function getContentOverride(options: ScanOptions, absolutePath: string): string 
   return options.fileContents[canonicalize(absolutePath)] ?? options.fileContents[absolutePath];
 }
 
-function selectDetectors(ruleIds: string[] | undefined): Detector[] {
+function selectDetectors(registry: Detector[], ruleIds: string[] | undefined): Detector[] {
   if (!ruleIds || ruleIds.length === 0) {
-    return allDetectors;
+    return registry;
   }
 
   const requested = new Set(ruleIds);
-  const selected = allDetectors.filter((detector) => requested.has(detector.id));
-  const missing = [...requested].filter((ruleId) => !allDetectors.some((detector) => detector.id === ruleId));
+  const selected = registry.filter((detector) => requested.has(detector.id));
+  const missing = [...requested].filter((ruleId) => !registry.some((detector) => detector.id === ruleId));
 
   if (missing.length > 0) {
-    throw new Error(`Unknown DebtLens rule(s): ${missing.join(", ")}`);
+    const knownIds = registry.map((detector) => detector.id);
+    const described = missing.map((ruleId) => {
+      const suggestion = suggestClosest(ruleId, knownIds);
+      return suggestion ? `${ruleId} (did you mean "${suggestion}"?)` : ruleId;
+    });
+    throw new Error(`Unknown DebtLens rule(s): ${described.join(", ")}`);
   }
 
   return selected;

@@ -51,6 +51,13 @@ describe("inline suppressions", () => {
     assert.match(result.warnings[0] ?? "", /unknown suppression rule/);
   });
 
+  it("suggests the closest rule id for an unknown suppression rule", () => {
+    const files = [file("src/a.ts", "// debtlens-disable-next-line todo-comments -- reason\n")];
+    const result = applyInlineSuppressions([issue()], files, validRuleIds);
+    assert.equal(result.issues.length, 1);
+    assert.match(result.warnings[0] ?? "", /did you mean "todo-comment"\?/);
+  });
+
   it("suppresses file-level findings for the configured rule", () => {
     const files = [file("src/a.ts", "// debtlens-disable-file naming-drift -- domain vocabulary is intentional\nconst movie = 1;\n")];
     const result = applyInlineSuppressions([

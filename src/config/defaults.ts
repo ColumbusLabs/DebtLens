@@ -1,6 +1,6 @@
 import type { DebtLensConfig } from "../core/types.js";
 
-export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOnConfidence">> = {
+export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "failOnConfidence" | "pluginApiVersion" | "plugins">> = {
   include: ["**/*.{ts,tsx,js,jsx}"],
   exclude: [
     "node_modules/**",

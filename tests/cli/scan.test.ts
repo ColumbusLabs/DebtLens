@@ -187,6 +187,72 @@ describe("debtlens scan fail-on confidence", () => {
   });
 });
 
+describe("debtlens scan failOn from config", () => {
+  function withTempProject(run: (dir: string) => void) {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-failon-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("gates the exit code from config-only failOn", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        failOn: "low",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+
+      assert.equal(result.status, 1);
+    });
+  });
+
+  it("does not fail when config failOn severity is not met", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        failOn: "high",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+
+      assert.equal(result.status, 0);
+    });
+  });
+
+  it("lets the --fail-on flag override config failOn", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        failOn: "low",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--fail-on", "high", "--format", "json"]);
+
+      assert.equal(result.status, 0);
+    });
+  });
+
+  it("rejects an invalid failOn severity in config", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        failOn: "critical",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Invalid severity "critical"/);
+    });
+  });
+});
+
 describe("debtlens scan inline suppressions", () => {
   function withTempProject(run: (dir: string) => void) {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-suppress-"));

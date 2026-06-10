@@ -3,6 +3,35 @@
 All notable changes to DebtLens are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`debtlens explain <rule>`** command printing rule docs, default thresholds, and
+  false-positive guidance from `docs/rules.md` ([#145](https://github.com/ColumbusLabs/DebtLens/issues/145)).
+- **Did-you-mean suggestions** for unknown rule ids in `--rules`, config `rules`, inline
+  suppression directives, and `debtlens explain` ([#151](https://github.com/ColumbusLabs/DebtLens/issues/151)).
+- **`failOn` config field** to set the CI exit-code severity policy in
+  `debtlens.config.json`; the `--fail-on` CLI flag overrides it
+  ([#106](https://github.com/ColumbusLabs/DebtLens/issues/106)).
+- **`pluginApiVersion` and `plugins` config fields** with fail-fast runtime validation
+  against the supported plugin API version
+  ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69)). The plugin API version is
+  an integer bumped only on breaking `Detector`/`DetectorContext` changes; bumps are
+  documented here and in `docs/plugin-api-rfc.md`.
+- **Plugin loader** for local ESM rule plugins per the plugin API RFC: detectors are
+  validated against the built-in `Detector` contract, rule id collisions fail fast, and
+  paths cannot escape the config directory
+  ([#68](https://github.com/ColumbusLabs/DebtLens/issues/68)).
+- **`DEBTLENS_DISABLE_PLUGINS=1`** environment escape hatch for CI pipelines scanning
+  untrusted repositories; built-in rules still run
+  ([#71](https://github.com/ColumbusLabs/DebtLens/issues/71)).
+- **Reference plugin** in `examples/plugin/` (no-console rule) with CI integration
+  coverage ([#72](https://github.com/ColumbusLabs/DebtLens/issues/72)).
+- **`debtlens/plugin` entry point** exporting `Detector`, `DetectorContext`, `DebtIssue`,
+  `Severity`, and `DEBTLENS_PLUGIN_API_VERSION` for plugin authors
+  ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70)).
+
 ## [0.3.0] - 2026-06-09
 
 ### Added

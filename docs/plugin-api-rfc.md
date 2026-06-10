@@ -1,6 +1,6 @@
 # Plugin API RFC
 
-Status: **Draft** — design only; no loader shipped yet. Target: v0.4 ([`ROADMAP.md`](../ROADMAP.md)).
+Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, and the `DEBTLENS_DISABLE_PLUGINS` escape hatch are implemented. Follow-ons: plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)) and vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)).
 
 ## Problem
 
@@ -90,7 +90,7 @@ Align with [`SECURITY.md`](../SECURITY.md):
 - **No network** during plugin load.
 - **No arbitrary code** from config values — only explicit `plugins` paths.
 - Paths must stay within the repository (reject `..` traversal outside repo root).
-- CI environments may set `DEBTLENS_DISABLE_PLUGINS=1` to skip loading (future flag).
+- CI environments may set `DEBTLENS_DISABLE_PLUGINS=1` to skip loading entirely; built-in rules still run and a single stderr note is emitted when configured plugins are skipped.
 
 Untrusted repos: treat plugins like any local code — only enable in trusted pipelines.
 
@@ -98,7 +98,7 @@ Untrusted repos: treat plugins like any local code — only enable in trusted pi
 
 ```js
 // debtlens-rules/no-console.mjs
-/** @type {import("debtlens").Detector} */
+/** @type {import("debtlens/plugin").Detector} */
 export const noConsoleDetector = {
   id: "no-console",
   name: "No console",
@@ -130,15 +130,15 @@ export const noConsoleDetector = {
 export default { rules: [noConsoleDetector] };
 ```
 
-(Pseudocode — types would ship from a future `debtlens/plugin` entry point.)
+A runnable version of this plugin lives in [`examples/plugin/`](../examples/plugin/), and types ship from the published `debtlens/plugin` entry point (`import type { Detector } from "debtlens/plugin"`).
 
 ## Implementation phases
 
-1. **RFC merged** (this document) — no runtime change
-2. **Loader prototype** — `import()` + validation behind feature flag
-3. **Schema + docs** — `plugins` / `pluginApiVersion` in JSON schema
-4. **Example repo** — sample plugin + integration test
-5. **Stable export** — document supported API in [`docs/architecture.md`](./architecture.md)
+1. **RFC merged** (this document) — no runtime change ✅
+2. **Loader prototype** — `import()` + validation ✅ ([#68](https://github.com/ColumbusLabs/DebtLens/issues/68))
+3. **Schema + docs** — `plugins` / `pluginApiVersion` in JSON schema ✅ ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69))
+4. **Example plugin** — [`examples/plugin/`](../examples/plugin/) + integration test ✅ ([#72](https://github.com/ColumbusLabs/DebtLens/issues/72))
+5. **Stable export** — `debtlens/plugin` types entry point ✅ ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70))
 
 ## Open questions
 

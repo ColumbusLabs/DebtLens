@@ -66,6 +66,12 @@ export interface DebtLensConfig {
     /** Built-in labels to disable (e.g. "todo marker"). */
     disableDefaults?: string[];
   };
+  /** Plugin API version this config targets; must match the DebtLens runtime version. */
+  pluginApiVersion?: number;
+  /** Paths to local ESM plugin modules, resolved relative to the config file directory. */
+  plugins?: string[];
+  /** Exit with code 1 when any reported issue meets this severity. CLI `--fail-on` overrides. */
+  failOn?: Severity;
   /** Exit with code 1 only when a reported issue meets `--fail-on` and this confidence floor. */
   failOnConfidence?: number;
 }
@@ -97,6 +103,8 @@ export interface ScanOptions {
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
   /** When true, collect per-rule timing in `summary.profile`. */
   profile?: boolean;
+  /** Detectors contributed by config-loaded plugins, merged after built-in rules. */
+  pluginDetectors?: Detector[];
 }
 
 export interface CliOptions {
@@ -118,6 +126,7 @@ export interface CliOptions {
   changedFiles?: string[];
   fileContents?: Record<string, string>;
   profile?: boolean;
+  pluginDetectors?: Detector[];
 }
 
 export interface DetectorContext {

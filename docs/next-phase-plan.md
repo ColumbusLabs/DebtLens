@@ -1,6 +1,7 @@
 # Next Phase Plan: Plugin API + CLI Quick Wins
 
-Status: **Proposed** — issue selection and execution plan for the next development phase.
+Status: **Implemented** — all eight issues landed on this branch as five sequential
+commits matching the PR breakdown below.
 Date: 2026-06-10
 
 ## Context

@@ -59,6 +59,11 @@ describe("config JSON schema", () => {
     assert.equal(typeof example.respectGitignore, "boolean");
   });
 
+  it("includes failOn with the canonical severity set", () => {
+    const built = buildConfigSchema() as { properties: { failOn?: { enum: string[] } } };
+    assert.deepEqual(built.properties.failOn?.enum, [...severities]);
+  });
+
   it("includes todoComment config shape", () => {
     const built = buildConfigSchema() as { properties: { todoComment?: { type: string }; pack?: { enum: string[] } } };
     assert.equal(built.properties.todoComment?.type, "object");

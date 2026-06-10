@@ -60,7 +60,7 @@ program.command("scan")
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
-      const failOn = rawOptions.failOn ? parseSeverity(String(rawOptions.failOn), "high") : undefined;
+      const failOn = resolveFailOn(rawOptions, fileConfig);
       const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
 
       let changedFiles: string[] | undefined;
@@ -415,6 +415,19 @@ function parseConfidence(value: string): number {
     throw new Error(`Expected a confidence between 0 and 1, received "${value}".`);
   }
   return parsed;
+}
+
+function resolveFailOn(
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): Severity | undefined {
+  if (rawOptions.failOn) {
+    return parseSeverity(String(rawOptions.failOn), "high");
+  }
+  if (fileConfig.failOn !== undefined) {
+    return parseSeverity(String(fileConfig.failOn), "high");
+  }
+  return undefined;
 }
 
 function resolveFailOnConfidence(

@@ -11,6 +11,9 @@ All notable changes to DebtLens are documented here. This project adheres to
   false-positive guidance from `docs/rules.md` ([#145](https://github.com/ColumbusLabs/DebtLens/issues/145)).
 - **Did-you-mean suggestions** for unknown rule ids in `--rules`, config `rules`, inline
   suppression directives, and `debtlens explain` ([#151](https://github.com/ColumbusLabs/DebtLens/issues/151)).
+- **`failOn` config field** to set the CI exit-code severity policy in
+  `debtlens.config.json`; the `--fail-on` CLI flag overrides it
+  ([#106](https://github.com/ColumbusLabs/DebtLens/issues/106)).
 
 ## [0.3.0] - 2026-06-09
 

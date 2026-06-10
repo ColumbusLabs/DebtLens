@@ -125,6 +125,10 @@ export function buildConfigSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      failOn: {
+        enum: [...severities],
+        description: "Exit with code 1 when any reported issue meets this severity. The --fail-on CLI flag overrides this.",
+      },
       failOnConfidence: {
         type: "number",
         minimum: 0,

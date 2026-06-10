@@ -15,6 +15,10 @@ export function buildConfigSchema(): Record<string, unknown> {
   const knownThresholds = Object.fromEntries(
     Object.keys(defaultConfig.thresholds).map((key) => [key, { type: "number" }]),
   );
+  const severityValue = { enum: [...severities] };
+  const confidenceFloorValue = { type: "number", minimum: 0, maximum: 1 };
+  const knownRuleSeverities = Object.fromEntries(detectorIds.map((id) => [id, severityValue]));
+  const knownRuleConfidenceFloors = Object.fromEntries(detectorIds.map((id) => [id, confidenceFloorValue]));
 
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -86,6 +90,18 @@ export function buildConfigSchema(): Record<string, unknown> {
           type: "array",
           items: { type: "string" },
         },
+      },
+      ruleSeverities: {
+        type: "object",
+        description: "Rule id -> severity reported for that rule's issues, replacing the detector's choice. May include plugin rule ids.",
+        properties: knownRuleSeverities,
+        additionalProperties: severityValue,
+      },
+      ruleConfidenceFloors: {
+        type: "object",
+        description: "Rule id -> minimum confidence (0-1); issues from that rule below the floor are not reported. May include plugin rule ids.",
+        properties: knownRuleConfidenceFloors,
+        additionalProperties: confidenceFloorValue,
       },
       propDrilling: {
         type: "object",

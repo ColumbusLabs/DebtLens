@@ -43,7 +43,7 @@ describe("loadPlugins", () => {
     });
   });
 
-  it("loads a { rules } export and warns on unsupported vocabulary", async () => {
+  it("loads a { rules } export with vocabulary and thresholds", async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, "plugin.mjs"), `
 const rule = {
@@ -54,12 +54,65 @@ const rule = {
   tags: [],
   detect: () => [],
 };
-export default { rules: [rule], vocabulary: { media: ["movie", "film"] } };
+export default {
+  rules: [rule],
+  thresholds: { "custom-rule.maxThings": 3 },
+  vocabulary: { media: ["movie", "film"] },
+};
 `);
       const result = await loadPlugins(dir, { plugins: ["./plugin.mjs"] }, builtInIds);
       assert.equal(result.detectors.length, 1);
       assert.equal(result.detectors[0]?.id, "custom-rule");
-      assert.match(result.warnings[0] ?? "", /vocabulary export is not supported yet/);
+      assert.deepEqual(result.thresholds, { "custom-rule.maxThings": 3 });
+      assert.deepEqual(result.vocabulary, { media: ["movie", "film"] });
+      assert.deepEqual(result.warnings, []);
+    });
+  });
+
+  it("rejects non-numeric plugin thresholds", async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, "plugin.mjs"), `
+export default {
+  rules: [],
+  thresholds: { "custom-rule.maxThings": "lots" },
+};
+`);
+      await assert.rejects(
+        loadPlugins(dir, { plugins: ["./plugin.mjs"] }, builtInIds),
+        /threshold "custom-rule.maxThings" must be a finite number/,
+      );
+    });
+  });
+
+  it("rejects malformed plugin vocabulary groups", async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, "plugin.mjs"), `
+export default {
+  rules: [],
+  vocabulary: { media: [] },
+};
+`);
+      await assert.rejects(
+        loadPlugins(dir, { plugins: ["./plugin.mjs"] }, builtInIds),
+        /vocabulary group "media" must be a non-empty array of strings/,
+      );
+    });
+  });
+
+  it("warns when a later plugin overrides an earlier plugin's threshold or vocabulary", async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, "one.mjs"), `
+export default { rules: [], thresholds: { "shared.max": 1 }, vocabulary: { media: ["movie"] } };
+`);
+      writeFileSync(join(dir, "two.mjs"), `
+export default { rules: [], thresholds: { "shared.max": 2 }, vocabulary: { media: ["film"] } };
+`);
+      const result = await loadPlugins(dir, { plugins: ["./one.mjs", "./two.mjs"] }, builtInIds);
+      assert.deepEqual(result.thresholds, { "shared.max": 2 });
+      assert.deepEqual(result.vocabulary, { media: ["film"] });
+      assert.equal(result.warnings.length, 2);
+      assert.match(result.warnings[0] ?? "", /threshold "shared.max" was already set by an earlier plugin/);
+      assert.match(result.warnings[1] ?? "", /vocabulary group "media" was already set by an earlier plugin/);
     });
   });
 

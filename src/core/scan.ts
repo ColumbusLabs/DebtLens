@@ -43,7 +43,12 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   let issues: DebtIssue[] = [];
   const warnings: string[] = [];
   let filteredByMinSeverity = 0;
+  let filteredByConfidenceFloor = 0;
   const ruleTimingsMs: Record<string, number> = {};
+
+  for (const warning of validatePerRuleOverrides(registry, options)) {
+    if (!warnings.includes(warning)) warnings.push(warning);
+  }
 
   for (const detector of detectors) {
     const detectorStartedAt = options.profile ? Date.now() : 0;
@@ -57,6 +62,15 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       },
     });
     for (const issue of detectorIssues) {
+      const severityOverride = options.ruleSeverities?.[issue.ruleId];
+      if (severityOverride) {
+        issue.severity = severityOverride;
+      }
+      const confidenceFloor = options.ruleConfidenceFloors?.[issue.ruleId];
+      if (confidenceFloor !== undefined && issue.confidence < confidenceFloor) {
+        filteredByConfidenceFloor += 1;
+        continue;
+      }
       if (meetsMinSeverity(issue.severity, options.minSeverity)) {
         issues.push(issue);
       } else {
@@ -85,6 +99,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   const filterStats = {
     ...(filteredByMinSeverity > 0 ? { filteredByMinSeverity } : {}),
+    ...(filteredByConfidenceFloor > 0 ? { filteredByConfidenceFloor } : {}),
     ...(suppression.suppressedByInline > 0 ? { suppressedByInline: suppression.suppressedByInline } : {}),
   };
 
@@ -150,4 +165,26 @@ function selectDetectors(registry: Detector[], ruleIds: string[] | undefined): D
 function getThreshold(options: ScanOptions, key: string, fallback: number): number {
   const value = options.thresholds[key];
   return Number.isFinite(value) ? value : fallback;
+}
+
+/** Warn (not fail) on per-rule override keys that match no known rule, so typos surface. */
+function validatePerRuleOverrides(registry: Detector[], options: ScanOptions): string[] {
+  const knownIds = registry.map((detector) => detector.id);
+  const knownIdSet = new Set(knownIds);
+  const warnings: string[] = [];
+
+  const describeUnknown = (configKey: string, ruleId: string) => {
+    const suggestion = suggestClosest(ruleId, knownIds);
+    const hint = suggestion ? ` (did you mean "${suggestion}"?)` : "";
+    return `${configKey}: unknown rule "${ruleId}"${hint}`;
+  };
+
+  for (const ruleId of Object.keys(options.ruleSeverities ?? {})) {
+    if (!knownIdSet.has(ruleId)) warnings.push(describeUnknown("ruleSeverities", ruleId));
+  }
+  for (const ruleId of Object.keys(options.ruleConfidenceFloors ?? {})) {
+    if (!knownIdSet.has(ruleId)) warnings.push(describeUnknown("ruleConfidenceFloors", ruleId));
+  }
+
+  return warnings;
 }

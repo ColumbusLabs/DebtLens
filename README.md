@@ -116,6 +116,7 @@ debtlens packs            # list built-in rule pack presets
 debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
 debtlens explain <rule>   # print rule docs, default thresholds, and false-positive guidance
+debtlens suppress --rule <rule> --reason "<why>"   # print a copy-paste inline suppression comment
 debtlens scan [target]
 ```
 
@@ -235,6 +236,16 @@ Rules:
 
 Terminal output includes inline suppression counts in the filter stats line (for example, `1 inline suppressed`). JSON reports expose the same count under `summary.filterStats.suppressedByInline`.
 
+`debtlens suppress` prints a ready-to-paste directive so you don't have to remember the syntax:
+
+```bash
+debtlens suppress --rule todo-comment --reason "tracked in PROJ-123"
+# // debtlens-disable-next-line todo-comment -- tracked in PROJ-123
+
+debtlens suppress --rule naming-drift --reason "domain vocabulary is intentional" --file
+# // debtlens-disable-file naming-drift -- domain vocabulary is intentional
+```
+
 Prefer baselines for legacy debt, config tuning for false positives, and inline suppressions for rare, documented exceptions. See [`docs/rules.md`](./docs/rules.md#suppressing-findings) for guidance.
 
 ## Configuration
@@ -293,6 +304,27 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 
 Explicit `rules` in config override the pack. Use `debtlens packs` to list presets.
 
+### Per-rule severities and confidence floors
+
+Tune noisy rules without disabling them. `ruleSeverities` replaces the severity a rule
+reports (changing summary counts and `--fail-on` behavior), and `ruleConfidenceFloors`
+hides findings from a rule below a minimum confidence:
+
+```json
+{
+  "ruleSeverities": {
+    "naming-drift": "info"
+  },
+  "ruleConfidenceFloors": {
+    "prop-drilling": 0.8
+  }
+}
+```
+
+Unknown rule ids in either map emit a warning with a did-you-mean suggestion. Issues
+hidden by a confidence floor are counted under `summary.filterStats.filteredByConfidenceFloor`.
+Both maps accept plugin rule ids when plugins are configured.
+
 ### Custom naming vocabulary
 
 `naming-drift` ships with a built-in media/release vocabulary. Add your own domain concepts with `vocabulary` (concept id → competing terms). Your groups are merged with the built-ins, and a group with the same id overrides the built-in one.
@@ -324,6 +356,19 @@ Plugin authors import types from the published `debtlens/plugin` entry point:
 
 ```ts
 import type { Detector, DetectorContext } from "debtlens/plugin";
+```
+
+Besides `rules`, a plugin's default export may include `thresholds` (defaults read by
+`context.getThreshold`, merged after built-ins so user config and `--threshold` still
+override them) and `vocabulary` (naming-drift concept groups, overridden by user config
+groups with the same id):
+
+```js
+export default {
+  rules: [noConsoleDetector],
+  thresholds: { "no-console.maxCalls": 0 },
+  vocabulary: { logging: ["log", "logger", "console", "debug", "trace"] },
+};
 ```
 
 See the reference plugin in [`examples/plugin/`](./examples/plugin/) and the full

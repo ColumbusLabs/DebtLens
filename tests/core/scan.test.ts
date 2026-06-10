@@ -68,6 +68,85 @@ describe("scan integration", () => {
     }
   });
 
+  it("applies ruleSeverities overrides to reported issues and summary counts", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-severities-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "// TODO fix later\nexport const value = 1;\n");
+
+      const baseOptions = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "info" as const,
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+      };
+
+      const result = await scan({ ...baseOptions, ruleSeverities: { "todo-comment": "high" } });
+
+      assert.equal(result.summary.totalIssues, 1);
+      assert.equal(result.issues[0]?.severity, "high");
+      assert.equal(result.summary.bySeverity.high, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("filters issues below a per-rule confidence floor and tracks filterStats", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-confidence-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "// TODO fix later\nexport const value = 1;\n");
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "info",
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        ruleConfidenceFloors: { "todo-comment": 1 },
+      });
+
+      assert.equal(result.summary.totalIssues, 0);
+      assert.equal(result.summary.filterStats?.filteredByConfidenceFloor, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns on unknown rule ids in per-rule overrides with a suggestion", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-unknown-rule-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "export const value = 1;\n");
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "info",
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        ruleSeverities: { "todo-coment": "info" },
+        ruleConfidenceFloors: { "prop-driling": 0.5 },
+      });
+
+      const warnings = result.summary.warnings ?? [];
+      assert.ok(warnings.some((warning) => warning.includes('ruleSeverities: unknown rule "todo-coment" (did you mean "todo-comment"?)')));
+      assert.ok(warnings.some((warning) => warning.includes('ruleConfidenceFloors: unknown rule "prop-driling" (did you mean "prop-drilling"?)')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("keeps scanning outside git repos when respectGitignore is enabled", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-plain-"));
     try {

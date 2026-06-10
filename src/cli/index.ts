@@ -10,13 +10,14 @@ import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline,
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, ScanThresholds, Severity } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
 import { loadPlugins } from "../plugins/loadPlugins.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
 import { runExplain } from "./explain.js";
 import { runInit } from "./init.js";
+import { runSuppress } from "./suppress.js";
 import { runDoctor } from "./doctor.js";
 import { runAdopt } from "./adopt.js";
 import { parseCommaList, parseThresholds } from "./parseList.js";
@@ -60,7 +61,7 @@ program.command("scan")
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
-      const pluginDetectors = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
+      const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
       const failOn = resolveFailOn(rawOptions, fileConfig);
       const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
@@ -108,7 +109,9 @@ program.command("scan")
         changedFiles,
         fileContents,
         profile: rawOptions.profile === true,
-        pluginDetectors,
+        pluginDetectors: pluginContribution?.detectors,
+        pluginThresholds: pluginContribution?.thresholds,
+        pluginVocabulary: pluginContribution?.vocabulary,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
@@ -317,6 +320,25 @@ program.command("explain")
     }
   });
 
+program.command("suppress")
+  .description("Print a copy-paste inline suppression comment for a finding.")
+  .requiredOption("--rule <rule>", "rule id to suppress, e.g. todo-comment")
+  .requiredOption("--reason <text>", "why the finding is acceptable (required by the scanner)")
+  .option("--file", "emit a file-level directive instead of next-line")
+  .action((rawOptions: Record<string, unknown>) => {
+    try {
+      process.stdout.write(runSuppress({
+        ruleId: String(rawOptions.rule),
+        reason: String(rawOptions.reason),
+        file: rawOptions.file === true,
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 program.command("init")
   .description("Create a starter debtlens.config.json in the current directory.")
   .option("--force", "overwrite an existing config file")
@@ -420,11 +442,17 @@ function parseConfidence(value: string): number {
   return parsed;
 }
 
+interface PluginContribution {
+  detectors?: Detector[];
+  thresholds?: ScanThresholds;
+  vocabulary?: Record<string, string[]>;
+}
+
 async function loadConfiguredPlugins(
   cwd: string,
   rawOptions: Record<string, unknown>,
   fileConfig: DebtLensConfig,
-): Promise<Detector[] | undefined> {
+): Promise<PluginContribution | undefined> {
   if (!fileConfig.plugins?.length) return undefined;
 
   const configPath = findConfigPath(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
@@ -433,7 +461,11 @@ async function loadConfiguredPlugins(
   for (const warning of loaded.warnings) {
     process.stderr.write(`DebtLens: ${warning}\n`);
   }
-  return loaded.detectors.length > 0 ? loaded.detectors : undefined;
+  return {
+    detectors: loaded.detectors.length > 0 ? loaded.detectors : undefined,
+    thresholds: Object.keys(loaded.thresholds).length > 0 ? loaded.thresholds : undefined,
+    vocabulary: Object.keys(loaded.vocabulary).length > 0 ? loaded.vocabulary : undefined,
+  };
 }
 
 function resolveFailOn(

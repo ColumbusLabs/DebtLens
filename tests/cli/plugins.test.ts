@@ -118,6 +118,91 @@ describe("debtlens scan with plugins", () => {
     });
   });
 
+  it("applies plugin threshold defaults and lets user config override them", () => {
+    withPluginProject((dir) => {
+      const thresholdPluginSource = `
+export default {
+  rules: [{
+    id: "no-console",
+    name: "No console",
+    description: "Flags console.log in production source.",
+    defaultSeverity: "low",
+    tags: ["hygiene"],
+    detect(context) {
+      const maxCalls = context.getThreshold("no-console.maxCalls", 0);
+      const issues = [];
+      for (const file of context.files) {
+        const lines = file.content.split(/\\r?\\n/);
+        const matches = [];
+        for (let index = 0; index < lines.length; index += 1) {
+          if (lines[index].includes("console.log")) matches.push(index);
+        }
+        if (matches.length <= maxCalls) continue;
+        for (const index of matches) {
+          issues.push({
+            id: "dl_nc_" + file.relativePath + ":" + (index + 1),
+            ruleId: "no-console",
+            ruleName: "No console",
+            severity: "low",
+            confidence: 0.85,
+            message: "console.log found in source.",
+            file: file.relativePath,
+            location: { startLine: index + 1 },
+            tags: ["hygiene"],
+            suggestion: "Remove debug logging.",
+          });
+        }
+      }
+      return issues;
+    },
+  }],
+  thresholds: { "no-console.maxCalls": 1 },
+};
+`;
+      writeFileSync(join(dir, "no-console.mjs"), thresholdPluginSource);
+
+      // The plugin default (maxCalls: 1) tolerates the single console.log in the fixture.
+      const withPluginDefault = runScan([".", "--cwd", dir, "--rules", "no-console", "--format", "json"]);
+      assert.equal(JSON.parse(withPluginDefault.stdout).summary.totalIssues, 0);
+
+      // User config overrides the plugin default back down to zero tolerance.
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        pluginApiVersion: 1,
+        plugins: ["./no-console.mjs"],
+        thresholds: { "no-console.maxCalls": 0 },
+      }));
+      const withUserOverride = runScan([".", "--cwd", dir, "--rules", "no-console", "--format", "json"]);
+      assert.equal(JSON.parse(withUserOverride.stdout).summary.totalIssues, 1);
+    });
+  });
+
+  it("merges plugin vocabulary into naming-drift concept groups", () => {
+    withPluginProject((dir) => {
+      writeFileSync(join(dir, "no-console.mjs"), `
+export default {
+  rules: [],
+  vocabulary: { logging: ["log", "logger", "console", "debug", "trace"] },
+};
+`);
+      writeFileSync(join(dir, "src", "app.ts"), [
+        "export const log = 1;",
+        "export const logger = 2;",
+        "export const consoleThing = 3;",
+        "export const debugMode = 4;",
+        "export const traceLevel = 5;",
+        "",
+      ].join("\n"));
+
+      const result = runScan([".", "--cwd", dir, "--rules", "naming-drift", "--min-severity", "info", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].ruleId, "naming-drift");
+      assert.match(parsed.issues[0].message, /competing terms for logging/);
+    });
+  });
+
   it("fails with a clear error when a plugin rule id collides", () => {
     withPluginProject((dir) => {
       writeFileSync(join(dir, "todo-clone.mjs"), pluginSource.replace(/no-console/g, "todo-comment"));

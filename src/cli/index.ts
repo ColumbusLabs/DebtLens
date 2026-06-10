@@ -14,6 +14,7 @@ import type { DebtIssue, DebtLensConfig, OutputFormat, ScanOptions, ScanResult, 
 import { allDetectors, detectorIds } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
+import { runExplain } from "./explain.js";
 import { runInit } from "./init.js";
 import { runDoctor } from "./doctor.js";
 import { runAdopt } from "./adopt.js";
@@ -293,6 +294,19 @@ program.command("rules")
       }
 
       process.stdout.write(renderRulesTable(rules));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program.command("explain")
+  .description("Print rule documentation, default thresholds, and false-positive guidance.")
+  .argument("<rule>", "rule id, e.g. prop-drilling")
+  .action((rule: string) => {
+    try {
+      process.stdout.write(runExplain(rule));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);

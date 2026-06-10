@@ -1,3 +1,4 @@
+import { suggestClosest } from "../utils/didYouMean.js";
 import type { DebtIssue, SourceFileInfo } from "./types.js";
 
 const disableNextLinePattern = /debtlens-disable-next-line\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
@@ -86,7 +87,9 @@ function registerSuppression(
 
   const normalizedRuleId = ruleId.toLowerCase();
   if (!validRuleIds.has(normalizedRuleId)) {
-    addWarning(warnings, `${file}: unknown suppression rule "${normalizedRuleId}"`);
+    const suggestion = suggestClosest(normalizedRuleId, [...validRuleIds]);
+    const hint = suggestion ? ` (did you mean "${suggestion}"?)` : "";
+    addWarning(warnings, `${file}: unknown suppression rule "${normalizedRuleId}"${hint}`);
     return;
   }
 

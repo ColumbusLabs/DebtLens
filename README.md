@@ -115,6 +115,7 @@ debtlens adopt            # adoption report (dry run; recommends minSeverity)
 debtlens packs            # list built-in rule pack presets
 debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
+debtlens explain <rule>   # print rule docs, default thresholds, and false-positive guidance
 debtlens scan [target]
 ```
 

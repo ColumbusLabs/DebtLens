@@ -5,6 +5,7 @@ import { allDetectors } from "../detectors/index.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
+import { suggestClosest } from "../utils/didYouMean.js";
 import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
@@ -134,7 +135,12 @@ function selectDetectors(ruleIds: string[] | undefined): Detector[] {
   const missing = [...requested].filter((ruleId) => !allDetectors.some((detector) => detector.id === ruleId));
 
   if (missing.length > 0) {
-    throw new Error(`Unknown DebtLens rule(s): ${missing.join(", ")}`);
+    const knownIds = allDetectors.map((detector) => detector.id);
+    const described = missing.map((ruleId) => {
+      const suggestion = suggestClosest(ruleId, knownIds);
+      return suggestion ? `${ruleId} (did you mean "${suggestion}"?)` : ruleId;
+    });
+    throw new Error(`Unknown DebtLens rule(s): ${described.join(", ")}`);
   }
 
   return selected;

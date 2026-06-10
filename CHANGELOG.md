@@ -3,6 +3,15 @@
 All notable changes to DebtLens are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`debtlens explain <rule>`** command printing rule docs, default thresholds, and
+  false-positive guidance from `docs/rules.md` ([#145](https://github.com/ColumbusLabs/DebtLens/issues/145)).
+- **Did-you-mean suggestions** for unknown rule ids in `--rules`, config `rules`, inline
+  suppression directives, and `debtlens explain` ([#151](https://github.com/ColumbusLabs/DebtLens/issues/151)).
+
 ## [0.3.0] - 2026-06-09
 
 ### Added

@@ -19,6 +19,13 @@ All notable changes to DebtLens are documented here. This project adheres to
   ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69)). The plugin API version is
   an integer bumped only on breaking `Detector`/`DetectorContext` changes; bumps are
   documented here and in `docs/plugin-api-rfc.md`.
+- **Plugin loader** for local ESM rule plugins per the plugin API RFC: detectors are
+  validated against the built-in `Detector` contract, rule id collisions fail fast, and
+  paths cannot escape the config directory
+  ([#68](https://github.com/ColumbusLabs/DebtLens/issues/68)).
+- **`DEBTLENS_DISABLE_PLUGINS=1`** environment escape hatch for CI pipelines scanning
+  untrusted repositories; built-in rules still run
+  ([#71](https://github.com/ColumbusLabs/DebtLens/issues/71)).
 
 ## [0.3.0] - 2026-06-09
 

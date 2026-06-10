@@ -1,6 +1,6 @@
 # Plugin API RFC
 
-Status: **Draft** — design only; no loader shipped yet. Target: v0.4 ([`ROADMAP.md`](../ROADMAP.md)).
+Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, and the `DEBTLENS_DISABLE_PLUGINS` escape hatch are implemented. Follow-ons: plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)) and vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)).
 
 ## Problem
 
@@ -90,7 +90,7 @@ Align with [`SECURITY.md`](../SECURITY.md):
 - **No network** during plugin load.
 - **No arbitrary code** from config values — only explicit `plugins` paths.
 - Paths must stay within the repository (reject `..` traversal outside repo root).
-- CI environments may set `DEBTLENS_DISABLE_PLUGINS=1` to skip loading (future flag).
+- CI environments may set `DEBTLENS_DISABLE_PLUGINS=1` to skip loading entirely; built-in rules still run and a single stderr note is emitted when configured plugins are skipped.
 
 Untrusted repos: treat plugins like any local code — only enable in trusted pipelines.
 

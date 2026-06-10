@@ -103,6 +103,8 @@ export interface ScanOptions {
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
   /** When true, collect per-rule timing in `summary.profile`. */
   profile?: boolean;
+  /** Detectors contributed by config-loaded plugins, merged after built-in rules. */
+  pluginDetectors?: Detector[];
 }
 
 export interface CliOptions {
@@ -124,6 +126,7 @@ export interface CliOptions {
   changedFiles?: string[];
   fileContents?: Record<string, string>;
   profile?: boolean;
+  pluginDetectors?: Detector[];
 }
 
 export interface DetectorContext {

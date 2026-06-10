@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { loadConfig } from "../config/loadConfig.js";
+import { findConfigPath, loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
@@ -10,8 +10,9 @@ import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline,
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { DebtIssue, DebtLensConfig, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, Severity } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
+import { loadPlugins } from "../plugins/loadPlugins.js";
 import { packageVersion } from "../utils/packageInfo.js";
 import { renderReport } from "../reporters/index.js";
 import { runExplain } from "./explain.js";
@@ -59,6 +60,7 @@ program.command("scan")
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
+      const pluginDetectors = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
       const failOn = resolveFailOn(rawOptions, fileConfig);
       const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
@@ -106,6 +108,7 @@ program.command("scan")
         changedFiles,
         fileContents,
         profile: rawOptions.profile === true,
+        pluginDetectors,
       });
 
       if (rawOptions.writeBaseline && rawOptions.baseline) {
@@ -415,6 +418,22 @@ function parseConfidence(value: string): number {
     throw new Error(`Expected a confidence between 0 and 1, received "${value}".`);
   }
   return parsed;
+}
+
+async function loadConfiguredPlugins(
+  cwd: string,
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): Promise<Detector[] | undefined> {
+  if (!fileConfig.plugins?.length) return undefined;
+
+  const configPath = findConfigPath(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
+  const configDir = configPath ? dirname(configPath) : cwd;
+  const loaded = await loadPlugins(configDir, fileConfig, new Set(detectorIds));
+  for (const warning of loaded.warnings) {
+    process.stderr.write(`DebtLens: ${warning}\n`);
+  }
+  return loaded.detectors.length > 0 ? loaded.detectors : undefined;
 }
 
 function resolveFailOn(

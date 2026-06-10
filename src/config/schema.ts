@@ -46,8 +46,23 @@ export function buildConfigSchema(): Record<string, unknown> {
       rules: {
         type: "array",
         uniqueItems: true,
-        items: { enum: [...detectorIds] },
-        description: "Rule ids to run. Omit to run all rules.",
+        items: {
+          anyOf: [
+            { enum: [...detectorIds] },
+            { type: "string", description: "A plugin-provided rule id." },
+          ],
+        },
+        description: "Rule ids to run. Omit to run all rules. May include plugin rule ids when plugins are configured.",
+      },
+      pluginApiVersion: {
+        type: "integer",
+        minimum: 1,
+        description: "Plugin API version this config targets; must match the DebtLens runtime version.",
+      },
+      plugins: {
+        type: "array",
+        items: { type: "string" },
+        description: "Paths to local ESM plugin modules, resolved relative to the config file directory.",
       },
       maxFiles: {
         type: "integer",

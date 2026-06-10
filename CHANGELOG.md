@@ -14,6 +14,11 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`failOn` config field** to set the CI exit-code severity policy in
   `debtlens.config.json`; the `--fail-on` CLI flag overrides it
   ([#106](https://github.com/ColumbusLabs/DebtLens/issues/106)).
+- **`pluginApiVersion` and `plugins` config fields** with fail-fast runtime validation
+  against the supported plugin API version
+  ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69)). The plugin API version is
+  an integer bumped only on breaking `Detector`/`DetectorContext` changes; bumps are
+  documented here and in `docs/plugin-api-rfc.md`.
 
 ## [0.3.0] - 2026-06-09
 

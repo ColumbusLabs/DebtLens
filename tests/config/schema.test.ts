@@ -9,13 +9,14 @@ import { detectorIds } from "../../src/detectors/index.js";
 type SchemaShape = {
   $id: string;
   properties: {
-    rules: { items: { enum: string[] } };
+    rules: { items: { anyOf: [{ enum: string[] }, { type: string }] } };
     minSeverity: { enum: string[] };
     respectGitignore: { type: string };
   };
 };
 
 const schema = buildConfigSchema() as unknown as SchemaShape;
+const ruleEnum = schema.properties.rules.items.anyOf[0].enum;
 
 describe("config JSON schema", () => {
   it("matches the committed schema file (no drift)", () => {
@@ -24,11 +25,23 @@ describe("config JSON schema", () => {
   });
 
   it("lists every detector id in the rules enum", () => {
-    const ruleEnum = schema.properties.rules.items.enum;
     for (const id of detectorIds) {
       assert.ok(ruleEnum.includes(id), `missing rule id in schema: ${id}`);
     }
     assert.equal(ruleEnum.length, detectorIds.length);
+  });
+
+  it("accepts plugin rule ids as plain strings in rules", () => {
+    assert.equal(schema.properties.rules.items.anyOf[1].type, "string");
+  });
+
+  it("includes plugin configuration fields", () => {
+    const built = buildConfigSchema() as {
+      properties: { pluginApiVersion?: { type: string; minimum: number }; plugins?: { type: string } };
+    };
+    assert.equal(built.properties.pluginApiVersion?.type, "integer");
+    assert.equal(built.properties.pluginApiVersion?.minimum, 1);
+    assert.equal(built.properties.plugins?.type, "array");
   });
 
   it("uses the canonical severity set", () => {
@@ -49,7 +62,6 @@ describe("config JSON schema", () => {
 
   it("validates the example config's rules and severity", () => {
     const example = JSON.parse(readFileSync("debtlens.config.example.json", "utf8"));
-    const ruleEnum = schema.properties.rules.items.enum;
     assert.equal(example.$schema, SCHEMA_ID);
     for (const rule of example.rules) {
       assert.ok(ruleEnum.includes(rule), `example uses unknown rule: ${rule}`);

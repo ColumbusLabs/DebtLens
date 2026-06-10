@@ -1,0 +1,6 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
+  "pluginApiVersion": 1,
+  "plugins": ["./no-console.mjs"],
+  "include": ["src/**/*.{ts,tsx,js,jsx}"]
+}

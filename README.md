@@ -306,6 +306,32 @@ Explicit `rules` in config override the pack. Use `debtlens packs` to list prese
 }
 ```
 
+### Plugins
+
+Ship custom rules as local ESM modules without forking the CLI. List them in config with
+the plugin API version, then select them like built-in rules:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
+  "pluginApiVersion": 1,
+  "plugins": ["./debtlens-rules/no-console.mjs"],
+  "include": ["src/**/*.{ts,tsx,js,jsx}"]
+}
+```
+
+Plugin authors import types from the published `debtlens/plugin` entry point:
+
+```ts
+import type { Detector, DetectorContext } from "debtlens/plugin";
+```
+
+See the reference plugin in [`examples/plugin/`](./examples/plugin/) and the full
+contract in [`docs/plugin-api-rfc.md`](./docs/plugin-api-rfc.md). Plugin paths must stay
+within the config file's directory tree, rule ids must not collide with built-ins, and
+CI pipelines scanning untrusted repos can set `DEBTLENS_DISABLE_PLUGINS=1` to skip
+plugin loading entirely (see [`SECURITY.md`](./SECURITY.md)).
+
 ## Output formats
 
 Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown grouped by file for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards.

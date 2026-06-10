@@ -98,7 +98,7 @@ Untrusted repos: treat plugins like any local code — only enable in trusted pi
 
 ```js
 // debtlens-rules/no-console.mjs
-/** @type {import("debtlens").Detector} */
+/** @type {import("debtlens/plugin").Detector} */
 export const noConsoleDetector = {
   id: "no-console",
   name: "No console",
@@ -130,15 +130,15 @@ export const noConsoleDetector = {
 export default { rules: [noConsoleDetector] };
 ```
 
-(Pseudocode — types would ship from a future `debtlens/plugin` entry point.)
+A runnable version of this plugin lives in [`examples/plugin/`](../examples/plugin/), and types ship from the published `debtlens/plugin` entry point (`import type { Detector } from "debtlens/plugin"`).
 
 ## Implementation phases
 
-1. **RFC merged** (this document) — no runtime change
-2. **Loader prototype** — `import()` + validation behind feature flag
-3. **Schema + docs** — `plugins` / `pluginApiVersion` in JSON schema
-4. **Example repo** — sample plugin + integration test
-5. **Stable export** — document supported API in [`docs/architecture.md`](./architecture.md)
+1. **RFC merged** (this document) — no runtime change ✅
+2. **Loader prototype** — `import()` + validation ✅ ([#68](https://github.com/ColumbusLabs/DebtLens/issues/68))
+3. **Schema + docs** — `plugins` / `pluginApiVersion` in JSON schema ✅ ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69))
+4. **Example plugin** — [`examples/plugin/`](../examples/plugin/) + integration test ✅ ([#72](https://github.com/ColumbusLabs/DebtLens/issues/72))
+5. **Stable export** — `debtlens/plugin` types entry point ✅ ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70))
 
 ## Open questions
 

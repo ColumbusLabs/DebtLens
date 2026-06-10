@@ -26,6 +26,11 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`DEBTLENS_DISABLE_PLUGINS=1`** environment escape hatch for CI pipelines scanning
   untrusted repositories; built-in rules still run
   ([#71](https://github.com/ColumbusLabs/DebtLens/issues/71)).
+- **Reference plugin** in `examples/plugin/` (no-console rule) with CI integration
+  coverage ([#72](https://github.com/ColumbusLabs/DebtLens/issues/72)).
+- **`debtlens/plugin` entry point** exporting `Detector`, `DetectorContext`, `DebtIssue`,
+  `Severity`, and `DEBTLENS_PLUGIN_API_VERSION` for plugin authors
+  ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70)).
 
 ## [0.3.0] - 2026-06-09
 

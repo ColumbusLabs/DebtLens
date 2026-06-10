@@ -31,6 +31,21 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`debtlens/plugin` entry point** exporting `Detector`, `DetectorContext`, `DebtIssue`,
   `Severity`, and `DEBTLENS_PLUGIN_API_VERSION` for plugin authors
   ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70)).
+- **Plugin threshold defaults**: plugins can export a `thresholds` map merged after
+  built-in defaults, so user config and `--threshold` still override
+  ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)).
+- **Plugin vocabulary groups**: plugins can export naming-drift `vocabulary` concept
+  groups, overridden by user config groups with the same id
+  ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)).
+- **`ruleSeverities` config field** replacing the severity a rule reports, for
+  downgrading noisy rules without disabling them; unknown rule ids warn with a
+  did-you-mean suggestion ([#107](https://github.com/ColumbusLabs/DebtLens/issues/107)).
+- **`ruleConfidenceFloors` config field** hiding findings from a rule below a minimum
+  confidence, tracked under `summary.filterStats.filteredByConfidenceFloor`
+  ([#108](https://github.com/ColumbusLabs/DebtLens/issues/108)).
+- **`debtlens suppress`** helper printing a copy-paste inline suppression directive
+  (`--rule`, `--reason`, optional `--file`)
+  ([#146](https://github.com/ColumbusLabs/DebtLens/issues/146)).
 
 ## [0.3.0] - 2026-06-09
 

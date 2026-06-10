@@ -10,11 +10,18 @@ const noConsoleDetector = {
   defaultSeverity: "low",
   tags: ["hygiene"],
   detect(context) {
+    // Plugin-exported threshold default (see `thresholds` below); user config
+    // `thresholds["no-console.maxCalls"]` overrides it.
+    const maxCalls = context.getThreshold("no-console.maxCalls", 0);
     const issues = [];
     for (const file of context.files) {
       const lines = file.content.split(/\r?\n/);
+      const matches = [];
       for (let index = 0; index < lines.length; index += 1) {
-        if (!lines[index].includes("console.log")) continue;
+        if (lines[index].includes("console.log")) matches.push(index);
+      }
+      if (matches.length <= maxCalls) continue;
+      for (const index of matches) {
         issues.push({
           id: `dl_nc_${file.relativePath}:${index + 1}`,
           ruleId: "no-console",
@@ -34,4 +41,12 @@ const noConsoleDetector = {
   },
 };
 
-export default { rules: [noConsoleDetector] };
+export default {
+  rules: [noConsoleDetector],
+  // Threshold defaults merged after built-ins, before user config and CLI flags.
+  thresholds: { "no-console.maxCalls": 0 },
+  // Naming-drift concept groups merged below user config `vocabulary` groups.
+  vocabulary: {
+    logging: ["log", "logger", "console", "debug", "trace", "print"],
+  },
+};

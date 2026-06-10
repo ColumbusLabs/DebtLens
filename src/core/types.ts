@@ -74,6 +74,10 @@ export interface DebtLensConfig {
   failOn?: Severity;
   /** Exit with code 1 only when a reported issue meets `--fail-on` and this confidence floor. */
   failOnConfidence?: number;
+  /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
+  ruleSeverities?: Record<string, Severity>;
+  /** Rule id -> minimum confidence; issues from that rule below the floor are not reported. */
+  ruleConfidenceFloors?: Record<string, number>;
 }
 
 export interface ScanOptions {
@@ -105,6 +109,10 @@ export interface ScanOptions {
   profile?: boolean;
   /** Detectors contributed by config-loaded plugins, merged after built-in rules. */
   pluginDetectors?: Detector[];
+  /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
+  ruleSeverities?: Record<string, Severity>;
+  /** Rule id -> minimum confidence; issues from that rule below the floor are not reported. */
+  ruleConfidenceFloors?: Record<string, number>;
 }
 
 export interface CliOptions {
@@ -127,6 +135,10 @@ export interface CliOptions {
   fileContents?: Record<string, string>;
   profile?: boolean;
   pluginDetectors?: Detector[];
+  /** Threshold defaults contributed by plugins; user config and CLI thresholds override. */
+  pluginThresholds?: ScanThresholds;
+  /** Naming-drift vocabulary contributed by plugins; user config groups override on id. */
+  pluginVocabulary?: Record<string, string[]>;
 }
 
 export interface DetectorContext {
@@ -148,6 +160,7 @@ export interface Detector {
 
 export interface ScanFilterStats {
   filteredByMinSeverity?: number;
+  filteredByConfidenceFloor?: number;
   suppressedByBaseline?: number;
   suppressedByInline?: number;
 }

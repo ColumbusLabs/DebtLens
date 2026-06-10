@@ -145,6 +145,135 @@
         }
       }
     },
+    "ruleSeverities": {
+      "type": "object",
+      "description": "Rule id -> severity reported for that rule's issues, replacing the detector's choice. May include plugin rule ids.",
+      "properties": {
+        "large-component": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "state-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "effect-complexity": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "prop-drilling": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "naming-drift": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "enum": [
+          "info",
+          "low",
+          "medium",
+          "high"
+        ]
+      }
+    },
+    "ruleConfidenceFloors": {
+      "type": "object",
+      "description": "Rule id -> minimum confidence (0-1); issues from that rule below the floor are not reported. May include plugin rule ids.",
+      "properties": {
+        "large-component": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "state-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "effect-complexity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "prop-drilling": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "naming-drift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
     "propDrilling": {
       "type": "object",
       "description": "Prop-drilling rule configuration.",

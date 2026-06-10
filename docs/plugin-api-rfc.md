@@ -1,6 +1,6 @@
 # Plugin API RFC
 
-Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, and the `DEBTLENS_DISABLE_PLUGINS` escape hatch are implemented. Follow-ons: plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)) and vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)).
+Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, the `DEBTLENS_DISABLE_PLUGINS` escape hatch, plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)), and vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)) are implemented.
 
 ## Problem
 
@@ -63,7 +63,13 @@ Issues must include `message`, `severity`, `confidence`, `file`, `location`, `ev
 Each plugin module default-exports either:
 
 - a single `Detector`, or
-- `{ rules: Detector[], vocabulary?: Record<string, string[]> }`
+- `{ rules: Detector[], thresholds?: Record<string, number>, vocabulary?: Record<string, string[]> }`
+
+`thresholds` supplies defaults for `context.getThreshold` keys; they merge after
+built-in defaults, so user config `thresholds` and the `--threshold` flag override
+them. `vocabulary` contributes naming-drift concept groups; user config groups with
+the same id override plugin groups. When multiple plugins set the same threshold key
+or concept id, the later plugin wins and a warning is emitted.
 
 ## Loading model
 
@@ -142,8 +148,8 @@ A runnable version of this plugin lives in [`examples/plugin/`](../examples/plug
 
 ## Open questions
 
-- Should plugins export threshold defaults?
-- Allow vocabulary packs from plugins?
+- ~~Should plugins export threshold defaults?~~ Shipped ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)): `thresholds` export merges after built-in defaults, before user config.
+- ~~Allow vocabulary packs from plugins?~~ Shipped ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)): `vocabulary` export merges below user config groups.
 - Per-plugin enable flags vs flat `rules` list?
 
 Track decisions in issue [#26](https://github.com/ColumbusLabs/DebtLens/issues/26).

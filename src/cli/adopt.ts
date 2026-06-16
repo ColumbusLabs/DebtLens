@@ -1,9 +1,11 @@
 import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
+import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { severities } from "../core/severity.js";
 import type { CliOptions, ScanResult, Severity } from "../core/types.js";
+import { buildThresholdSuggestions, type ThresholdSuggestion } from "./adoptionThresholds.js";
 import { runInit } from "./init.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
@@ -15,6 +17,7 @@ export interface AdoptInput {
   writeConfig?: boolean;
   force?: boolean;
   pack?: string;
+  packageName?: string;
   writeBaseline?: boolean | string;
   format?: "terminal" | "markdown";
 }
@@ -22,6 +25,7 @@ export interface AdoptInput {
 export interface AdoptResult {
   text: string;
   scan: ScanResult;
+  thresholdSuggestions: ThresholdSuggestion[];
   configWritten?: string;
   baselineWritten?: string;
   baselineSkipped?: boolean;
@@ -37,7 +41,11 @@ export function recommendMinSeverity(bySeverity: Record<Severity, number>, total
   return "low";
 }
 
-export function formatAdoptReport(scanResult: ScanResult, recommendedMinSeverity: Severity): string {
+export function formatAdoptReport(
+  scanResult: ScanResult,
+  recommendedMinSeverity: Severity,
+  thresholdSuggestions: ThresholdSuggestion[] = [],
+): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
     .sort((a, b) => b[1] - a[1])
@@ -59,11 +67,21 @@ export function formatAdoptReport(scanResult: ScanResult, recommendedMinSeverity
     "",
     `Recommended minSeverity: ${recommendedMinSeverity}`,
   ];
+  if (thresholdSuggestions.length > 0) {
+    lines.push("", "Suggested threshold tuning:");
+    for (const suggestion of thresholdSuggestions) {
+      lines.push(`  ${suggestion.key}: ${suggestion.current} -> ${suggestion.suggested} (p90 observed ${suggestion.observedP90}, ${suggestion.samples} sample${suggestion.samples === 1 ? "" : "s"})`);
+    }
+  }
 
   return `${lines.join("\n")}\n`;
 }
 
-export function formatAdoptMarkdownReport(scanResult: ScanResult, recommendedMinSeverity: Severity): string {
+export function formatAdoptMarkdownReport(
+  scanResult: ScanResult,
+  recommendedMinSeverity: Severity,
+  thresholdSuggestions: ThresholdSuggestion[] = [],
+): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
     .sort((a, b) => b[1] - a[1])
@@ -90,16 +108,30 @@ export function formatAdoptMarkdownReport(scanResult: ScanResult, recommendedMin
     "",
     `Recommended minSeverity: **${recommendedMinSeverity}**`,
   ];
+  if (thresholdSuggestions.length > 0) {
+    lines.push(
+      "",
+      "## Suggested Threshold Tuning",
+      "",
+      "| Threshold | Current | Suggested | P90 observed | Samples |",
+      "| --- | ---: | ---: | ---: | ---: |",
+      ...thresholdSuggestions.map((suggestion) => `| \`${suggestion.key}\` | ${suggestion.current} | ${suggestion.suggested} | ${suggestion.observedP90} | ${suggestion.samples} |`),
+    );
+  }
 
   return `${lines.join("\n")}\n`;
 }
 
 export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   const fileConfig = loadConfig(input.cwd, input.configPath);
-  const options = mergeConfig(input.target, fileConfig, input.cliOptions);
+  const target = input.packageName
+    ? resolveWorkspacePackage(input.cwd, input.packageName).directory
+    : input.target;
+  const options = mergeConfig(target, fileConfig, input.cliOptions);
   const result = await scan(options);
 
   const recommended = recommendMinSeverity(result.summary.bySeverity, result.summary.totalIssues);
+  const thresholdSuggestions = buildThresholdSuggestions(result, options);
   const lines: string[] = [];
 
   if (result.summary.filesScanned === 0) {
@@ -115,15 +147,15 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   }
 
   lines.push((input.format === "markdown"
-    ? formatAdoptMarkdownReport(result, recommended)
-    : formatAdoptReport(result, recommended)).trimEnd());
+    ? formatAdoptMarkdownReport(result, recommended, thresholdSuggestions)
+    : formatAdoptReport(result, recommended, thresholdSuggestions)).trimEnd());
 
   let configWritten: string | undefined;
   let baselineWritten: string | undefined;
   let baselineSkipped = false;
 
   if (input.writeConfig) {
-    const initResult = runInit(input.cwd, input.force === true, input.pack);
+    const initResult = runInit(input.cwd, input.force === true, input.pack, thresholdSuggestionOverrides(thresholdSuggestions));
     configWritten = initResult.path;
     lines.push("");
     lines.push(`${initResult.overwritten ? "Overwrote" : "Created"} ${initResult.path}`);
@@ -153,8 +185,13 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   return {
     text: `${lines.join("\n")}\n`,
     scan: result,
+    thresholdSuggestions,
     configWritten,
     baselineWritten,
     baselineSkipped,
   };
+}
+
+function thresholdSuggestionOverrides(suggestions: ThresholdSuggestion[]): Record<string, number> {
+  return Object.fromEntries(suggestions.map((suggestion) => [suggestion.key, suggestion.suggested]));
 }

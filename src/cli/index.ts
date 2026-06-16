@@ -20,6 +20,7 @@ import { runInit } from "./init.js";
 import { runSuppress } from "./suppress.js";
 import { runDoctor } from "./doctor.js";
 import { runAdopt } from "./adopt.js";
+import { renderCompletions, type CompletionShell } from "./completions.js";
 import { parseCommaList, parseThresholds } from "./parseList.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
@@ -263,6 +264,9 @@ program.command("doctor")
       });
 
       process.stdout.write(report.text);
+      if (!report.ok) {
+        process.exitCode = 1;
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);
@@ -314,6 +318,19 @@ program.command("rules")
       }
 
       process.stdout.write(renderRulesTable(rules));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      process.stderr.write(`DebtLens failed: ${message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+program.command("completions")
+  .description("Print shell completions for bash, zsh, or fish.")
+  .argument("<shell>", "bash, zsh, or fish")
+  .action((shell: string) => {
+    try {
+      process.stdout.write(renderCompletions(parseCompletionShell(shell)));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`DebtLens failed: ${message}\n`);
@@ -379,8 +396,10 @@ program.command("adopt")
   .option("--min-severity <severity>", "info, low, medium, or high", "low")
   .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
   .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
+  .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
+  .option("--package <name>", "scan a single workspace package by name")
   .option("--write-config", "write debtlens.config.json")
   .option("--force", "overwrite an existing config file (required with --write-config)")
   .option("--write-baseline [path]", "write baseline file (skipped when 0 issues)")
@@ -393,6 +412,7 @@ program.command("adopt")
         cwd,
         configPath: rawOptions.config ? String(rawOptions.config) : undefined,
         pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+        packageName: rawOptions.package ? String(rawOptions.package) : undefined,
         format: parseAdoptFormat(String(rawOptions.format ?? "terminal")),
         writeConfig: rawOptions.writeConfig === true,
         force: rawOptions.force === true,
@@ -402,6 +422,7 @@ program.command("adopt")
           include: parseCommaList(rawOptions.include as string | undefined),
           exclude: parseCommaList(rawOptions.exclude as string | undefined),
           rules: parseRuleList(rawOptions.rules as string | undefined),
+          thresholds: parseThresholds(rawOptions.threshold as string | undefined),
           pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
           minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
         },
@@ -559,6 +580,11 @@ function getGitHubSourceUrlBase(env: NodeJS.ProcessEnv): string | undefined {
 function parseRulesFormat(value: string): "terminal" | "json" {
   if (value === "terminal" || value === "json") return value;
   throw new Error(`Invalid rules format "${value}". Expected terminal or json.`);
+}
+
+function parseCompletionShell(value: string): CompletionShell {
+  if (value === "bash" || value === "zsh" || value === "fish") return value;
+  throw new Error(`Invalid completion shell "${value}". Expected bash, zsh, or fish.`);
 }
 
 function renderRulesTable(rules: Array<{ id: string; name: string; defaultSeverity: string; description: string }>): string {

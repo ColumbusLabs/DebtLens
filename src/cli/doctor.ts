@@ -1,7 +1,8 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { findConfigPath, loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
+import { validateConfigShape } from "../config/validateConfig.js";
 import { allDetectors } from "../detectors/index.js";
 import { resolveFilePaths } from "../core/resolveFiles.js";
 import type { CliOptions, ScanOptions } from "../core/types.js";
@@ -24,20 +25,26 @@ export interface DoctorInput {
 
 export interface DoctorReport {
   text: string;
+  ok: boolean;
 }
 
 export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
-  const fileConfig = loadConfig(input.cwd, input.configPath);
-  const options = mergeConfig(input.target, fileConfig, input.cliOptions);
   const configPath = findConfigPath(input.cwd, input.configPath);
   const explicitConfigPath = input.configPath ? resolve(input.cwd, input.configPath) : undefined;
   const missingConfigPath = explicitConfigPath && !existsSync(explicitConfigPath)
     ? explicitConfigPath
     : undefined;
+  const configValidation = validateConfigAtPath(configPath, missingConfigPath);
+  const fileConfig = configValidation.state === "invalid"
+    ? {}
+    : loadConfig(input.cwd, input.configPath);
+  const options = mergeConfig(input.target, fileConfig, input.cliOptions);
   const filePaths = await resolveFilePaths(options);
   const resolvedRules = resolveRuleIds(options);
   const warnings = missingConfigPath
     ? [`DebtLens warning: config file not found at ${missingConfigPath}.`]
+    : configValidation.state === "invalid"
+      ? [`DebtLens warning: config schema validation failed: ${configValidation.errors.join("; ")}.`]
     : [];
 
   const lines = [
@@ -45,6 +52,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     "===============",
     `Working directory: ${options.cwd}`,
     `Config: ${missingConfigPath ? `${missingConfigPath} (missing)` : configPath ?? "(none found)"}`,
+    `Config schema: ${formatConfigSchemaStatus(configValidation)}`,
     `Target: ${options.target}`,
     `Pack: ${options.pack ?? "(none)"}`,
     `Rules: ${resolvedRules.join(", ")}`,
@@ -92,7 +100,34 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     ).trimEnd());
   }
 
-  return { text: `${lines.join("\n")}\n` };
+  return { text: `${lines.join("\n")}\n`, ok: configValidation.state !== "invalid" };
+}
+
+function validateConfigAtPath(configPath: string | undefined, missingConfigPath: string | undefined): ConfigValidationResultForDoctor {
+  if (!configPath || missingConfigPath || !existsSync(configPath)) {
+    return { state: "not-found" };
+  }
+  try {
+    const parsed = JSON.parse(readFileSync(configPath, "utf8"));
+    const validation = validateConfigShape(parsed);
+    return validation.valid
+      ? { state: "valid" }
+      : { state: "invalid", errors: validation.errors };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { state: "invalid", errors: [`could not parse config JSON: ${message}`] };
+  }
+}
+
+type ConfigValidationResultForDoctor =
+  | { state: "not-found" }
+  | { state: "valid" }
+  | { state: "invalid"; errors: string[] };
+
+function formatConfigSchemaStatus(result: ConfigValidationResultForDoctor): string {
+  if (result.state === "not-found") return "(not checked)";
+  if (result.state === "valid") return "valid";
+  return `invalid (${result.errors.join("; ")})`;
 }
 
 function resolveRuleIds(options: ScanOptions): string[] {

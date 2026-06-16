@@ -31,11 +31,18 @@ export const configTemplate: DebtLensConfig & { $schema: string } = {
   },
 };
 
-export function renderConfigFile(pack?: string): string {
+export function renderConfigFile(pack?: string, thresholdOverrides: Record<string, number> = {}): string {
   if (pack) {
     const { rules: _rules, ...base } = configTemplate;
-    return `${JSON.stringify({ ...base, pack }, null, 2)}\n`;
+    return `${JSON.stringify({
+      ...base,
+      pack,
+      thresholds: { ...base.thresholds, ...thresholdOverrides },
+    }, null, 2)}\n`;
   }
 
-  return `${JSON.stringify(configTemplate, null, 2)}\n`;
+  return `${JSON.stringify({
+    ...configTemplate,
+    thresholds: { ...configTemplate.thresholds, ...thresholdOverrides },
+  }, null, 2)}\n`;
 }

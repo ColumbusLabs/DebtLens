@@ -14,7 +14,12 @@ export interface InitResult {
  * Write a starter `debtlens.config.json` into `cwd`. Refuses to clobber an existing
  * config unless `force` is set.
  */
-export function runInit(cwd: string, force = false, pack?: string): InitResult {
+export function runInit(
+  cwd: string,
+  force = false,
+  pack?: string,
+  thresholdOverrides: Record<string, number> = {},
+): InitResult {
   const path = resolve(cwd, CONFIG_FILENAME);
   const exists = existsSync(path);
 
@@ -26,6 +31,6 @@ export function runInit(cwd: string, force = false, pack?: string): InitResult {
     getRulePack(pack);
   }
 
-  writeFileSync(path, renderConfigFile(pack), "utf8");
+  writeFileSync(path, renderConfigFile(pack, thresholdOverrides), "utf8");
   return { path, overwritten: exists };
 }

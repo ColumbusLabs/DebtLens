@@ -13,6 +13,7 @@ debt, and naming drift before it becomes permanent.
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
 
 See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework packs**, and **language-agnostic reporting** fit together.
+If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
 
 ```bash
 npx debtlens scan
@@ -48,7 +49,7 @@ HIGH (2)
   - src/duplicateTwo.ts:1-18 (18 lines)
 ```
 
-See [`docs/showcase-expensify-app.md`](./docs/showcase-expensify-app.md) for a curated run against a large production React Native codebase — one supported target, not the sole identity of the tool.
+See [`docs/showcase-expensify-app.md`](./docs/showcase-expensify-app.md) for a curated run against a large production React Native codebase and [`docs/showcase-next-app.md`](./docs/showcase-next-app.md) for a reproducible Next.js App Router showcase template.
 
 ## Why this matters
 
@@ -112,6 +113,7 @@ npx debtlens scan
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
 debtlens init --pack core # starter config using the core rule pack preset
 debtlens adopt            # adoption report (dry run; recommends minSeverity)
+debtlens completions zsh  # print shell completions
 debtlens packs            # list built-in rule pack presets
 debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
@@ -170,6 +172,9 @@ debtlens scan --format pr-comment --output debtlens-pr-comment.md
 # Create HTML and JUnit reports for CI artifacts
 debtlens scan --format html --output reports/debtlens.html
 debtlens scan --format junit --output reports/debtlens.junit.xml
+
+# Package-scoped adoption report in a workspace
+debtlens adopt . --package web --format markdown
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
 debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
@@ -440,7 +445,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, `comment-delta-only`, `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. Each maps to the matching `scan` or reporter flag. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 
@@ -476,6 +481,16 @@ A Shields endpoint badge can be generated from the artifact by publishing a tiny
   "color": "orange"
 }
 ```
+
+For example:
+
+```bash
+jq '{schemaVersion: 1, label: "DebtLens", message: (.summary.totalIssues|tostring + " issues"), color: (if .summary.totalIssues == 0 then "brightgreen" elif .summary.bySeverity.high > 0 then "red" else "orange" end)}' debtlens-report.json > debtlens-badge.json
+```
+
+Other CI templates: [GitLab](./docs/ci-gitlab.md), [Bitbucket](./docs/ci-bitbucket.md), and [Azure Pipelines](./docs/ci-azure.md).
+
+For local hooks, see [pre-commit hooks](./docs/pre-commit.md). For monorepo rollout, see [per-package baselines](./docs/monorepo-baselines.md).
 
 Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`):
 

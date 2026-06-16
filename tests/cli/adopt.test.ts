@@ -9,9 +9,12 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { CONFIG_FILENAME } from "../../src/cli/init.js";
 import { DEFAULT_BASELINE_FILENAME } from "../../src/core/baseline.js";
 import { recommendMinSeverity } from "../../src/cli/adopt.js";
+import { buildThresholdSuggestions } from "../../src/cli/adoptionThresholds.js";
+import type { ScanOptions, ScanResult } from "../../src/core/types.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
+const monorepoFixtureRoot = join(repoRoot, "tests", "fixtures", "monorepo");
 
 function runAdopt(args: string[], options: { cwd?: string } = {}) {
   return spawnSync(process.execPath, ["--import", "tsx", cliEntrypoint, "adopt", ...args], {
@@ -36,6 +39,56 @@ describe("recommendMinSeverity", () => {
       3,
     );
     assert.equal(recommendation, "low");
+  });
+});
+
+describe("buildThresholdSuggestions", () => {
+  it("suggests higher rollout thresholds from observed findings", () => {
+    const result: ScanResult = {
+      schemaVersion: 1,
+      issues: [{
+        id: "large",
+        fingerprint: "large",
+        ruleId: "large-component",
+        ruleName: "Large component",
+        severity: "medium",
+        confidence: 0.8,
+        message: "App appears to own too many responsibilities.",
+        file: "src/App.tsx",
+        evidence: ["Lines: 400 / 250", "Hook calls: 14 / 10", "Branch points: 20 / 16"],
+        tags: [],
+      }],
+      summary: {
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 0, medium: 1, high: 0 },
+        byRule: { "large-component": 1 },
+        filesScanned: 1,
+        rulesRun: 1,
+        elapsedMs: 1,
+      },
+      options: { target: ".", include: [], exclude: [], minSeverity: "low", rules: ["large-component"] },
+    };
+    const options = {
+      cwd: repoRoot,
+      target: repoRoot,
+      include: [],
+      exclude: [],
+      minSeverity: "low" as const,
+      thresholds: {
+        "large-component.maxLines": 250,
+        "large-component.maxHooks": 10,
+        "large-component.maxBranches": 16,
+      },
+    } satisfies ScanOptions;
+
+    const suggestions = buildThresholdSuggestions(result, options);
+
+    assert.deepEqual(suggestions.map((suggestion) => suggestion.key), [
+      "large-component.maxBranches",
+      "large-component.maxHooks",
+      "large-component.maxLines",
+    ]);
+    assert.equal(suggestions.find((suggestion) => suggestion.key === "large-component.maxLines")?.suggested, 441);
   });
 });
 
@@ -73,6 +126,24 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /\| `todo-comment` \| 1 \|/);
   });
 
+  it("prints threshold suggestions when adoption findings exceed defaults", () => {
+    const result = runAdopt(["examples/react", "--rules", "large-component", "--threshold", "large-component.maxLines=20"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Suggested threshold tuning:/);
+    assert.match(result.stdout, /large-component\.maxLines/);
+  });
+
+  it("supports package-scoped adoption reports in workspaces", () => {
+    const pkgA = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-a", "--rules", "todo-comment"]);
+    const pkgB = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-b", "--rules", "todo-comment"]);
+
+    assert.equal(pkgA.status, 0);
+    assert.match(pkgA.stdout, /Total issues: 1/);
+    assert.equal(pkgB.status, 0);
+    assert.match(pkgB.stdout, /Total issues: 0/);
+  });
+
   it("writes config and baseline when requested", () => {
     const result = runAdopt([
       ".",
@@ -93,6 +164,25 @@ describe("debtlens adopt", () => {
 
     const baseline = JSON.parse(readFileSync(join(dir, DEFAULT_BASELINE_FILENAME), "utf8"));
     assert.ok(Object.keys(baseline.fingerprints).length >= 1);
+  });
+
+  it("persists suggested threshold tuning when writing config", () => {
+    const result = runAdopt([
+      join(repoRoot, "examples", "react"),
+      "--rules",
+      "large-component",
+      "--threshold",
+      "large-component.maxLines=20",
+      "--write-config",
+      "--force",
+      "--cwd",
+      dir,
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Suggested threshold tuning:/);
+    const config = JSON.parse(readFileSync(join(dir, CONFIG_FILENAME), "utf8"));
+    assert.ok(config.thresholds["large-component.maxLines"] > 20);
   });
 
   it("skips baseline write when no issues are found", () => {

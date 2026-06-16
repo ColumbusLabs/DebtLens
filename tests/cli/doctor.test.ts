@@ -43,6 +43,7 @@ describe("debtlens doctor", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, new RegExp(`Config: ${configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    assert.match(result.stdout, /Config schema: valid/);
     assert.match(result.stdout, /Pack: core/);
     assert.match(result.stdout, /duplicate-logic/);
     assert.match(result.stdout, /Matched files: 1/);
@@ -55,7 +56,44 @@ describe("debtlens doctor", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, new RegExp(`Config: ${configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\(missing\\)`));
+    assert.match(result.stdout, /Config schema: \(not checked\)/);
     assert.match(result.stdout, new RegExp(`DebtLens warning: config file not found at ${configPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.`));
+  });
+
+  it("validates config shape and exits nonzero for schema violations", () => {
+    const configPath = join(dir, "debtlens.config.json");
+    writeFileSync(configPath, JSON.stringify({
+      $schema: 123,
+      minSeverity: "urgent",
+      rules: ["todo-comment", "todo-comment"],
+      thresholds: { "large-component.maxLines": "many" },
+      todoComment: { markers: [{ severity: "critical" }] },
+      mystery: true,
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Config schema: invalid/);
+    assert.match(result.stdout, /\$schema must be a string/);
+    assert.match(result.stdout, /rules must not contain duplicate values/);
+    assert.match(result.stdout, /unknown property "mystery"/);
+    assert.match(result.stdout, /minSeverity must be one of info, low, medium, high/);
+    assert.match(result.stdout, /thresholds\.large-component\.maxLines must be a number/);
+    assert.match(result.stdout, /todoComment\.markers\[0\]\.pattern must be a string/);
+  });
+
+  it("reports plugin config dependency errors in the doctor output", () => {
+    writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+      plugins: ["./plugin.mjs"],
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /Config schema: invalid/);
+    assert.match(result.stdout, /plugins requires pluginApiVersion/);
+    assert.doesNotMatch(result.stderr, /DebtLens failed/);
   });
 
   it("warns when zero files match the include globs", () => {

@@ -43,13 +43,17 @@ npm run build
 
 1. Decide whether the rule belongs in the **core** pack or a **framework pack** (see
    [`docs/rule-packs.md`](./docs/rule-packs.md)).
-2. Add a detector in `src/detectors/<ruleName>.ts`.
-3. Export it from `src/detectors/index.ts`.
-4. Add default thresholds in `src/config/defaults.ts` if needed.
-5. Document the rule in `docs/rules.md` and note its pack in `docs/rule-packs.md` when
+2. State the false-positive bar before coding: what common pattern should not fire?
+3. Add a detector in `src/detectors/<ruleName>.ts`.
+4. Export it from `src/detectors/index.ts`.
+5. Add default thresholds in `src/config/defaults.ts` if needed.
+6. Document the rule in `docs/rules.md` and note its pack in `docs/rule-packs.md` when
    adding a new id.
-6. Add a test in `tests/detectors/<ruleName>.test.ts` using the `runDetector` helper —
+7. Add a test in `tests/detectors/<ruleName>.test.ts` using the `runDetector` helper —
    include a true positive **and** a near-miss that must not fire.
+8. Add or update a calibration fixture when the rule changes cross-rule finding volume.
+9. Explain the confidence score and include reviewable evidence/suggestions.
+10. Check whether the rule affects baselines, SARIF, JSON schema examples, or showcase docs.
 
 A detector must return issues with:
 

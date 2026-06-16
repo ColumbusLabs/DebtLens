@@ -130,7 +130,7 @@ Options:
 --rules <rules>                comma-separated rule ids
 --threshold <thresholds>       comma-separated key=value threshold overrides
 --max-files <count>            maximum files to scan
---format <format>              terminal, json, markdown, pr-comment, or sarif
+--format <format>              terminal, json, markdown, pr-comment, sarif, html, or junit
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
 --fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
@@ -147,6 +147,9 @@ Options:
 --no-color                     disable terminal color
 -q, --quiet                    terminal only: suppress per-finding detail
 --profile                      print per-rule timing to stderr without changing findings
+--group-by <group>             terminal grouping: severity, rule, or file
+--sarif-compact                SARIF only: emit only rules referenced by findings
+--markdown-heatmap [limit]     Markdown only: append a debt heatmap table
 ```
 
 Examples:
@@ -163,6 +166,10 @@ debtlens scan --format markdown --output debtlens-report.md
 
 # Create a compact grouped PR comment body
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
+
+# Create HTML and JUnit reports for CI artifacts
+debtlens scan --format html --output reports/debtlens.html
+debtlens scan --format junit --output reports/debtlens.junit.xml
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
 debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
@@ -217,7 +224,7 @@ When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns tha
 
 `debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
 
-Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas.
+Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
 
 ## Inline suppressions
 
@@ -387,18 +394,21 @@ plugin loading entirely (see [`SECURITY.md`](./SECURITY.md)).
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown grouped by file for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with collapsible per-file sections for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards. HTML is a self-contained human report; JUnit XML is for CI systems that expect test-style failures.
 
 ```bash
 debtlens scan --format json
-debtlens scan --format markdown --output reports/debtlens.md
+debtlens scan --format markdown --markdown-heatmap 10 --output reports/debtlens.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
-debtlens scan --format sarif --output debtlens.sarif
+debtlens scan --format sarif --sarif-compact --output debtlens.sarif
+debtlens scan --format html --output reports/debtlens.html
+debtlens scan --format junit --output reports/debtlens.junit.xml
+debtlens scan --group-by rule
 ```
 
 ## GitHub Action
 
-Run DebtLens on pull requests and surface findings as code-scanning annotations:
+Run DebtLens on pull requests and surface findings as code-scanning annotations. Version tags such as `@v0` and `@v0.3.0` are intended to contain the built `dist/` Action runtime; source checkouts build as a fallback when `dist/cli/index.js` is missing.
 
 ```yaml
 name: DebtLens
@@ -420,6 +430,7 @@ jobs:
           changed: origin/${{ github.base_ref }}
           format: sarif
           output: debtlens.sarif
+          upload-json-artifact: true
           thresholds: large-component.maxLines=300
           quiet: true
           fail-on: high
@@ -429,7 +440,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Inputs: `target`, `min-severity`, `rules`, `fail-on`, `fail-on-confidence`, `format`, `output`, `changed`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `step-summary`, `comment`. Each maps to the matching `scan` flag. `write-baseline` and `baseline` are mutually exclusive. With `fail-on`, a qualifying issue fails the job (gating the merge); `if: always()` still uploads the SARIF so annotations appear even on a failing run.
+Inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, `comment-delta-only`, `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. Each maps to the matching `scan` or reporter flag. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 
@@ -440,8 +451,30 @@ Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub
     format: sarif
     output: debtlens.sarif
     step-summary: true
+    previous-report: previous-debtlens-report.json
     quiet: true
     fail-on: high
+```
+
+The JSON artifact is named `debtlens-scan-result` by default. To also write it into the workspace for a later workflow step:
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    json-output: debtlens-report.json
+    json-artifact-name: debt-metrics
+```
+
+A Shields endpoint badge can be generated from the artifact by publishing a tiny JSON file derived from `summary.totalIssues`:
+
+```json
+{
+  "schemaVersion": 1,
+  "label": "DebtLens",
+  "message": "12 issues",
+  "color": "orange"
+}
 ```
 
 Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`):
@@ -454,8 +487,24 @@ permissions:
 - uses: ColumbusLabs/debtlens@v0
   with:
     changed: origin/${{ github.base_ref }}
+    diff-base: origin/${{ github.base_ref }}
     comment: true
+    comment-delta-only: true
     fail-on: high
+```
+
+For very large repos, keep the first rollout intentionally narrow:
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    package: web
+    pack: core
+    rules: todo-comment,duplicate-logic
+    max-files: 500
+    profile: true
+    step-summary: true
 ```
 
 To post a grouped PR comment manually instead, write the `pr-comment` output and post it with `actions/github-script`:

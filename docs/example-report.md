@@ -111,3 +111,10 @@ Evidence:
 - { return <footer>{props.region}</footer>; }
 
 Suggestion: Keep the wrapper only if it creates a stable domain boundary. Otherwise inline it or add the missing behavior where this abstraction belongs.
+
+
+## Rule correlations
+
+| File | Rules | Issues |
+| --- | --- | ---: |
+| `src/Dashboard.tsx` | dead-abstraction (3), effect-complexity (1), prop-drilling (1), state-sprawl (1), todo-comment (1) | 7 |

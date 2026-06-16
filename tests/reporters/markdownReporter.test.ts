@@ -58,6 +58,48 @@ describe("markdown reporter", () => {
     assert.doesNotMatch(md, /## High severity/);
   });
 
+  it("renders correlations and an opt-in debt heatmap", () => {
+    const result = makeResult([
+      issue,
+      {
+        ...issue,
+        id: "dl_state",
+        ruleId: "state-sprawl",
+        ruleName: "State sprawl",
+        severity: "medium",
+        message: "Parent manages too much state.",
+      },
+    ]);
+    result.summary.correlations = [{
+      file: "src/Parent.tsx",
+      totalIssues: 2,
+      rules: [
+        { ruleId: "prop-drilling", ruleName: "Prop drilling", count: 1 },
+        { ruleId: "state-sprawl", ruleName: "State sprawl", count: 1 },
+      ],
+    }];
+
+    const md = renderMarkdown(result, { heatmapLimit: 5 });
+
+    assert.match(md, /## Rule correlations/);
+    assert.match(md, /\| `src\/Parent\.tsx` \| prop-drilling \(1\), state-sprawl \(1\) \| 2 \|/);
+    assert.match(md, /## Debt heatmap/);
+  });
+
+  it("escapes Markdown table cells in correlations and heatmaps", () => {
+    const result = makeResult([{ ...issue, file: "src/a|b.tsx\n" }]);
+    result.summary.correlations = [{
+      file: "src/a|b.tsx\n",
+      totalIssues: 2,
+      rules: [{ ruleId: "rule|id", ruleName: "Rule", count: 2 }],
+    }];
+
+    const md = renderMarkdown(result, { heatmapLimit: 1 });
+
+    assert.match(md, /`src\/a\\\|b\.tsx`/);
+    assert.match(md, /rule\\\|id \(2\)/);
+  });
+
   it("matches the examples/react report fixture", async () => {
     const result = await scan({
       cwd: process.cwd(),

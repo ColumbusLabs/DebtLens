@@ -64,6 +64,15 @@ describe("debtlens adopt", () => {
     assert.equal(existsSync(join(dir, DEFAULT_BASELINE_FILENAME)), false);
   });
 
+  it("prints a stakeholder severity histogram as markdown", () => {
+    const result = runAdopt([".", "--cwd", dir, "--rules", "todo-comment", "--format", "markdown"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /^# DebtLens Adoption Report/m);
+    assert.match(result.stdout, /\| Severity \| Issues \|/);
+    assert.match(result.stdout, /\| `todo-comment` \| 1 \|/);
+  });
+
   it("writes config and baseline when requested", () => {
     const result = runAdopt([
       ".",

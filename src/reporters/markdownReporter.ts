@@ -1,10 +1,16 @@
+import { buildDebtHeatmap } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import { escapeMarkdownTableCell } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
-export function renderMarkdown(result: ScanResult): string {
+export interface MarkdownOptions {
+  heatmapLimit?: number;
+}
+
+export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}): string {
   const lines: string[] = [];
   lines.push("# DebtLens Report");
   lines.push("");
@@ -57,6 +63,32 @@ export function renderMarkdown(result: ScanResult): string {
         lines.push(`Review prompt: ${reviewPrompt}`);
       }
       lines.push("");
+    }
+  }
+
+  if (result.summary.correlations?.length) {
+    lines.push("");
+    lines.push("## Rule correlations");
+    lines.push("");
+    lines.push("| File | Rules | Issues |");
+    lines.push("| --- | --- | ---: |");
+    for (const entry of result.summary.correlations) {
+      const rules = entry.rules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+      lines.push(`| \`${escapeMarkdownTableCell(entry.file)}\` | ${escapeMarkdownTableCell(rules)} | ${entry.totalIssues} |`);
+    }
+  }
+
+  if (options.heatmapLimit && options.heatmapLimit > 0) {
+    const heatmap = buildDebtHeatmap(result.issues, options.heatmapLimit);
+    if (heatmap.length) {
+      lines.push("");
+      lines.push("## Debt heatmap");
+      lines.push("");
+      lines.push("| File | Issues | Rules | High | Medium | Low | Info |");
+      lines.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: |");
+      for (const entry of heatmap) {
+        lines.push(`| \`${escapeMarkdownTableCell(entry.file)}\` | ${entry.totalIssues} | ${entry.distinctRules} | ${entry.bySeverity.high} | ${entry.bySeverity.medium} | ${entry.bySeverity.low} | ${entry.bySeverity.info} |`);
+      }
     }
   }
 

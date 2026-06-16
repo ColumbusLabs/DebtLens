@@ -96,4 +96,23 @@ describe("step summary reporter", () => {
     const output = renderStepSummary(makeResult(issues));
     assert.match(output, /…and 2 more finding\(s\)/);
   });
+
+  it("renders a trend when a valid previous result is provided", () => {
+    const previous = makeResult([]);
+    const current = makeResult([{
+      id: "1",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "low",
+      confidence: 0.5,
+      message: "Finding",
+      file: "file.ts",
+      tags: [],
+    }]);
+
+    const output = renderStepSummary(current, { previousResult: previous });
+
+    assert.match(output, /### Trend/);
+    assert.match(output, /\| 0 \| 0 \| \+1 \| 0 \| \+1 \|/);
+  });
 });

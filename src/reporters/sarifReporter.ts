@@ -27,22 +27,44 @@ function ruleHelpUri(ruleId: string): string {
 
 /**
  * Render a scan result as SARIF 2.1.0 for GitHub code scanning and other tools.
- * The full rule catalog (all detectors) is always emitted under `tool.driver.rules`
- * so rule indices stay stable regardless of which rules produced results.
+ * The full rule catalog is emitted by default so rule indices stay stable. Compact
+ * mode emits only rules referenced by findings or suppression audit entries.
  */
-export function renderSarif(result: ScanResult): string {
+export function renderSarif(result: ScanResult, options: { compact?: boolean } = {}): string {
   const ruleIndex = new Map<string, number>();
-  const rules = allDetectors.map((detector, index) => {
-    ruleIndex.set(detector.id, index);
-    return {
-      id: detector.id,
-      name: detector.name,
-      shortDescription: { text: detector.description },
-      helpUri: ruleHelpUri(detector.id),
-      defaultConfiguration: { level: toSarifLevel(detector.defaultSeverity) },
-      properties: { tags: detector.tags },
-    };
-  });
+  const usedRuleIds = new Set([
+    ...result.issues.map((issue) => issue.ruleId),
+    ...(result.suppressions ?? []).map((suppression) => suppression.ruleId),
+  ]);
+  const catalog = options.compact
+    ? allDetectors.filter((detector) => usedRuleIds.has(detector.id))
+    : allDetectors;
+  const knownRuleIds = new Set(catalog.map((detector) => detector.id));
+  const rules = [
+    ...catalog.map((detector, index) => {
+      ruleIndex.set(detector.id, index);
+      return {
+        id: detector.id,
+        name: detector.name,
+        shortDescription: { text: detector.description },
+        helpUri: ruleHelpUri(detector.id),
+        defaultConfiguration: { level: toSarifLevel(detector.defaultSeverity) },
+        properties: { tags: detector.tags },
+      };
+    }),
+    ...[...usedRuleIds].filter((ruleId) => !knownRuleIds.has(ruleId)).sort().map((ruleId) => {
+      const index = ruleIndex.size;
+      ruleIndex.set(ruleId, index);
+      return {
+        id: ruleId,
+        name: ruleId,
+        shortDescription: { text: "Plugin-provided DebtLens rule" },
+        helpUri: ruleHelpUri(ruleId),
+        defaultConfiguration: { level: "warning" as SarifLevel },
+        properties: { tags: ["plugin"] },
+      };
+    }),
+  ];
 
   const results = [
     ...result.issues.map((issue) => toSarifResult(issue, ruleIndex)),

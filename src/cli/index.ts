@@ -10,7 +10,7 @@ import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline,
 import { scan } from "../core/scan.js";
 import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
-import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, ScanThresholds, Severity } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, ScanThresholds, Severity, TerminalGroupBy } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
 import { loadPlugins } from "../plugins/loadPlugins.js";
 import { packageVersion } from "../utils/packageInfo.js";
@@ -40,7 +40,7 @@ program.command("scan")
   .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
   .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
   .option("--max-files <count>", "maximum files to scan", parseInteger)
-  .option("--format <format>", "terminal, json, markdown, pr-comment, or sarif", "terminal")
+  .option("--format <format>", "terminal, json, markdown, pr-comment, sarif, html, or junit", "terminal")
   .option("-o, --output <path>", "write the report to a file instead of stdout")
   .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
   .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
@@ -57,9 +57,13 @@ program.command("scan")
   .option("--no-color", "disable ANSI color in terminal output")
   .option("-q, --quiet", "print only the summary line, suppress individual findings")
   .option("--profile", "print per-rule timing without changing findings")
+  .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
+  .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
+  .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
+      const groupBy = parseGroupBy(String(rawOptions.groupBy ?? "severity"));
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
       const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
       const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
@@ -158,9 +162,12 @@ program.command("scan")
       });
 
       const report = renderReport(reported, format, {
-        color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY,
+        color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
         quiet: rawOptions.quiet === true,
         sourceUrlBase: format === "pr-comment" ? getGitHubSourceUrlBase(process.env) : undefined,
+        groupBy,
+        sarifCompact: rawOptions.sarifCompact === true,
+        markdownHeatmapLimit: normalizeOptionalLimit(rawOptions.markdownHeatmap, 10),
       });
 
       if (rawOptions.output) {
@@ -377,6 +384,7 @@ program.command("adopt")
   .option("--write-config", "write debtlens.config.json")
   .option("--force", "overwrite an existing config file (required with --write-config)")
   .option("--write-baseline [path]", "write baseline file (skipped when 0 issues)")
+  .option("--format <format>", "terminal or markdown", "terminal")
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
@@ -385,6 +393,7 @@ program.command("adopt")
         cwd,
         configPath: rawOptions.config ? String(rawOptions.config) : undefined,
         pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+        format: parseAdoptFormat(String(rawOptions.format ?? "terminal")),
         writeConfig: rawOptions.writeConfig === true,
         force: rawOptions.force === true,
         writeBaseline: rawOptions.writeBaseline as boolean | string | undefined,
@@ -439,6 +448,17 @@ function parseInteger(value: string): number {
     throw new Error(`Expected a positive integer, received "${value}".`);
   }
   return parsed;
+}
+
+function parseOptionalInteger(value: string | boolean): number | true {
+  if (value === true) return true;
+  return parseInteger(String(value));
+}
+
+function normalizeOptionalLimit(value: unknown, defaultValue: number): number | undefined {
+  if (value === undefined || value === false) return undefined;
+  if (value === true) return defaultValue;
+  return value as number;
 }
 
 function parseConfidence(value: string): number {
@@ -514,8 +534,18 @@ function shouldFailOnRegression(result: ScanResult): boolean {
 }
 
 function parseFormat(value: string): OutputFormat {
-  if (value === "terminal" || value === "json" || value === "markdown" || value === "pr-comment" || value === "sarif") return value;
-  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, pr-comment, or sarif.`);
+  if (value === "terminal" || value === "json" || value === "markdown" || value === "pr-comment" || value === "sarif" || value === "html" || value === "junit") return value;
+  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, pr-comment, sarif, html, or junit.`);
+}
+
+function parseGroupBy(value: string): TerminalGroupBy {
+  if (value === "severity" || value === "rule" || value === "file") return value;
+  throw new Error(`Invalid group "${value}". Expected severity, rule, or file.`);
+}
+
+function parseAdoptFormat(value: string): "terminal" | "markdown" {
+  if (value === "terminal" || value === "markdown") return value;
+  throw new Error(`Invalid adopt format "${value}". Expected terminal or markdown.`);
 }
 
 function getGitHubSourceUrlBase(env: NodeJS.ProcessEnv): string | undefined {

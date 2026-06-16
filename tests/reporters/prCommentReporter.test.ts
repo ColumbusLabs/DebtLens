@@ -67,13 +67,47 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(markdown, /\| Files scanned \| Rules run \| Total issues \| High \| Medium \| Low \| Info \|/);
     assert.match(markdown, /\| 3 \| 8 \| 3 \| 1 \| 1 \| 0 \| 1 \|/);
-    assert.match(markdown, /#### `src\/Parent\.tsx`/);
+    assert.match(markdown, /<details><summary><code>src\/Parent\.tsx<\/code> - 2 findings<\/summary>/);
     assert.match(markdown, /- \*\*High\*\* Prop drilling \(`prop-drilling`\) at `src\/Parent\.tsx:13`: Parent forwards/);
     assert.match(markdown, /  - Confidence: \*\*73%\*\*/);
     assert.match(markdown, /  - Evidence: Child: a, b, c, d, e/);
     assert.match(markdown, /  - Suggestion: Consider colocating/);
     assert.match(markdown, /- \*\*Medium\*\* State sprawl \(`state-sprawl`\) at `src\/Parent\.tsx:24`: Parent manages/);
-    assert.match(markdown, /#### `src\/release plan\.ts`/);
+    assert.match(markdown, /<details><summary><code>src\/release plan\.ts<\/code> - 1 finding<\/summary>/);
+  });
+
+  it("renders baseline delta copy in delta-only mode", () => {
+    const result = makeResult([propIssue]);
+    result.summary.deltaFromBaseline = {
+      new: 1,
+      resolved: 2,
+      changed: 1,
+      severityRegressions: 0,
+      totalDelta: -1,
+      baseline: { totalIssues: 2, bySeverity: { info: 0, low: 0, medium: 0, high: 2 }, byRule: { "prop-drilling": 2 } },
+      current: { totalIssues: 1, bySeverity: { info: 0, low: 0, medium: 0, high: 1 }, byRule: { "prop-drilling": 1 } },
+      hasBaselineSummary: true,
+      byRule: { "prop-drilling": { baseline: 2, current: 1, delta: -1 } },
+    };
+
+    const markdown = renderPrComment(result, { deltaOnly: true });
+
+    assert.match(markdown, /Delta: -1 total, 1 new, 2 resolved, 1 changed/);
+    assert.match(markdown, /Showing findings not covered by the compared baseline\. Changed findings are counted above\./);
+    assert.doesNotMatch(markdown, /remain available in the JSON report/);
+  });
+
+  it("normalizes multi-line finding text for PR comments", () => {
+    const markdown = renderPrComment(makeResult([{
+      ...propIssue,
+      message: "Parent forwards\nmany props.",
+      evidence: ["first line\nsecond line"],
+      suggestion: "Split\nthis.",
+    }]));
+
+    assert.match(markdown, /Parent forwards many props\./);
+    assert.match(markdown, /Evidence: first line second line/);
+    assert.match(markdown, /Suggestion: Split this\./);
   });
 
   it("renders source links when a source URL base is provided", () => {

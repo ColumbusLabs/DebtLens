@@ -98,6 +98,13 @@ describe("sarif reporter", () => {
     assert.equal(sarif.runs[0].tool.driver.rules.length, 8);
   });
 
+  it("emits only referenced rules in compact mode", () => {
+    const sarif = JSON.parse(renderSarif(makeResult([highIssue]), { compact: true }));
+
+    assert.deepEqual(sarif.runs[0].tool.driver.rules.map((rule: { id: string }) => rule.id), ["prop-drilling"]);
+    assert.equal(sarif.runs[0].results[0].ruleIndex, 0);
+  });
+
   it("maps inline suppression audits to SARIF suppressions", () => {
     const sarif = JSON.parse(renderSarif({
       ...makeResult([]),

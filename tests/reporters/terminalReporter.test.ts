@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
+import { renderReport } from "../../src/reporters/index.js";
 import { renderTerminal } from "../../src/reporters/terminalReporter.js";
 
 function makeResult(issues: DebtIssue[]): ScanResult {
@@ -67,5 +68,30 @@ describe("renderTerminal", () => {
       },
     }, { color: false });
     assert.match(out, /Filtered: 2 baselined \| 3 below min severity/);
+  });
+
+  it("can group findings by rule or file", () => {
+    const second = { ...issue, id: "dl_2", ruleId: "state-sprawl", ruleName: "State sprawl", file: "src/State.tsx" };
+
+    const byRule = renderTerminal(makeResult([issue, second]), { color: false, groupBy: "rule" });
+    const byFile = renderTerminal(makeResult([issue, second]), { color: false, groupBy: "file" });
+
+    assert.match(byRule, /Grouped by rule \(2\)/);
+    assert.match(byRule, /prop-drilling \(1\)/);
+    assert.match(byFile, /Grouped by file \(2\)/);
+    assert.match(byFile, /src\/Parent\.tsx \(1\)/);
+  });
+
+  it("rejects unknown formats instead of falling through to terminal output", () => {
+    assert.throws(
+      () => renderReport(makeResult([issue]), "nope" as never),
+      /Invalid format "nope"/,
+    );
+  });
+
+  it("does not colorize when color is explicitly false", () => {
+    const out = renderReport(makeResult([issue]), "terminal", { color: false });
+
+    assert.doesNotMatch(out, /\u001b\[/);
   });
 });

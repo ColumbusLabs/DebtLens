@@ -1,14 +1,30 @@
 import type { OutputFormat, ScanResult } from "../core/types.js";
+import { renderHtml } from "./htmlReporter.js";
 import { renderJson } from "./jsonReporter.js";
+import { renderJunit } from "./junitReporter.js";
 import { renderMarkdown } from "./markdownReporter.js";
 import { renderPrComment } from "./prCommentReporter.js";
 import { renderSarif } from "./sarifReporter.js";
 import { renderTerminal } from "./terminalReporter.js";
 
-export function renderReport(result: ScanResult, format: OutputFormat, options: { color?: boolean; quiet?: boolean; sourceUrlBase?: string } = {}): string {
+export interface RenderReportOptions {
+  color?: boolean;
+  quiet?: boolean;
+  sourceUrlBase?: string;
+  groupBy?: "severity" | "rule" | "file";
+  sarifCompact?: boolean;
+  markdownHeatmapLimit?: number;
+  prCommentDeltaOnly?: boolean;
+  previousResult?: ScanResult;
+}
+
+export function renderReport(result: ScanResult, format: OutputFormat, options: RenderReportOptions = {}): string {
   if (format === "json") return renderJson(result);
-  if (format === "markdown") return renderMarkdown(result);
-  if (format === "pr-comment") return renderPrComment(result, { sourceUrlBase: options.sourceUrlBase });
-  if (format === "sarif") return renderSarif(result);
-  return renderTerminal(result, { color: options.color ?? true, quiet: options.quiet });
+  if (format === "markdown") return renderMarkdown(result, { heatmapLimit: options.markdownHeatmapLimit });
+  if (format === "pr-comment") return renderPrComment(result, { sourceUrlBase: options.sourceUrlBase, deltaOnly: options.prCommentDeltaOnly });
+  if (format === "sarif") return renderSarif(result, { compact: options.sarifCompact });
+  if (format === "html") return renderHtml(result);
+  if (format === "junit") return renderJunit(result);
+  if (format === "terminal") return renderTerminal(result, { color: options.color ?? true, quiet: options.quiet, groupBy: options.groupBy });
+  throw new Error(`Invalid format "${format}". Expected terminal, json, markdown, pr-comment, sarif, html, or junit.`);
 }

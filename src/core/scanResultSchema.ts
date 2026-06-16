@@ -46,6 +46,28 @@ export function buildScanResultSchema(): Record<string, unknown> {
       byRule: { type: "object", additionalProperties: { type: "integer", minimum: 0 } },
     },
   };
+  const correlation = {
+    type: "object",
+    additionalProperties: false,
+    required: ["file", "totalIssues", "rules"],
+    properties: {
+      file: { type: "string" },
+      totalIssues: { type: "integer", minimum: 0 },
+      rules: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["ruleId", "ruleName", "count"],
+          properties: {
+            ruleId: { type: "string" },
+            ruleName: { type: "string" },
+            count: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+  };
 
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -125,6 +147,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
               },
             },
           },
+          correlations: { type: "array", items: correlation },
           profile: {
             type: "object",
             additionalProperties: false,

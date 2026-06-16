@@ -16,6 +16,7 @@ export interface AdoptInput {
   force?: boolean;
   pack?: string;
   writeBaseline?: boolean | string;
+  format?: "terminal" | "markdown";
 }
 
 export interface AdoptResult {
@@ -62,6 +63,37 @@ export function formatAdoptReport(scanResult: ScanResult, recommendedMinSeverity
   return `${lines.join("\n")}\n`;
 }
 
+export function formatAdoptMarkdownReport(scanResult: ScanResult, recommendedMinSeverity: Severity): string {
+  const { summary } = scanResult;
+  const topRules = Object.entries(summary.byRule)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
+  const lines = [
+    "# DebtLens Adoption Report",
+    "",
+    `Scanned **${summary.filesScanned}** files and found **${summary.totalIssues}** issues.`,
+    "",
+    "## Severity Histogram",
+    "",
+    "| Severity | Issues |",
+    "| --- | ---: |",
+    ...severities.map((severity) => `| ${severity} | ${summary.bySeverity[severity]} |`),
+    "",
+    "## Top Rules",
+    "",
+    "| Rule | Issues |",
+    "| --- | ---: |",
+    ...(topRules.length > 0
+      ? topRules.map(([rule, count]) => `| \`${rule}\` | ${count} |`)
+      : ["| None | 0 |"]),
+    "",
+    `Recommended minSeverity: **${recommendedMinSeverity}**`,
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
 export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   const fileConfig = loadConfig(input.cwd, input.configPath);
   const options = mergeConfig(input.target, fileConfig, input.cliOptions);
@@ -82,7 +114,9 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
     lines.push("");
   }
 
-  lines.push(formatAdoptReport(result, recommended).trimEnd());
+  lines.push((input.format === "markdown"
+    ? formatAdoptMarkdownReport(result, recommended)
+    : formatAdoptReport(result, recommended)).trimEnd());
 
   let configWritten: string | undefined;
   let baselineWritten: string | undefined;

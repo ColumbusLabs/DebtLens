@@ -1,7 +1,8 @@
 import type { Project, SourceFile } from "ts-morph";
 
 export type Severity = "info" | "low" | "medium" | "high";
-export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif";
+export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit";
+export type TerminalGroupBy = "severity" | "rule" | "file";
 
 export interface IssueLocation {
   startLine: number;
@@ -191,6 +192,23 @@ export interface ScanBaselineDelta {
   byRule: Record<string, { baseline: number; current: number; delta: number }>;
 }
 
+export interface RuleCorrelation {
+  file: string;
+  totalIssues: number;
+  rules: Array<{
+    ruleId: string;
+    ruleName: string;
+    count: number;
+  }>;
+}
+
+export interface DebtHeatmapEntry {
+  file: string;
+  totalIssues: number;
+  distinctRules: number;
+  bySeverity: Record<Severity, number>;
+}
+
 export interface InlineSuppressionAudit {
   ruleId: string;
   file: string;
@@ -215,6 +233,7 @@ export interface ScanSummary {
   warnings?: string[];
   filterStats?: ScanFilterStats;
   deltaFromBaseline?: ScanBaselineDelta;
+  correlations?: RuleCorrelation[];
   profile?: ScanProfile;
 }
 

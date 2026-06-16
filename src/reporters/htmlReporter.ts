@@ -1,0 +1,86 @@
+import { buildDebtHeatmap } from "../core/issueAggregates.js";
+import type { ScanResult, Severity } from "../core/types.js";
+import { formatFilterStats } from "./filterStats.js";
+
+const severityOrder: Severity[] = ["high", "medium", "low", "info"];
+
+export function renderHtml(result: ScanResult): string {
+  const filterStats = formatFilterStats(result.summary.filterStats);
+  const heatmap = buildDebtHeatmap(result.issues, 10);
+  const findings = result.issues.map((issue) => {
+    const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
+    return `<tr><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(issue.ruleName)}</td><td><code>${escapeHtml(location)}</code></td><td>${escapeHtml(issue.message)}</td><td>${Math.round(issue.confidence * 100)}%</td></tr>`;
+  }).join("\n");
+
+  const correlations = (result.summary.correlations ?? []).map((entry) => (
+    `<tr><td><code>${escapeHtml(entry.file)}</code></td><td>${entry.totalIssues}</td><td>${escapeHtml(entry.rules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`
+  )).join("\n");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DebtLens Report</title>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172026; background: #f7f8fa; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 48px; }
+    h1, h2 { margin: 0 0 16px; }
+    p { margin: 0 0 20px; color: #46515c; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 28px; background: #fff; border: 1px solid #d8dee4; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e6ebef; vertical-align: top; }
+    th { background: #eef2f5; font-size: 13px; text-transform: uppercase; letter-spacing: .02em; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 20px 0 28px; }
+    .metric { background: #fff; border: 1px solid #d8dee4; padding: 14px; }
+    .metric strong { display: block; font-size: 28px; line-height: 1; }
+    .empty { background: #fff; border: 1px solid #d8dee4; padding: 18px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>DebtLens Report</h1>
+  <p>Scanned ${result.summary.filesScanned} files with ${result.summary.rulesRun} rules in ${result.summary.elapsedMs}ms.${filterStats ? ` Filtered: ${escapeHtml(filterStats)}.` : ""}</p>
+  <section class="summary">
+    <div class="metric"><span>Total</span><strong>${result.summary.totalIssues}</strong></div>
+    ${severityOrder.map((severity) => `<div class="metric"><span>${capitalize(severity)}</span><strong>${result.summary.bySeverity[severity]}</strong></div>`).join("\n    ")}
+  </section>
+  <h2>Findings</h2>
+  ${result.issues.length === 0 ? `<div class="empty">No maintainability debt found at the configured severity level.</div>` : `<table>
+    <thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message</th><th>Confidence</th></tr></thead>
+    <tbody>
+${findings}
+    </tbody>
+  </table>`}
+  ${heatmap.length ? `<h2>Debt Heatmap</h2>
+  <table>
+    <thead><tr><th>File</th><th>Issues</th><th>Rules</th><th>High</th><th>Medium</th><th>Low</th><th>Info</th></tr></thead>
+    <tbody>
+${heatmap.map((entry) => `<tr><td><code>${escapeHtml(entry.file)}</code></td><td>${entry.totalIssues}</td><td>${entry.distinctRules}</td><td>${entry.bySeverity.high}</td><td>${entry.bySeverity.medium}</td><td>${entry.bySeverity.low}</td><td>${entry.bySeverity.info}</td></tr>`).join("\n")}
+    </tbody>
+  </table>` : ""}
+  ${correlations ? `<h2>Rule Correlations</h2>
+  <table>
+    <thead><tr><th>File</th><th>Issues</th><th>Rules</th></tr></thead>
+    <tbody>
+${correlations}
+    </tbody>
+  </table>` : ""}
+</main>
+</body>
+</html>
+`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function capitalize(value: string): string {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}

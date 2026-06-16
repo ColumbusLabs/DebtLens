@@ -22,7 +22,7 @@ inputs:
     description: With fail-on, require at least this confidence (0-1) to exit with code 1.
     default: ""
   format:
-    description: Output format (terminal, json, markdown, pr-comment, sarif).
+    description: Output format (terminal, json, markdown, pr-comment, sarif, html, junit).
     default: terminal
   output:
     description: Write the report to this file instead of stdout.
@@ -30,6 +30,18 @@ inputs:
   changed:
     description: Scan only changed files. Use "true" for changes vs HEAD, or a base ref (e.g. origin/main).
     default: ""
+  diff-base:
+    description: Compare against a git ref and report only introduced findings.
+    default: ""
+  pack:
+    description: Built-in rule pack preset (core, react, react-native, next).
+    default: ""
+  package:
+    description: Workspace package name to scan.
+    default: ""
+  profile:
+    description: Collect per-rule timing profile in the JSON report.
+    default: "false"
   respect-gitignore:
     description: Skip files ignored by git in addition to configured excludes.
     default: "false"
@@ -54,6 +66,36 @@ inputs:
   quiet:
     description: Terminal only - suppress per-finding detail.
     default: "false"
+  group-by:
+    description: Terminal grouping (severity, rule, file).
+    default: severity
+  sarif-compact:
+    description: SARIF only - emit only rules referenced by findings.
+    default: "false"
+  markdown-heatmap:
+    description: Markdown only - append a debt heatmap table. Use a positive integer limit or leave empty to disable.
+    default: ""
+  fail-on-regression:
+    description: Exit with code 1 when counts increase versus baseline or diff-base.
+    default: "false"
+  json-output:
+    description: Optional path to also write the canonical ScanResult JSON report.
+    default: ""
+  upload-json-artifact:
+    description: Upload the canonical ScanResult JSON as an Actions artifact.
+    default: "true"
+  json-artifact-name:
+    description: Name for the uploaded JSON artifact.
+    default: debtlens-scan-result
+  json-artifact-retention-days:
+    description: Retention days for the uploaded JSON artifact.
+    default: "14"
+  previous-report:
+    description: Optional previous ScanResult JSON path for step-summary trend comparison.
+    default: ""
+  comment-delta-only:
+    description: PR comment only - emphasize baseline or diff-base delta findings.
+    default: "false"
   step-summary:
     description: Append a compact Markdown summary to the GitHub Actions step summary.
     default: "false"
@@ -67,13 +109,16 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version: "20"
-    - name: Build DebtLens
+    - name: Prepare DebtLens runtime
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
-        npm ci
-        npm run build
+        if [ ! -f dist/cli/index.js ]; then
+          npm ci
+          npm run build
+        fi
     - name: Run DebtLens scan
+      id: scan
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
@@ -85,6 +130,10 @@ runs:
         DL_FORMAT: ${{ inputs.format }}
         DL_OUTPUT: ${{ inputs.output }}
         DL_CHANGED: ${{ inputs.changed }}
+        DL_DIFF_BASE: ${{ inputs.diff-base }}
+        DL_PACK: ${{ inputs.pack }}
+        DL_PACKAGE: ${{ inputs.package }}
+        DL_PROFILE: ${{ inputs.profile }}
         DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
         DL_CONFIG: ${{ inputs.config }}
@@ -92,22 +141,39 @@ runs:
         DL_THRESHOLDS: ${{ inputs.thresholds }}
         DL_MAX_FILES: ${{ inputs.max-files }}
         DL_QUIET: ${{ inputs.quiet }}
+        DL_GROUP_BY: ${{ inputs.group-by }}
+        DL_SARIF_COMPACT: ${{ inputs.sarif-compact }}
+        DL_MARKDOWN_HEATMAP: ${{ inputs.markdown-heatmap }}
+        DL_FAIL_ON_REGRESSION: ${{ inputs.fail-on-regression }}
+        DL_JSON_OUTPUT: ${{ inputs.json-output }}
         DL_STEP_SUMMARY: ${{ inputs.step-summary }}
         DL_COMMENT: ${{ inputs.comment }}
+        DL_PREVIOUS_REPORT: ${{ inputs.previous-report }}
+        DL_COMMENT_DELTA_ONLY: ${{ inputs.comment-delta-only }}
         GITHUB_TOKEN: ${{ github.token }}
       run: |
-        report_format="$DL_FORMAT"
-        report_output="$DL_OUTPUT"
-        if [ "$DL_COMMENT" = "true" ]; then
-          report_format="pr-comment"
-          report_output="${DL_OUTPUT:-$RUNNER_TEMP/debtlens-pr-comment.md}"
+        set -euo pipefail
+        if [ -n "$DL_WRITE_BASELINE" ]; then
+          args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --write-baseline "$DL_WRITE_BASELINE")
+          [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
+          [ -n "$DL_PACK" ] && args+=(--pack "$DL_PACK")
+          [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")
+          [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
+          [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
+          [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
+          [ "$DL_RESPECT_GITIGNORE" = "true" ] && args+=(--respect-gitignore)
+          node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"
+          exit $?
         fi
-        args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format "$report_format")
+
+        internal_json="$RUNNER_TEMP/debtlens-report.json"
+        args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format json --output "$internal_json")
         [ -n "$DL_RULES" ] && args+=(--rules "$DL_RULES")
+        [ -n "$DL_PACK" ] && args+=(--pack "$DL_PACK")
         [ -n "$DL_FAIL_ON" ] && args+=(--fail-on "$DL_FAIL_ON")
         [ -n "$DL_FAIL_ON_CONFIDENCE" ] && args+=(--fail-on-confidence "$DL_FAIL_ON_CONFIDENCE")
-        [ -n "$report_output" ] && args+=(--output "$report_output")
         [ -n "$DL_BASELINE" ] && args+=(--baseline "$DL_BASELINE")
+        [ -n "$DL_DIFF_BASE" ] && args+=(--diff-base "$DL_DIFF_BASE")
         [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")
         if [ "$DL_CHANGED" = "true" ]; then
           args+=(--changed)
@@ -115,28 +181,60 @@ runs:
           args+=(--changed "$DL_CHANGED")
         fi
         [ "$DL_RESPECT_GITIGNORE" = "true" ] && args+=(--respect-gitignore)
-        [ -n "$DL_WRITE_BASELINE" ] && args+=(--write-baseline "$DL_WRITE_BASELINE")
         [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
         [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
-        [ "$DL_QUIET" = "true" ] && args+=(--quiet)
+        [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
+        [ "$DL_PROFILE" = "true" ] && args+=(--profile)
+        [ "$DL_FAIL_ON_REGRESSION" = "true" ] && args+=(--fail-on-regression)
+        set +e
         node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"
-        if [ "$DL_STEP_SUMMARY" = "true" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
-          summary_json="$RUNNER_TEMP/debtlens-step-summary.json"
-          summary_args=(scan "$DL_TARGET" --min-severity "$DL_MIN_SEVERITY" --format json --output "$summary_json" --quiet)
-          [ -n "$DL_RULES" ] && summary_args+=(--rules "$DL_RULES")
-          [ -n "$DL_BASELINE" ] && summary_args+=(--baseline "$DL_BASELINE")
-          [ -n "$DL_CONFIG" ] && summary_args+=(--config "$DL_CONFIG")
-          if [ "$DL_CHANGED" = "true" ]; then
-            summary_args+=(--changed)
-          elif [ -n "$DL_CHANGED" ]; then
-            summary_args+=(--changed "$DL_CHANGED")
+        scan_status=$?
+        set -e
+
+        if [ -n "$DL_JSON_OUTPUT" ]; then
+          mkdir -p "$(dirname "$DL_JSON_OUTPUT")"
+          cp "$internal_json" "$DL_JSON_OUTPUT"
+        fi
+
+        export DEBTLENS_QUIET="$DL_QUIET"
+        export DEBTLENS_GROUP_BY="$DL_GROUP_BY"
+        export DEBTLENS_SARIF_COMPACT="$DL_SARIF_COMPACT"
+        export DEBTLENS_MARKDOWN_HEATMAP="$DL_MARKDOWN_HEATMAP"
+        export DEBTLENS_PR_COMMENT_DELTA_ONLY="$DL_COMMENT_DELTA_ONLY"
+
+        if [ "$DL_FORMAT" = "json" ]; then
+          if [ -n "$DL_OUTPUT" ]; then
+            mkdir -p "$(dirname "$DL_OUTPUT")"
+            cp "$internal_json" "$DL_OUTPUT"
+          else
+            cat "$internal_json"
           fi
-          [ "$DL_RESPECT_GITIGNORE" = "true" ] && summary_args+=(--respect-gitignore)
-          [ -n "$DL_THRESHOLDS" ] && summary_args+=(--threshold "$DL_THRESHOLDS")
-          [ -n "$DL_MAX_FILES" ] && summary_args+=(--max-files "$DL_MAX_FILES")
-          node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${summary_args[@]}"
-          node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$summary_json"
+        else
+          node "$GITHUB_ACTION_PATH/scripts/render-scan-result.mjs" "$internal_json" "$DL_FORMAT" "$DL_OUTPUT"
         fi
-        if [ "$DL_COMMENT" = "true" ] && [ -n "$report_output" ]; then
-          node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$report_output"
+
+        if [ "$DL_STEP_SUMMARY" = "true" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
+          node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$internal_json" "$DL_PREVIOUS_REPORT"
         fi
+
+        if [ "$DL_COMMENT" = "true" ]; then
+          comment_output="$RUNNER_TEMP/debtlens-pr-comment.md"
+          node "$GITHUB_ACTION_PATH/scripts/render-scan-result.mjs" "$internal_json" pr-comment "$comment_output"
+          node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$comment_output"
+        fi
+
+        echo "scan-status=$scan_status" >> "$GITHUB_OUTPUT"
+    - uses: actions/upload-artifact@v4
+      if: ${{ inputs.upload-json-artifact == 'true' && inputs.write-baseline == '' }}
+      with:
+        name: ${{ inputs.json-artifact-name }}
+        path: ${{ runner.temp }}/debtlens-report.json
+        retention-days: ${{ inputs.json-artifact-retention-days }}
+    - name: Complete DebtLens scan
+      if: ${{ always() && inputs.write-baseline == '' }}
+      shell: bash
+      run: |
+        if [ "${{ steps.scan.outcome }}" != "success" ]; then
+          exit 1
+        fi
+        exit "${{ steps.scan.outputs['scan-status'] || 0 }}"

@@ -1,9 +1,12 @@
+import { groupIssuesByFile } from "../core/issueAggregates.js";
 import type { DebtIssue, ScanResult } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import { normalizeMarkdownText } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
 
 export interface PrCommentOptions {
   sourceUrlBase?: string;
+  deltaOnly?: boolean;
 }
 
 export function renderPrComment(result: ScanResult, options: PrCommentOptions = {}): string {
@@ -19,6 +22,11 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
     lines.push("");
     lines.push(`Filtered: ${filterStats}`);
   }
+  const delta = result.summary.deltaFromBaseline;
+  if (delta) {
+    lines.push("");
+    lines.push(`Delta: ${formatSigned(delta.totalDelta)} total, ${delta.new} new, ${delta.resolved} resolved, ${delta.changed} changed, ${delta.severityRegressions} severity regression(s).`);
+  }
 
   if (result.issues.length === 0) {
     lines.push("");
@@ -28,45 +36,38 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
 
   lines.push("");
   lines.push("### Grouped annotations");
+  if (options.deltaOnly && delta) {
+    lines.push("");
+    lines.push(`Showing findings not covered by the compared baseline. Changed findings are counted above.`);
+  }
 
   for (const [file, issues] of groupIssuesByFile(result.issues)) {
     lines.push("");
-    lines.push(`#### \`${file}\``);
+    lines.push(`<details><summary><code>${escapeHtml(file)}</code> - ${issues.length} finding${issues.length === 1 ? "" : "s"}</summary>`);
     lines.push("");
 
     for (const issue of issues) {
       const location = renderLocation(issue, options.sourceUrlBase);
-      lines.push(`- **${capitalize(issue.severity)}** ${issue.ruleName} (\`${issue.ruleId}\`) at ${location}: ${issue.message}`);
+      lines.push(`- **${capitalize(issue.severity)}** ${normalizeMarkdownText(issue.ruleName)} (\`${issue.ruleId}\`) at ${location}: ${normalizeMarkdownText(issue.message)}`);
       lines.push(`  - Confidence: **${Math.round(issue.confidence * 100)}%**`);
 
       if (issue.evidence?.length) {
-        lines.push(`  - Evidence: ${issue.evidence.join("; ")}`);
+        lines.push(`  - Evidence: ${issue.evidence.map(normalizeMarkdownText).join("; ")}`);
       }
 
       if (issue.suggestion) {
-        lines.push(`  - Suggestion: ${issue.suggestion}`);
+        lines.push(`  - Suggestion: ${normalizeMarkdownText(issue.suggestion)}`);
       }
       const reviewPrompt = getReviewPrompt(issue.ruleId);
       if (reviewPrompt) {
-        lines.push(`  - Review prompt: ${reviewPrompt}`);
+        lines.push(`  - Review prompt: ${normalizeMarkdownText(reviewPrompt)}`);
       }
     }
+    lines.push("");
+    lines.push("</details>");
   }
 
   return `${lines.join("\n")}\n`;
-}
-
-function groupIssuesByFile(issues: DebtIssue[]): Array<[string, DebtIssue[]]> {
-  const byFile = new Map<string, DebtIssue[]>();
-  for (const issue of issues) {
-    const group = byFile.get(issue.file);
-    if (group) {
-      group.push(issue);
-    } else {
-      byFile.set(issue.file, [issue]);
-    }
-  }
-  return [...byFile.entries()];
 }
 
 function renderLocation(issue: DebtIssue, sourceUrlBase: string | undefined): string {
@@ -78,6 +79,19 @@ function renderLocation(issue: DebtIssue, sourceUrlBase: string | undefined): st
 
 function encodePath(path: string): string {
   return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function formatSigned(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function capitalize(value: string): string {

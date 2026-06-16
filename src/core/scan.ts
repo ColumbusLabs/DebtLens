@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
-import { summarizeIssues } from "./baseline.js";
+import { buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
@@ -107,6 +107,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   };
 
   const issueSummary = summarizeIssues(issues);
+  const correlations = buildRuleCorrelations(issues);
   const summary = {
     totalIssues: issueSummary.totalIssues,
     bySeverity: issueSummary.bySeverity,
@@ -116,6 +117,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     elapsedMs: Date.now() - startedAt,
     ...(warnings.length ? { warnings } : {}),
     ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
+    ...(correlations.length > 0 ? { correlations } : {}),
     ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
   };
 

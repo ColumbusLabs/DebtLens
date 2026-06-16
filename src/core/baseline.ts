@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DebtIssue, ScanBaselineDelta, ScanCountSummary, ScanResult, Severity } from "./types.js";
 import { severityRank } from "./severity.js";
+import { buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
 
 export const DEFAULT_BASELINE_FILENAME = "debtlens-baseline.json";
@@ -143,6 +144,7 @@ export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResul
   const issues = comparison.newIssues;
   const suppressedByBaseline = result.issues.length - issues.length;
   const summary = summarizeIssues(issues);
+  const correlations = buildRuleCorrelations(issues);
   const filterStats = {
     ...result.summary.filterStats,
     ...(suppressedByBaseline > 0 ? { suppressedByBaseline } : {}),
@@ -157,18 +159,9 @@ export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResul
       byRule: summary.byRule,
       ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
       deltaFromBaseline: comparison.delta,
+      ...(correlations.length > 0 ? { correlations } : { correlations: undefined }),
     },
   };
-}
-
-export function summarizeIssues(issues: DebtIssue[]): ScanCountSummary {
-  const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
-  const byRule: Record<string, number> = {};
-  for (const issue of issues) {
-    bySeverity[issue.severity] += 1;
-    byRule[issue.ruleId] = (byRule[issue.ruleId] ?? 0) + 1;
-  }
-  return { totalIssues: issues.length, bySeverity, byRule };
 }
 
 function summarizeBaselineFingerprints(baseline: Baseline): ScanCountSummary {

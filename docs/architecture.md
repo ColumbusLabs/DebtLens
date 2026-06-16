@@ -38,7 +38,7 @@ Current detectors live in `src/detectors`.
 
 ## Reporters
 
-Reporters convert `ScanResult` to terminal text, JSON, Markdown, PR-comment Markdown, or SARIF.
+Reporters convert `ScanResult` to terminal text, JSON, Markdown, PR-comment Markdown, SARIF, HTML, or JUnit XML.
 
 Future reporters should use the same `ScanResult` object so downstream integrations can remain stable. JSON output carries `schemaVersion: 1` and is described by the published schema at:
 
@@ -46,11 +46,9 @@ Future reporters should use the same `ScanResult` object so downstream integrati
 https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json
 ```
 
-In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines. The fingerprint excludes raw line numbers so findings remain stable when code moves. Inline suppressions are preserved in a top-level audit log instead of being represented only as aggregate counts, and baseline comparisons populate `summary.deltaFromBaseline`.
+In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines. The fingerprint excludes raw line numbers so findings remain stable when code moves. Inline suppressions are preserved in a top-level audit log instead of being represented only as aggregate counts, baseline comparisons populate `summary.deltaFromBaseline`, and multi-rule hotspots are exposed through `summary.correlations`.
 
-Planned reporters:
-
-- compact CI summary
+Reporter-specific views share aggregate helpers for severity counts, file/rule grouping, correlations, and heatmaps so CLI output, PR comments, Markdown, HTML, and JSON stay aligned.
 
 ## Why JSON config only?
 

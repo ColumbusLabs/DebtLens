@@ -104,7 +104,7 @@ describe("debtlens scan output formats", () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(result.stdout, /### Grouped annotations/);
-    assert.match(result.stdout, /#### `src\/Dashboard\.tsx`/);
+    assert.match(result.stdout, /<details><summary><code>src\/Dashboard\.tsx<\/code> - 1 finding<\/summary>/);
     assert.match(result.stdout, /\*\*Low\*\* Debt marker comment \(`todo-comment`\)/);
   });
 
@@ -112,7 +112,7 @@ describe("debtlens scan output formats", () => {
     const result = runScan(["examples/react", "--format", "nope"]);
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, or sarif/);
+    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, or junit/);
   });
 
   it("links locations when GitHub source env is available", () => {

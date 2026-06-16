@@ -134,6 +134,7 @@ Options:
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
 --fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
+--fail-on-regression           exit 1 when issue counts increase vs --baseline or --diff-base
 --baseline <path>              report only issues absent from this baseline file
 --diff-base <ref>              report only findings introduced since this git ref
 --write-baseline [path]        write current issues to a baseline file and exit
@@ -172,6 +173,7 @@ debtlens scan --threshold "large-component.maxLines=320,state-sprawl.maxStateful
 # Adopt on a legacy repo: record existing debt, then only report newly introduced debt
 debtlens scan --write-baseline
 debtlens scan --baseline debtlens-baseline.json --fail-on high
+debtlens scan --baseline debtlens-baseline.json --fail-on-regression
 
 # Pull-request scan: only the files this branch changed vs main
 debtlens scan --changed origin/main --fail-on high
@@ -203,13 +205,19 @@ debtlens adopt --cwd . --rules todo-comment   # dry-run report (default)
 debtlens adopt --write-config --write-baseline --force
 ```
 
-The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). After adoption, use `debtlens scan --baseline debtlens-baseline.json --fail-on high` in CI to gate only newly introduced debt.
+The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). After adoption, use `debtlens scan --baseline debtlens-baseline.json --fail-on high` in CI to gate only newly introduced debt, or add `--fail-on-regression` to fail whenever total or per-rule issue counts increase.
 
-Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported.
+Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported. The JSON reporter exposes the same line-stable value as both `id` and `fingerprint` in ScanResult schema v1.
 
 When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty git file set from `--changed` / `--staged`. The warning is advisory and does not change the exit code for `--fail-on`.
 
 When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns that duplicate comparisons were capped. JSON output includes the same advisory under `summary.warnings`.
+
+## JSON contract
+
+`debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
+
+Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas.
 
 ## Inline suppressions
 

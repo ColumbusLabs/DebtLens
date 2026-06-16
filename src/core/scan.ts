@@ -2,10 +2,12 @@ import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
+import { summarizeIssues } from "./baseline.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
 import { suggestClosest } from "../utils/didYouMean.js";
+import { computeIssueFingerprint } from "../utils/fingerprint.js";
 import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
@@ -62,6 +64,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       },
     });
     for (const issue of detectorIssues) {
+      normalizeIssueIdentity(issue);
       const severityOverride = options.ruleSeverities?.[issue.ruleId];
       if (severityOverride) {
         issue.severity = severityOverride;
@@ -103,18 +106,11 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     ...(suppression.suppressedByInline > 0 ? { suppressedByInline: suppression.suppressedByInline } : {}),
   };
 
+  const issueSummary = summarizeIssues(issues);
   const summary = {
-    totalIssues: issues.length,
-    bySeverity: {
-      info: issues.filter((issue) => issue.severity === "info").length,
-      low: issues.filter((issue) => issue.severity === "low").length,
-      medium: issues.filter((issue) => issue.severity === "medium").length,
-      high: issues.filter((issue) => issue.severity === "high").length,
-    },
-    byRule: issues.reduce<Record<string, number>>((accumulator, issue) => {
-      accumulator[issue.ruleId] = (accumulator[issue.ruleId] ?? 0) + 1;
-      return accumulator;
-    }, {}),
+    totalIssues: issueSummary.totalIssues,
+    bySeverity: issueSummary.bySeverity,
+    byRule: issueSummary.byRule,
     filesScanned: files.length,
     rulesRun: detectors.length,
     elapsedMs: Date.now() - startedAt,
@@ -124,7 +120,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   };
 
   return {
+    schemaVersion: 1,
     issues,
+    ...(suppression.suppressions.length > 0 ? { suppressions: suppression.suppressions } : {}),
     summary,
     options: {
       target: options.target,
@@ -134,6 +132,12 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       rules: options.rules,
     },
   };
+}
+
+function normalizeIssueIdentity(issue: DebtIssue): void {
+  const fingerprint = issue.fingerprint ?? computeIssueFingerprint(issue);
+  issue.fingerprint = fingerprint;
+  issue.id = fingerprint;
 }
 
 function getContentOverride(options: ScanOptions, absolutePath: string): string | undefined {

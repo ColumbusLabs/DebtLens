@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -187,6 +187,205 @@ describe("debtlens scan fail-on confidence", () => {
   });
 });
 
+describe("debtlens scan fail-on regression", () => {
+  function withTempProject(run: (dir: string) => void) {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-regression-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("rejects --fail-on-regression without a baseline or diff base", () => {
+    const result = runScan(["examples/react", "--fail-on-regression"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Use --fail-on-regression with --baseline or --diff-base/);
+  });
+
+  it("fails when total issue count increases versus the baseline", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      writeFileSync(join(dir, "baseline.json"), JSON.stringify({
+        version: 1,
+        generatedAt: "2026-06-16T00:00:00.000Z",
+        fingerprints: {},
+        summary: {
+          totalIssues: 0,
+          bySeverity: { info: 0, low: 0, medium: 0, high: 0 },
+          byRule: {},
+        },
+      }));
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--baseline",
+        "baseline.json",
+        "--fail-on-regression",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.byRule["todo-comment"].delta, 1);
+    });
+  });
+
+  it("does not fail when a new same-rule fingerprint replaces a resolved one without count growth", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      const writeBaselineResult = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--write-baseline",
+        "baseline.json",
+      ]);
+      assert.equal(writeBaselineResult.status, 0);
+
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after GA\nexport const value = 1;\n");
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--baseline",
+        "baseline.json",
+        "--fail-on-regression",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.byRule["todo-comment"].delta, 0);
+    });
+  });
+
+  it("does not fail unchanged legacy baselines that lack per-rule metadata", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      const writeBaselineResult = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--write-baseline",
+        "baseline.json",
+      ]);
+      assert.equal(writeBaselineResult.status, 0);
+
+      const baseline = JSON.parse(readFileSync(join(dir, "baseline.json"), "utf8"));
+      delete baseline.summary;
+      delete baseline.issues;
+      writeFileSync(join(dir, "baseline.json"), JSON.stringify(baseline));
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--baseline",
+        "baseline.json",
+        "--fail-on-regression",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.hasBaselineSummary, false);
+    });
+  });
+
+  it("fails when a baselined finding increases in severity", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      const writeBaselineResult = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--write-baseline",
+        "baseline.json",
+      ]);
+      assert.equal(writeBaselineResult.status, 0);
+
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        ruleSeverities: { "todo-comment": "high" },
+      }));
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--baseline",
+        "baseline.json",
+        "--fail-on-regression",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.changed, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.severityRegressions, 1);
+    });
+  });
+
+  it("fails when a per-rule count increases even if total issue count is flat", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      writeFileSync(join(dir, "baseline.json"), JSON.stringify({
+        version: 1,
+        generatedAt: "2026-06-16T00:00:00.000Z",
+        fingerprints: { dl_old_naming: 1 },
+        summary: {
+          totalIssues: 1,
+          bySeverity: { info: 1, low: 0, medium: 0, high: 0 },
+          byRule: { "naming-drift": 1 },
+        },
+      }));
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--baseline",
+        "baseline.json",
+        "--fail-on-regression",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.byRule["todo-comment"].delta, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.byRule["naming-drift"].delta, -1);
+    });
+  });
+});
+
 describe("debtlens scan failOn from config", () => {
   function withTempProject(run: (dir: string) => void) {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-failon-"));
@@ -282,6 +481,14 @@ describe("debtlens scan inline suppressions", () => {
       assert.equal(control.summary.totalIssues, 1);
       assert.equal(suppressed.summary.totalIssues, 0);
       assert.equal(suppressed.summary.filterStats?.suppressedByInline, 1);
+      assert.equal(suppressed.suppressions[0].ruleId, "todo-comment");
+      assert.equal(suppressed.suppressions[0].file, suppressed.suppressions[0].issue.file);
+      assert.equal(suppressed.suppressions[0].kind, "next-line");
+      assert.equal(suppressed.suppressions[0].reason, "tracked in PROJ-1");
+      assert.equal(suppressed.suppressions[0].directiveLine, 1);
+      assert.equal(suppressed.suppressions[0].targetLine, 2);
+      assert.equal(suppressed.suppressions[0].issue.ruleId, "todo-comment");
+      assert.equal(typeof suppressed.suppressions[0].issue.fingerprint, "string");
     });
   });
 

@@ -11,6 +11,7 @@ function makeResult(issues: DebtIssue[]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const issue of issues) bySeverity[issue.severity] += 1;
   return {
+    schemaVersion: 1,
     issues,
     summary: {
       totalIssues: issues.length,

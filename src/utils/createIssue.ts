@@ -1,4 +1,5 @@
 import type { DebtIssue, Detector, IssueLocation, Severity } from "../core/types.js";
+import { computeIssueFingerprint } from "./fingerprint.js";
 
 export interface CreateIssueInput {
   detector: Detector;
@@ -13,10 +14,16 @@ export interface CreateIssueInput {
 }
 
 export function createIssue(input: CreateIssueInput): DebtIssue {
-  const stable = `${input.detector.id}:${input.file}:${input.location?.startLine ?? 0}:${input.message}`;
+  const fingerprint = computeIssueFingerprint({
+    ruleId: input.detector.id,
+    file: input.file,
+    message: input.message,
+    evidence: input.evidence,
+  });
 
   return {
-    id: hashString(stable),
+    id: fingerprint,
+    fingerprint,
     ruleId: input.detector.id,
     ruleName: input.detector.name,
     severity: input.severity ?? input.detector.defaultSeverity,
@@ -32,13 +39,4 @@ export function createIssue(input: CreateIssueInput): DebtIssue {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
-}
-
-function hashString(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
-  }
-  return `dl_${(hash >>> 0).toString(16)}`;
 }

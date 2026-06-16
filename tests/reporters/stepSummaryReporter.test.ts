@@ -11,6 +11,7 @@ function makeResult(issues: DebtIssue[]): ScanResult {
     byRule[issue.ruleId] = (byRule[issue.ruleId] ?? 0) + 1;
   }
   return {
+    schemaVersion: 1,
     issues,
     summary: {
       totalIssues: issues.length,

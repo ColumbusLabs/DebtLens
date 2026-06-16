@@ -12,6 +12,8 @@ export interface IssueLocation {
 
 export interface DebtIssue {
   id: string;
+  /** Line-stable finding fingerprint used for baselines and external integrations. */
+  fingerprint?: string;
   ruleId: string;
   ruleName: string;
   severity: Severity;
@@ -165,6 +167,40 @@ export interface ScanFilterStats {
   suppressedByInline?: number;
 }
 
+export interface ScanCountSummary {
+  totalIssues: number;
+  bySeverity: Record<Severity, number>;
+  byRule: Record<string, number>;
+}
+
+export interface ScanBaselineDelta {
+  /** Current findings not covered by the compared baseline. */
+  new: number;
+  /** Baseline findings no longer present in the current scan. */
+  resolved: number;
+  /** Findings with the same fingerprint but changed metadata such as severity. */
+  changed: number;
+  /** Known findings whose severity increased versus the baseline snapshot. */
+  severityRegressions: number;
+  /** Current total minus baseline total. Positive means the debt count regressed. */
+  totalDelta: number;
+  baseline: ScanCountSummary;
+  current: ScanCountSummary;
+  /** False for legacy baselines that lack per-rule/per-severity count metadata. */
+  hasBaselineSummary: boolean;
+  byRule: Record<string, { baseline: number; current: number; delta: number }>;
+}
+
+export interface InlineSuppressionAudit {
+  ruleId: string;
+  file: string;
+  kind: "next-line" | "file";
+  reason: string;
+  directiveLine: number;
+  targetLine?: number;
+  issue: DebtIssue;
+}
+
 export interface ScanProfile {
   ruleTimingsMs: Record<string, number>;
 }
@@ -178,11 +214,14 @@ export interface ScanSummary {
   elapsedMs: number;
   warnings?: string[];
   filterStats?: ScanFilterStats;
+  deltaFromBaseline?: ScanBaselineDelta;
   profile?: ScanProfile;
 }
 
 export interface ScanResult {
+  schemaVersion: 1;
   issues: DebtIssue[];
+  suppressions?: InlineSuppressionAudit[];
   summary: ScanSummary;
   options: Pick<ScanOptions, "target" | "include" | "exclude" | "minSeverity" | "rules">;
 }

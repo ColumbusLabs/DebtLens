@@ -9,6 +9,7 @@ function makeResult(issues: DebtIssue[]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const issue of issues) bySeverity[issue.severity] += 1;
   return {
+    schemaVersion: 1,
     issues,
     summary: {
       totalIssues: issues.length,
@@ -24,6 +25,7 @@ function makeResult(issues: DebtIssue[]): ScanResult {
 
 const highIssue: DebtIssue = {
   id: "dl_1",
+  fingerprint: "dl_1",
   ruleId: "prop-drilling",
   ruleName: "Prop drilling",
   severity: "high",
@@ -38,6 +40,7 @@ const highIssue: DebtIssue = {
 
 const infoIssue: DebtIssue = {
   id: "dl_2",
+  fingerprint: "dl_2",
   ruleId: "naming-drift",
   ruleName: "Naming drift",
   severity: "info",
@@ -82,6 +85,7 @@ describe("sarif reporter", () => {
     assert.equal(region.endLine, 20);
     assert.equal(high.properties.suggestion, "Colocate the data owner.");
     assert.deepEqual(high.properties.evidence, ["Child: a, b, c, d, e"]);
+    assert.equal(high.properties.fingerprint, "dl_1");
 
     const info = results.find((r: { ruleId: string }) => r.ruleId === "naming-drift");
     assert.equal(info.level, "note");
@@ -92,5 +96,30 @@ describe("sarif reporter", () => {
     const sarif = JSON.parse(renderSarif(makeResult([])));
     assert.deepEqual(sarif.runs[0].results, []);
     assert.equal(sarif.runs[0].tool.driver.rules.length, 8);
+  });
+
+  it("maps inline suppression audits to SARIF suppressions", () => {
+    const sarif = JSON.parse(renderSarif({
+      ...makeResult([]),
+      suppressions: [{
+        ruleId: "prop-drilling",
+        file: "src/Parent.tsx",
+        kind: "next-line",
+        reason: "tracked in PROJ-1",
+        directiveLine: 12,
+        targetLine: 13,
+        issue: highIssue,
+      }],
+    }));
+
+    const [suppressed] = sarif.runs[0].results;
+    assert.equal(suppressed.ruleId, "prop-drilling");
+    assert.equal(suppressed.suppressions[0].kind, "inSource");
+    assert.equal(suppressed.suppressions[0].status, "accepted");
+    assert.equal(suppressed.suppressions[0].justification, "tracked in PROJ-1");
+    assert.equal(suppressed.suppressions[0].location.physicalLocation.artifactLocation.uri, "src/Parent.tsx");
+    assert.equal(suppressed.suppressions[0].location.physicalLocation.region.startLine, 12);
+    assert.equal(suppressed.properties.suppressedBy, "next-line");
+    assert.equal(suppressed.properties.suppressionDirectiveLine, 12);
   });
 });

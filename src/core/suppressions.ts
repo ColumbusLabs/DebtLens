@@ -1,16 +1,25 @@
 import { suggestClosest } from "../utils/didYouMean.js";
-import type { DebtIssue, SourceFileInfo } from "./types.js";
+import type { DebtIssue, InlineSuppressionAudit, SourceFileInfo } from "./types.js";
 
 const disableNextLinePattern = /debtlens-disable-next-line\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
 const disableFilePattern = /debtlens-disable-file\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
 
 interface FileSuppressionRules {
-  fileRules: Set<string>;
-  nextLineRules: Map<number, Set<string>>;
+  fileRules: Map<string, SuppressionDirective>;
+  nextLineRules: Map<number, Map<string, SuppressionDirective>>;
+}
+
+interface SuppressionDirective {
+  ruleId: string;
+  kind: "next-line" | "file";
+  reason: string;
+  directiveLine: number;
+  targetLine?: number;
 }
 
 export interface SuppressionResult {
   issues: DebtIssue[];
+  suppressions: InlineSuppressionAudit[];
   suppressedByInline: number;
   warnings: string[];
 }
@@ -29,17 +38,28 @@ export function applyInlineSuppressions(
 
   let suppressedByInline = 0;
   const kept: DebtIssue[] = [];
+  const suppressions: InlineSuppressionAudit[] = [];
 
   for (const issue of issues) {
     const rules = rulesByFile.get(issue.file);
-    if (!rules || !shouldSuppressIssue(issue, rules)) {
+    const directive = rules ? getSuppressionDirective(issue, rules) : undefined;
+    if (!directive) {
       kept.push(issue);
       continue;
     }
     suppressedByInline += 1;
+    suppressions.push({
+      ruleId: issue.ruleId,
+      file: issue.file,
+      kind: directive.kind,
+      reason: directive.reason,
+      directiveLine: directive.directiveLine,
+      ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
+      issue,
+    });
   }
 
-  return { issues: kept, suppressedByInline, warnings };
+  return { issues: kept, suppressions, suppressedByInline, warnings };
 }
 
 function parseFileSuppressions(
@@ -47,16 +67,21 @@ function parseFileSuppressions(
   validRuleIds: ReadonlySet<string>,
   warnings: string[],
 ): FileSuppressionRules {
-  const fileRules = new Set<string>();
-  const nextLineRules = new Map<number, Set<string>>();
+  const fileRules = new Map<string, SuppressionDirective>();
+  const nextLineRules = new Map<number, Map<string, SuppressionDirective>>();
   const lines = file.content.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
     const fileMatch = line.match(disableFilePattern);
     if (fileMatch) {
-      registerSuppression(file.relativePath, fileMatch[1], fileMatch[2], validRuleIds, warnings, () => {
-        fileRules.add(fileMatch[1]!.toLowerCase());
+      registerSuppression(file.relativePath, fileMatch[1], fileMatch[2], validRuleIds, warnings, (ruleId, reason) => {
+        fileRules.set(ruleId, {
+          ruleId,
+          kind: "file",
+          reason,
+          directiveLine: index + 1,
+        });
       });
       continue;
     }
@@ -64,10 +89,16 @@ function parseFileSuppressions(
     const nextLineMatch = line.match(disableNextLinePattern);
     if (!nextLineMatch) continue;
 
-    registerSuppression(file.relativePath, nextLineMatch[1], nextLineMatch[2], validRuleIds, warnings, () => {
+    registerSuppression(file.relativePath, nextLineMatch[1], nextLineMatch[2], validRuleIds, warnings, (ruleId, reason) => {
       const targetLine = index + 2;
-      const rules = nextLineRules.get(targetLine) ?? new Set<string>();
-      rules.add(nextLineMatch[1]!.toLowerCase());
+      const rules = nextLineRules.get(targetLine) ?? new Map<string, SuppressionDirective>();
+      rules.set(ruleId, {
+        ruleId,
+        kind: "next-line",
+        reason,
+        directiveLine: index + 1,
+        targetLine,
+      });
       nextLineRules.set(targetLine, rules);
     });
   }
@@ -81,7 +112,7 @@ function registerSuppression(
   reason: string | undefined,
   validRuleIds: ReadonlySet<string>,
   warnings: string[],
-  apply: () => void,
+  apply: (ruleId: string, reason: string) => void,
 ): void {
   if (!ruleId) return;
 
@@ -93,21 +124,23 @@ function registerSuppression(
     return;
   }
 
-  if (!reason?.trim()) {
+  const trimmedReason = reason?.trim();
+  if (!trimmedReason) {
     addWarning(warnings, `${file}: suppression for "${normalizedRuleId}" ignored because reason is missing after "--"`);
     return;
   }
 
-  apply();
+  apply(normalizedRuleId, trimmedReason);
 }
 
-function shouldSuppressIssue(issue: DebtIssue, rules: FileSuppressionRules): boolean {
+function getSuppressionDirective(issue: DebtIssue, rules: FileSuppressionRules): SuppressionDirective | undefined {
   const ruleId = issue.ruleId.toLowerCase();
-  if (rules.fileRules.has(ruleId)) return true;
+  const fileDirective = rules.fileRules.get(ruleId);
+  if (fileDirective) return fileDirective;
 
   const line = issue.location?.startLine;
-  if (!line) return false;
-  return rules.nextLineRules.get(line)?.has(ruleId) ?? false;
+  if (!line) return undefined;
+  return rules.nextLineRules.get(line)?.get(ruleId);
 }
 
 function addWarning(warnings: string[], warning: string): void {

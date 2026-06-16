@@ -5,6 +5,7 @@ import { renderJson } from "../../src/reporters/jsonReporter.js";
 
 const issue: DebtIssue = {
   id: "dl_json_contract",
+  fingerprint: "dl_json_contract",
   ruleId: "prop-drilling",
   ruleName: "Prop drilling",
   severity: "high",
@@ -18,6 +19,7 @@ const issue: DebtIssue = {
 };
 
 const result: ScanResult = {
+  schemaVersion: 1,
   issues: [issue],
   summary: {
     totalIssues: 1,
@@ -40,10 +42,12 @@ describe("json reporter", () => {
   it("preserves the public ScanResult contract", () => {
     const parsed = JSON.parse(renderJson(result));
 
-    assert.deepEqual(Object.keys(parsed), ["issues", "summary", "options"]);
+    assert.deepEqual(Object.keys(parsed), ["schemaVersion", "issues", "summary", "options"]);
+    assert.equal(parsed.schemaVersion, 1);
 
     const [parsedIssue] = parsed.issues;
     assert.equal(parsedIssue.id, issue.id);
+    assert.equal(parsedIssue.fingerprint, issue.fingerprint);
     assert.equal(parsedIssue.ruleId, issue.ruleId);
     assert.equal(parsedIssue.ruleName, issue.ruleName);
     assert.equal(parsedIssue.severity, "high");
@@ -83,5 +87,47 @@ describe("json reporter", () => {
     assert.deepEqual(parsed.summary.warnings, [
       "duplicate-logic inspected 2 of 4 eligible snippets because duplicate-logic.maxSnippets is capped.",
     ]);
+  });
+
+  it("includes optional baseline deltas and suppression audits for integrations", () => {
+    const parsed = JSON.parse(renderJson({
+      ...result,
+      suppressions: [{
+        ruleId: "prop-drilling",
+        file: "src/Parent.tsx",
+        kind: "next-line",
+        reason: "tracked in PROJ-1",
+        directiveLine: 12,
+        targetLine: 13,
+        issue,
+      }],
+      summary: {
+        ...result.summary,
+        deltaFromBaseline: {
+          new: 1,
+          resolved: 0,
+          changed: 0,
+          severityRegressions: 0,
+          totalDelta: 1,
+          baseline: {
+            totalIssues: 0,
+            bySeverity: { info: 0, low: 0, medium: 0, high: 0 },
+            byRule: {},
+          },
+          current: {
+            totalIssues: 1,
+            bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+            byRule: { "prop-drilling": 1 },
+          },
+          hasBaselineSummary: true,
+          byRule: { "prop-drilling": { baseline: 0, current: 1, delta: 1 } },
+        },
+      },
+    }));
+
+    assert.equal(parsed.suppressions[0].reason, "tracked in PROJ-1");
+    assert.equal(parsed.suppressions[0].issue.fingerprint, "dl_json_contract");
+    assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 1);
+    assert.equal(parsed.summary.deltaFromBaseline.byRule["prop-drilling"].delta, 1);
   });
 });

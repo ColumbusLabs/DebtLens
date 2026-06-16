@@ -35,6 +35,11 @@ describe("inline suppressions", () => {
     const result = applyInlineSuppressions([issue()], files, validRuleIds);
     assert.equal(result.issues.length, 0);
     assert.equal(result.suppressedByInline, 1);
+    assert.equal(result.suppressions[0]?.kind, "next-line");
+    assert.equal(result.suppressions[0]?.reason, "tracked in JIRA-1");
+    assert.equal(result.suppressions[0]?.directiveLine, 1);
+    assert.equal(result.suppressions[0]?.targetLine, 2);
+    assert.equal(result.suppressions[0]?.issue.ruleId, "todo-comment");
   });
 
   it("does not suppress when the reason is missing", () => {
@@ -65,6 +70,8 @@ describe("inline suppressions", () => {
     ], files, validRuleIds);
     assert.equal(result.issues.length, 0);
     assert.equal(result.suppressedByInline, 1);
+    assert.equal(result.suppressions[0]?.kind, "file");
+    assert.equal(result.suppressions[0]?.reason, "domain vocabulary is intentional");
   });
 
   it("does not suppress a different rule on the suppressed line", () => {

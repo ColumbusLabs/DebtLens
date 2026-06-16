@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyBaseline,
+  compareBaseline,
   computeFingerprint,
   createBaseline,
   filterIssues,
@@ -29,6 +30,7 @@ function resultOf(issues: DebtIssue[]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const i of issues) bySeverity[i.severity] += 1;
   return {
+    schemaVersion: 1,
     issues,
     summary: { totalIssues: issues.length, bySeverity, byRule: {}, filesScanned: 2, rulesRun: 8, elapsedMs: 5 },
     options: { target: ".", include: [], exclude: [], minSeverity: "info", rules: undefined },
@@ -75,6 +77,52 @@ describe("filterIssues", () => {
   });
 });
 
+describe("createBaseline", () => {
+  it("stores count metadata for regression comparisons", () => {
+    const baseline = createBaseline([
+      issue({ ruleId: "duplicate-logic", severity: "medium" }),
+      issue({ ruleId: "todo-comment", severity: "low", file: "src/todo.ts", message: "Comment contains a todo marker." }),
+    ]);
+
+    assert.equal(baseline.summary?.totalIssues, 2);
+    assert.equal(baseline.summary?.byRule["duplicate-logic"], 1);
+    assert.equal(baseline.summary?.byRule["todo-comment"], 1);
+    assert.equal(baseline.summary?.bySeverity.medium, 1);
+    assert.equal(baseline.summary?.bySeverity.low, 1);
+    assert.equal(Object.keys(baseline.issues ?? {}).length, 2);
+  });
+});
+
+describe("compareBaseline", () => {
+  it("reports new, resolved, total, and per-rule deltas", () => {
+    const oldDuplicate = issue({ ruleId: "duplicate-logic", severity: "medium" });
+    const oldTodo = issue({ ruleId: "todo-comment", severity: "low", file: "src/todo.ts", message: "Comment contains a todo marker." });
+    const newState = issue({ ruleId: "state-sprawl", severity: "high", file: "src/state.tsx", message: "Screen manages 9 stateful hooks." });
+    const baseline = createBaseline([oldDuplicate, oldTodo]);
+
+    const comparison = compareBaseline([oldDuplicate, newState], baseline);
+
+    assert.deepEqual(comparison.newIssues, [newState]);
+    assert.equal(comparison.delta.new, 1);
+    assert.equal(comparison.delta.resolved, 1);
+    assert.equal(comparison.delta.severityRegressions, 0);
+    assert.equal(comparison.delta.totalDelta, 0);
+    assert.equal(comparison.delta.hasBaselineSummary, true);
+    assert.equal(comparison.delta.byRule["todo-comment"]?.delta, -1);
+    assert.equal(comparison.delta.byRule["state-sprawl"]?.delta, 1);
+  });
+
+  it("reports changed findings when a known fingerprint changes severity", () => {
+    const baselineIssue = issue({ severity: "medium" });
+    const currentIssue = issue({ severity: "high" });
+    const comparison = compareBaseline([currentIssue], createBaseline([baselineIssue]));
+
+    assert.equal(comparison.newIssues.length, 0);
+    assert.equal(comparison.delta.changed, 1);
+    assert.equal(comparison.delta.severityRegressions, 1);
+  });
+});
+
 describe("applyBaseline", () => {
   it("recomputes the summary after filtering", () => {
     const baselined = issue();
@@ -88,6 +136,8 @@ describe("applyBaseline", () => {
     // preserved fields
     assert.equal(out.summary.filesScanned, 2);
     assert.equal(out.summary.rulesRun, 8);
+    assert.equal(out.summary.deltaFromBaseline?.new, 1);
+    assert.equal(out.summary.deltaFromBaseline?.resolved, 0);
   });
 
   it("records suppressed baseline counts in filter stats", () => {
@@ -95,5 +145,21 @@ describe("applyBaseline", () => {
     const fresh = issue({ ruleId: "state-sprawl", file: "src/z.ts" });
     const out = applyBaseline(resultOf([baselined, fresh]), createBaseline([baselined]));
     assert.equal(out.summary.filterStats?.suppressedByBaseline, 1);
+  });
+
+  it("keeps total deltas for legacy baselines without claiming per-rule metadata", () => {
+    const baselined = issue();
+    const legacyBaseline = {
+      version: 1,
+      generatedAt: "2026-06-16T00:00:00.000Z",
+      fingerprints: createBaseline([baselined]).fingerprints,
+    };
+
+    const out = applyBaseline(resultOf([baselined]), legacyBaseline);
+
+    assert.equal(out.summary.totalIssues, 0);
+    assert.equal(out.summary.deltaFromBaseline?.totalDelta, 0);
+    assert.equal(out.summary.deltaFromBaseline?.hasBaselineSummary, false);
+    assert.deepEqual(out.summary.deltaFromBaseline?.baseline.byRule, {});
   });
 });

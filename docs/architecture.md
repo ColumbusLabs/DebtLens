@@ -40,7 +40,13 @@ Current detectors live in `src/detectors`.
 
 Reporters convert `ScanResult` to terminal text, JSON, Markdown, PR-comment Markdown, or SARIF.
 
-Future reporters should use the same `ScanResult` object so downstream integrations can remain stable.
+Future reporters should use the same `ScanResult` object so downstream integrations can remain stable. JSON output carries `schemaVersion: 1` and is described by the published schema at:
+
+```text
+https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json
+```
+
+In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines. The fingerprint excludes raw line numbers so findings remain stable when code moves. Inline suppressions are preserved in a top-level audit log instead of being represented only as aggregate counts, and baseline comparisons populate `summary.deltaFromBaseline`.
 
 Planned reporters:
 

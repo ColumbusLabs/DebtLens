@@ -1,0 +1,557 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json",
+  "title": "DebtLens ScanResult",
+  "description": "Versioned JSON report contract emitted by `debtlens scan --format json`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "issues",
+    "summary",
+    "options"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "fingerprint",
+          "ruleId",
+          "ruleName",
+          "severity",
+          "confidence",
+          "message",
+          "file",
+          "tags"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Line-stable finding identifier. Equal to fingerprint in ScanResult schema v1."
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "Line-stable finding fingerprint used for baselines and integrations."
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleName": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "message": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "location": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "startLine"
+            ],
+            "properties": {
+              "startLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "startColumn": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endLine": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "endColumn": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggestion": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "suppressions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleId",
+          "file",
+          "kind",
+          "reason",
+          "directiveLine",
+          "issue"
+        ],
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "next-line",
+              "file"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "directiveLine": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "targetLine": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "issue": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "fingerprint",
+              "ruleId",
+              "ruleName",
+              "severity",
+              "confidence",
+              "message",
+              "file",
+              "tags"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Line-stable finding identifier. Equal to fingerprint in ScanResult schema v1."
+              },
+              "fingerprint": {
+                "type": "string",
+                "description": "Line-stable finding fingerprint used for baselines and integrations."
+              },
+              "ruleId": {
+                "type": "string"
+              },
+              "ruleName": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "message": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "location": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "startLine"
+                ],
+                "properties": {
+                  "startLine": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "startColumn": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "endLine": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "endColumn": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "suggestion": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "totalIssues",
+        "bySeverity",
+        "byRule",
+        "filesScanned",
+        "rulesRun",
+        "elapsedMs"
+      ],
+      "properties": {
+        "totalIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bySeverity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ],
+          "properties": {
+            "info": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "low": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "high": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "byRule": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "filesScanned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rulesRun": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "elapsedMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "filterStats": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "filteredByMinSeverity": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "filteredByConfidenceFloor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "suppressedByBaseline": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "suppressedByInline": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "deltaFromBaseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "new",
+            "resolved",
+            "changed",
+            "severityRegressions",
+            "totalDelta",
+            "baseline",
+            "current",
+            "hasBaselineSummary",
+            "byRule"
+          ],
+          "properties": {
+            "new": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resolved": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "changed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "severityRegressions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "totalDelta": {
+              "type": "integer"
+            },
+            "baseline": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "totalIssues",
+                "bySeverity",
+                "byRule"
+              ],
+              "properties": {
+                "totalIssues": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "bySeverity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "info",
+                    "low",
+                    "medium",
+                    "high"
+                  ],
+                  "properties": {
+                    "info": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "low": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "medium": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "high": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "byRule": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            },
+            "current": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "totalIssues",
+                "bySeverity",
+                "byRule"
+              ],
+              "properties": {
+                "totalIssues": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "bySeverity": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "info",
+                    "low",
+                    "medium",
+                    "high"
+                  ],
+                  "properties": {
+                    "info": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "low": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "medium": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "high": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "byRule": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            },
+            "hasBaselineSummary": {
+              "type": "boolean"
+            },
+            "byRule": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "baseline",
+                  "current",
+                  "delta"
+                ],
+                "properties": {
+                  "baseline": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "current": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "delta": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ruleTimingsMs"
+          ],
+          "properties": {
+            "ruleTimingsMs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "include",
+        "exclude",
+        "minSeverity"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minSeverity": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildConfigSchema } from "../src/config/schema.js";
+import { buildScanResultSchema } from "../src/core/scanResultSchema.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(root, "schema");
@@ -13,3 +14,7 @@ mkdirSync(outDir, { recursive: true });
 const outFile = join(outDir, "debtlens.config.schema.json");
 writeFileSync(outFile, `${JSON.stringify(buildConfigSchema(), null, 2)}\n`, "utf8");
 console.log(`Wrote ${outFile}`);
+
+const scanResultOutFile = join(outDir, "debtlens.scan-result.schema.json");
+writeFileSync(scanResultOutFile, `${JSON.stringify(buildScanResultSchema(), null, 2)}\n`, "utf8");
+console.log(`Wrote ${scanResultOutFile}`);

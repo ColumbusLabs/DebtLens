@@ -1,4 +1,4 @@
-import type { ScanResult, Severity } from "../core/types.js";
+import type { DebtIssue, InlineSuppressionAudit, ScanResult, Severity } from "../core/types.js";
 import { allDetectors } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 
@@ -44,30 +44,10 @@ export function renderSarif(result: ScanResult): string {
     };
   });
 
-  const results = result.issues.map((issue) => ({
-    ruleId: issue.ruleId,
-    ruleIndex: ruleIndex.get(issue.ruleId) ?? -1,
-    level: toSarifLevel(issue.severity),
-    message: { text: issue.message },
-    locations: [
-      {
-        physicalLocation: {
-          artifactLocation: { uri: issue.file },
-          region: {
-            startLine: issue.location?.startLine ?? 1,
-            ...(issue.location?.endLine ? { endLine: issue.location.endLine } : {}),
-            ...(issue.location?.startColumn ? { startColumn: issue.location.startColumn } : {}),
-          },
-        },
-      },
-    ],
-    properties: {
-      confidence: issue.confidence,
-      severity: issue.severity,
-      ...(issue.evidence?.length ? { evidence: issue.evidence } : {}),
-      ...(issue.suggestion ? { suggestion: issue.suggestion } : {}),
-    },
-  }));
+  const results = [
+    ...result.issues.map((issue) => toSarifResult(issue, ruleIndex)),
+    ...(result.suppressions ?? []).map((suppression) => toSarifResult(suppression.issue, ruleIndex, suppression)),
+  ];
 
   const sarif = {
     $schema: "https://json.schemastore.org/sarif-2.1.0.json",
@@ -88,4 +68,54 @@ export function renderSarif(result: ScanResult): string {
   };
 
   return `${JSON.stringify(sarif, null, 2)}\n`;
+}
+
+function toSarifResult(
+  issue: DebtIssue,
+  ruleIndex: Map<string, number>,
+  suppression?: InlineSuppressionAudit,
+) {
+  return {
+    ruleId: issue.ruleId,
+    ruleIndex: ruleIndex.get(issue.ruleId) ?? -1,
+    level: toSarifLevel(issue.severity),
+    message: { text: issue.message },
+    locations: [
+      {
+        physicalLocation: {
+          artifactLocation: { uri: issue.file },
+          region: {
+            startLine: issue.location?.startLine ?? 1,
+            ...(issue.location?.endLine ? { endLine: issue.location.endLine } : {}),
+            ...(issue.location?.startColumn ? { startColumn: issue.location.startColumn } : {}),
+          },
+        },
+      },
+    ],
+    ...(suppression
+      ? {
+          suppressions: [
+            {
+              kind: "inSource",
+              status: "accepted",
+              justification: suppression.reason,
+              location: {
+                physicalLocation: {
+                  artifactLocation: { uri: suppression.file },
+                  region: { startLine: suppression.directiveLine },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+    properties: {
+      confidence: issue.confidence,
+      severity: issue.severity,
+      fingerprint: issue.fingerprint ?? issue.id,
+      ...(suppression ? { suppressedBy: suppression.kind, suppressionDirectiveLine: suppression.directiveLine } : {}),
+      ...(issue.evidence?.length ? { evidence: issue.evidence } : {}),
+      ...(issue.suggestion ? { suggestion: issue.suggestion } : {}),
+    },
+  };
 }

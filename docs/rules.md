@@ -34,7 +34,7 @@ Inline suppressions use comment directives:
 // debtlens-disable-file <rule-id> -- <reason>
 ```
 
-The reason after `--` is required. Unknown rule ids and missing reasons produce warnings and do not suppress. Suppressions run inside `scan()` before baseline or `--diff-base` filtering, so baselines still track only the issues that remain after inline suppressions.
+The reason after `--` is required. Unknown rule ids and missing reasons produce warnings and do not suppress. Suppressions run inside `scan()` before baseline or `--diff-base` filtering, so baselines still track only the issues that remain after inline suppressions. JSON output includes accepted suppressions in a root `suppressions` audit array with the rule, file, directive line, reason, and suppressed issue.
 
 ## `large-component`
 

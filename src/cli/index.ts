@@ -44,6 +44,7 @@ program.command("scan")
   .option("-o, --output <path>", "write the report to a file instead of stdout")
   .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
   .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
+  .option("--fail-on-regression", "exit with code 1 when counts increase versus --baseline or --diff-base")
   .option("--baseline <path>", "report only issues absent from this baseline file")
   .option("--diff-base <ref>", "report only findings introduced since this git ref")
   .option("--write-baseline [path]", "write current issues to a baseline file and exit")
@@ -120,6 +121,9 @@ program.command("scan")
       if (rawOptions.diffBase && rawOptions.baseline) {
         throw new Error("Use either --diff-base or --baseline, not both.");
       }
+      if (rawOptions.failOnRegression === true && !rawOptions.baseline && !rawOptions.diffBase) {
+        throw new Error("Use --fail-on-regression with --baseline or --diff-base.");
+      }
 
       const result = await scan(options);
 
@@ -168,6 +172,9 @@ program.command("scan")
       }
 
       if (failOn && reported.issues.some((issue) => shouldFailOnIssue(issue, failOn, failOnConfidence))) {
+        process.exitCode = 1;
+      }
+      if (rawOptions.failOnRegression === true && shouldFailOnRegression(reported)) {
         process.exitCode = 1;
       }
     } catch (error) {
@@ -495,6 +502,15 @@ function shouldFailOnIssue(issue: DebtIssue, failOn: Severity, failOnConfidence:
   if (severityRank[issue.severity] < severityRank[failOn]) return false;
   if (failOnConfidence === undefined) return true;
   return issue.confidence >= failOnConfidence;
+}
+
+function shouldFailOnRegression(result: ScanResult): boolean {
+  const delta = result.summary.deltaFromBaseline;
+  if (!delta) return false;
+  if (delta.totalDelta > 0) return true;
+  if (delta.severityRegressions > 0) return true;
+  if (!delta.hasBaselineSummary) return false;
+  return Object.values(delta.byRule).some((ruleDelta) => ruleDelta.delta > 0);
 }
 
 function parseFormat(value: string): OutputFormat {

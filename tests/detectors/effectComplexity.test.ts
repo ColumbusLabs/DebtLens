@@ -17,6 +17,25 @@ export function Widget() {
     assert.equal(issues.length, 1);
     assert.equal(issues[0]?.ruleId, "effect-complexity");
     assert.match(issues[0]?.message ?? "", /8 dependencies/);
+    assert.equal(issues[0]?.severity, "medium");
+    assert.equal(issues[0]?.confidence, 0.8);
+  });
+
+  it("down-ranks a single delegated custom hook effect", async () => {
+    const src = `
+export function Widget() {
+  useEffect(() => {
+    useData(a, b, c, d, e, f, g, h, i, j, k, l);
+  }, [a, b, c, d, e, f, g, h, i, j, k, l]);
+  return null;
+}
+`;
+    const issues = await runDetector(effectComplexityDetector, { "Widget.tsx": src });
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "effect-complexity");
+    assert.equal(issues[0]?.severity, "low");
+    assert.ok((issues[0]?.confidence ?? 1) < 0.8);
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("useData")));
   });
 
   it("flags a useLayoutEffect with the same thresholds", async () => {

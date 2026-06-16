@@ -40,6 +40,8 @@ The reason after `--` is required. Unknown rule ids and missing reasons produce 
 
 Flags React-style PascalCase functions, `memo`/`forwardRef` wrappers, and class components
 that extend `Component`/`PureComponent` when they exceed line, hook, or branch thresholds.
+Calls to custom hooks defined in the same file are not counted against the component
+hook budget; imported hooks and React hooks still count.
 
 Default thresholds:
 
@@ -59,6 +61,7 @@ Good fixes:
 When this is a false positive:
 
 - the file is not actually a React-style component
+- same-file custom hook delegation accounts for the apparent hook count
 - the component stays within the configured line, hook, and branch budgets
 
 Confidence: **0.86** when the line budget is exceeded; **0.74** when only hook or branch budgets are exceeded. Line count is the strongest structural signal.
@@ -108,9 +111,10 @@ Good fixes:
 When this is a false positive:
 
 - the callback is small and focused
+- a many-dependency effect only delegates to a focused custom hook
 - the array literal belongs to another API instead of a React effect hook
 
-Confidence: **0.80**. Effect length and dependency count are measurable, but some complex effects are intentional.
+Confidence: **0.80** for raw overloaded effects; lower when the callback only delegates to a custom hook.
 
 ## `duplicate-logic`
 
@@ -196,6 +200,7 @@ Configure custom markers via `todoComment.markers`, disable built-in labels with
 `todoComment.replaceDefaults: true` to use only custom patterns.
 
 Why it matters: a comment can be a legitimate marker, but untracked markers often become permanent.
+Markers with issue keys, ticket numbers, or issue URLs are reported with higher confidence than bare markers.
 
 Good fixes:
 
@@ -209,7 +214,7 @@ When this is a false positive:
 - the word appears in executable code or identifiers instead of a comment
 - the comment is already paired with explicit tracking and removal criteria
 
-Confidence: **0.90**. Comment markers are literal text matches with little interpretation.
+Confidence: **0.90** for bare markers; higher for tracker-linked markers.
 
 ## `naming-drift`
 

@@ -78,6 +78,20 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
     }
   }
 
+  if (result.summary.duplicateClusters?.length) {
+    lines.push("");
+    lines.push("## Duplicate logic clusters");
+    lines.push("");
+    lines.push("| Cluster | Findings | Locations |");
+    lines.push("| --- | ---: | --- |");
+    for (const cluster of result.summary.duplicateClusters) {
+      const locations = cluster.locations
+        .map((location) => `${location.file}:${location.startLine}${location.endLine ? `-${location.endLine}` : ""}`)
+        .join(", ");
+      lines.push(`| \`${escapeMarkdownTableCell(cluster.clusterId)}\` | ${cluster.issueCount} | ${escapeMarkdownTableCell(locations)} |`);
+    }
+  }
+
   if (options.heatmapLimit && options.heatmapLimit > 0) {
     const heatmap = buildDebtHeatmap(result.issues, options.heatmapLimit);
     if (heatmap.length) {

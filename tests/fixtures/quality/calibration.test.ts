@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { defaultConfig } from "../../../src/config/defaults.js";
+import { getRulePack } from "../../../src/config/packs.js";
 import { scan } from "../../../src/core/scan.js";
 
 interface CalibrationCase {
@@ -48,7 +49,34 @@ const cases: CalibrationCase[] = [
       "state-sprawl": 0,
     },
   },
+  {
+    id: "examples-node-api-core",
+    target: "examples/node-api",
+    minSeverity: "info",
+    minIssuesByRule: {
+      "duplicate-logic": 1,
+      "todo-comment": 1,
+    },
+    maxIssuesByRule: {
+      "duplicate-logic": 1,
+      "todo-comment": 1,
+      "dead-abstraction": 0,
+      "naming-drift": 0,
+    },
+    mustNotIncludeRules: ["large-component", "state-sprawl", "effect-complexity", "prop-drilling"],
+  },
 ];
+
+const falsePositiveCases = [
+  { ruleId: "dead-abstraction", target: "examples/false-positives/dead-abstraction" },
+  { ruleId: "duplicate-logic", target: "examples/false-positives/duplicate-logic" },
+  { ruleId: "effect-complexity", target: "examples/false-positives/effect-complexity" },
+  { ruleId: "large-component", target: "examples/false-positives/large-component" },
+  { ruleId: "naming-drift", target: "examples/false-positives/naming-drift" },
+  { ruleId: "prop-drilling", target: "examples/false-positives/prop-drilling" },
+  { ruleId: "state-sprawl", target: "examples/false-positives/state-sprawl" },
+  { ruleId: "todo-comment", target: "examples/false-positives/todo-comment" },
+] as const;
 
 describe("calibrated quality fixtures", () => {
   for (const calibration of cases) {
@@ -59,7 +87,7 @@ describe("calibrated quality fixtures", () => {
         include: defaultConfig.include,
         exclude: defaultConfig.exclude,
         minSeverity: calibration.minSeverity,
-        rules: undefined,
+        rules: calibration.id === "examples-node-api-core" ? getRulePack("core").rules : undefined,
         thresholds: defaultConfig.thresholds,
         maxFiles: defaultConfig.maxFiles,
         respectGitignore: defaultConfig.respectGitignore,
@@ -81,6 +109,24 @@ describe("calibrated quality fixtures", () => {
       for (const ruleId of calibration.mustNotIncludeRules ?? []) {
         assert.equal(counts[ruleId] ?? 0, 0, `${calibration.id}: ${ruleId} should not fire`);
       }
+    });
+  }
+
+  for (const calibration of falsePositiveCases) {
+    it(`keeps ${calibration.ruleId} quiet for its false-positive playground`, async () => {
+      const result = await scan({
+        cwd: process.cwd(),
+        target: resolve(calibration.target),
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "info",
+        rules: [calibration.ruleId],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        respectGitignore: defaultConfig.respectGitignore,
+      });
+
+      assert.equal(result.summary.totalIssues, 0, `${calibration.ruleId}: expected no playground findings`);
     });
   }
 });

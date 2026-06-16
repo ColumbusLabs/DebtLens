@@ -1,7 +1,10 @@
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
-import { collectComponentLikes, countBranches, countHookCalls, getComponentBody } from "../utils/ast.js";
+import { collectComponentLikes, countBranches, getComponentBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
+import { isHookName } from "../utils/identifiers.js";
 import { nodeLineSpan } from "../utils/lines.js";
+import { Node, SyntaxKind } from "ts-morph";
+import type { Node as MorphNode } from "ts-morph";
 
 export const largeComponentDetector: Detector = {
   id: "large-component",
@@ -16,12 +19,19 @@ export const largeComponentDetector: Detector = {
     const maxHooks = context.getThreshold("large-component.maxHooks", 10);
 
     for (const file of context.files) {
-      for (const fn of collectComponentLikes(file)) {
+      const componentLikes = collectComponentLikes(file);
+      const localHookNames = new Set(
+        componentLikes
+          .filter((fn) => fn.kind === "function" && fn.classification === "hook")
+          .map((fn) => fn.name),
+      );
+
+      for (const fn of componentLikes) {
         if (fn.classification !== "component") continue;
         const body = getComponentBody(fn);
         const span = nodeLineSpan(body);
         const branchCount = countBranches(body);
-        const hookCount = fn.kind === "class" ? 0 : countHookCalls(body);
+        const hookCount = fn.kind === "class" ? 0 : countExternalHookCalls(body, localHookNames);
         const isOverLineBudget = span.lines >= maxLines;
         const isOverComplexityBudget = branchCount >= maxBranches || hookCount >= maxHooks;
 
@@ -47,3 +57,13 @@ export const largeComponentDetector: Detector = {
     return issues;
   },
 };
+
+function countExternalHookCalls(node: MorphNode, localHookNames: Set<string>): number {
+  return node.getDescendantsOfKind(SyntaxKind.CallExpression).filter((call) => {
+    const expression = call.getExpression();
+    if (!Node.isIdentifier(expression)) return false;
+
+    const name = expression.getText();
+    return isHookName(name) && !localHookNames.has(name);
+  }).length;
+}

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildDebtHeatmap, buildRuleCorrelations, groupIssuesByFile, groupIssuesByRule, summarizeIssues } from "../../src/core/issueAggregates.js";
+import { buildDebtHeatmap, buildDuplicateLogicClusters, buildRuleCorrelations, groupIssuesByFile, groupIssuesByRule, summarizeIssues } from "../../src/core/issueAggregates.js";
 import type { DebtIssue } from "../../src/core/types.js";
 
 const issues: DebtIssue[] = [
@@ -38,6 +38,28 @@ describe("issue aggregates", () => {
     assert.equal(heatmap[0].file, "src/App.tsx");
     assert.equal(heatmap[0].distinctRules, 2);
   });
+
+  it("builds transitive duplicate-logic clusters from pair findings", () => {
+    const clusters = buildDuplicateLogicClusters([
+      makeDuplicateIssue("ab", [
+        "src/a.ts:10-20 (11 lines)",
+        "src/b.ts:30-40 (11 lines)",
+      ]),
+      makeDuplicateIssue("bc", [
+        "src/b.ts:30-40 (11 lines)",
+        "src/c.ts:50-60 (11 lines)",
+      ]),
+      makeIssue("todo", "todo-comment", "Todo comment", "low", "src/a.ts"),
+    ]);
+
+    assert.equal(clusters.length, 1);
+    assert.equal(clusters[0].issueCount, 2);
+    assert.deepEqual(clusters[0].locations.map((location) => `${location.file}:${location.startLine}`), [
+      "src/a.ts:10",
+      "src/b.ts:30",
+      "src/c.ts:50",
+    ]);
+  });
 });
 
 function makeIssue(id: string, ruleId: string, ruleName: string, severity: DebtIssue["severity"], file: string): DebtIssue {
@@ -51,5 +73,12 @@ function makeIssue(id: string, ruleId: string, ruleName: string, severity: DebtI
     message: `${ruleName} message`,
     file,
     tags: [],
+  };
+}
+
+function makeDuplicateIssue(id: string, evidence: string[]): DebtIssue {
+  return {
+    ...makeIssue(id, "duplicate-logic", "Duplicate logic", "medium", "src/a.ts"),
+    evidence,
   };
 }

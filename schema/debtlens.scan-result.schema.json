@@ -539,6 +539,52 @@
             }
           }
         },
+        "duplicateClusters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "clusterId",
+              "issueCount",
+              "locations"
+            ],
+            "properties": {
+              "clusterId": {
+                "type": "string"
+              },
+              "issueCount": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "locations": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "file",
+                    "startLine"
+                  ],
+                  "properties": {
+                    "file": {
+                      "type": "string"
+                    },
+                    "startLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "endLine": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "profile": {
           "type": "object",
           "additionalProperties": false,

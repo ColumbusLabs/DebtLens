@@ -130,4 +130,24 @@ describe("json reporter", () => {
     assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 1);
     assert.equal(parsed.summary.deltaFromBaseline.byRule["prop-drilling"].delta, 1);
   });
+
+  it("includes optional duplicate-logic clusters for integrations", () => {
+    const parsed = JSON.parse(renderJson({
+      ...result,
+      summary: {
+        ...result.summary,
+        duplicateClusters: [{
+          clusterId: "dup_test",
+          issueCount: 2,
+          locations: [
+            { file: "src/a.ts", startLine: 10, endLine: 20 },
+            { file: "src/b.ts", startLine: 30, endLine: 40 },
+          ],
+        }],
+      },
+    }));
+
+    assert.equal(parsed.summary.duplicateClusters[0].clusterId, "dup_test");
+    assert.equal(parsed.summary.duplicateClusters[0].locations[1].file, "src/b.ts");
+  });
 });

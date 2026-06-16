@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DebtIssue, ScanBaselineDelta, ScanCountSummary, ScanResult, Severity } from "./types.js";
 import { severityRank } from "./severity.js";
-import { buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
+import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
 
 export const DEFAULT_BASELINE_FILENAME = "debtlens-baseline.json";
@@ -145,6 +145,7 @@ export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResul
   const suppressedByBaseline = result.issues.length - issues.length;
   const summary = summarizeIssues(issues);
   const correlations = buildRuleCorrelations(issues);
+  const duplicateClusters = buildDuplicateLogicClusters(issues);
   const filterStats = {
     ...result.summary.filterStats,
     ...(suppressedByBaseline > 0 ? { suppressedByBaseline } : {}),
@@ -160,6 +161,7 @@ export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResul
       ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
       deltaFromBaseline: comparison.delta,
       ...(correlations.length > 0 ? { correlations } : { correlations: undefined }),
+      ...(duplicateClusters.length > 0 ? { duplicateClusters } : { duplicateClusters: undefined }),
     },
   };
 }

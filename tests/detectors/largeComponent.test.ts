@@ -23,6 +23,48 @@ export function Screen() {
     assert.equal(issues[0]?.ruleId, "large-component");
   });
 
+  it("does NOT count same-file custom hooks against the component hook budget", async () => {
+    const src = `
+function useWidgetData() {
+  const query = useQuery();
+  const cache = useMemo(() => query.data, [query.data]);
+  return cache;
+}
+
+export function Screen() {
+  const a = useState(0);
+  const b = useMemo(() => a, [a]);
+  const c = useRef(null);
+  const data = useWidgetData();
+  return <div>{data}</div>;
+}
+`;
+    const issues = await runDetector(
+      largeComponentDetector,
+      { "Screen.tsx": src },
+      { thresholds: { "large-component.maxHooks": 4 } },
+    );
+    assert.equal(issues.length, 0);
+  });
+
+  it("still counts imported custom hooks against the component hook budget", async () => {
+    const src = `
+import { useWidgetData } from "./useWidgetData";
+
+export function Screen() {
+  const data = useWidgetData();
+  return <div>{data}</div>;
+}
+`;
+    const issues = await runDetector(
+      largeComponentDetector,
+      { "Screen.tsx": src },
+      { thresholds: { "large-component.maxHooks": 1 } },
+    );
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "large-component");
+  });
+
   it("does NOT flag a small component within budget", async () => {
     const src = `
 export function Screen() {

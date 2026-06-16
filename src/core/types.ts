@@ -202,6 +202,16 @@ export interface RuleCorrelation {
   }>;
 }
 
+export interface DuplicateLogicCluster {
+  clusterId: string;
+  issueCount: number;
+  locations: Array<{
+    file: string;
+    startLine: number;
+    endLine?: number;
+  }>;
+}
+
 export interface DebtHeatmapEntry {
   file: string;
   totalIssues: number;
@@ -234,6 +244,7 @@ export interface ScanSummary {
   filterStats?: ScanFilterStats;
   deltaFromBaseline?: ScanBaselineDelta;
   correlations?: RuleCorrelation[];
+  duplicateClusters?: DuplicateLogicCluster[];
   profile?: ScanProfile;
 }
 

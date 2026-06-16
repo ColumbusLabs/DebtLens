@@ -147,6 +147,26 @@ describe("applyBaseline", () => {
     assert.equal(out.summary.filterStats?.suppressedByBaseline, 1);
   });
 
+  it("clears duplicate clusters after baseline filtering suppresses duplicate findings", () => {
+    const baselined = issue();
+    const fresh = issue({ ruleId: "todo-comment", file: "src/z.ts", message: "Comment contains a todo marker." });
+    const result = resultOf([baselined, fresh]);
+    result.summary.duplicateClusters = [{
+      clusterId: "dup_stale",
+      issueCount: 1,
+      locations: [
+        { file: "src/a.ts", startLine: 10, endLine: 20 },
+        { file: "src/b.ts", startLine: 5, endLine: 15 },
+      ],
+    }];
+
+    const out = applyBaseline(result, createBaseline([baselined]));
+
+    assert.equal(out.issues.length, 1);
+    assert.equal(out.summary.totalIssues, 1);
+    assert.equal(out.summary.duplicateClusters, undefined);
+  });
+
   it("keeps total deltas for legacy baselines without claiming per-rule metadata", () => {
     const baselined = issue();
     const legacyBaseline = {

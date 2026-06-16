@@ -46,15 +46,19 @@ export const todoCommentDetector: Detector = {
         if (/debtlens-disable-(?:next-line|file)/i.test(line)) continue;
         const match = patterns.find((pattern) => pattern.regex.test(line));
         if (!match) continue;
+        const hasTrackerLink = containsTrackerLink(line);
 
         issues.push(createIssue({
           detector: todoCommentDetector,
           severity: match.severity,
-          confidence: 0.9,
+          confidence: hasTrackerLink ? 0.96 : 0.9,
           file: file.relativePath,
           location: { startLine: index + 1 },
           message: `Comment contains a ${match.label}.`,
-          evidence: [line.trim().slice(0, 220)],
+          evidence: [
+            line.trim().slice(0, 220),
+            ...(hasTrackerLink ? ["Tracker-linked marker detected"] : []),
+          ],
           suggestion: "Convert the marker into a tracked issue, add a removal condition, or fix it before more code depends on it.",
         }));
 
@@ -66,6 +70,13 @@ export const todoCommentDetector: Detector = {
     return issues;
   },
 };
+
+function containsTrackerLink(line: string): boolean {
+  return /\b[A-Z][A-Z0-9]+-\d+\b/.test(line)
+    || /\b(?:issue|ticket|bug|gh|github)\s*#?\d+\b/i.test(line)
+    || /(?:^|[\s([#])#\d+\b/.test(line)
+    || /https?:\/\/\S+\b(?:issues|browse|tickets?)\/\d+\b/i.test(line);
+}
 
 export function compileTodoCommentMarkers(
   markers: Array<{ pattern: string; severity?: Severity; label?: string }>,

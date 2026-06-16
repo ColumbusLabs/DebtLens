@@ -15,6 +15,16 @@ export const x = 1;
     assert.match(issues[0]?.message ?? "", /todo marker/);
   });
 
+  it("boosts confidence for tracker-linked TODO markers", async () => {
+    const bare = await runDetector(todoCommentDetector, { "bare.ts": "// TODO: split this later\n" });
+    const linked = await runDetector(todoCommentDetector, { "linked.ts": "// TODO(JIRA-123): split this later\n" });
+
+    assert.equal(bare.length, 1);
+    assert.equal(linked.length, 1);
+    assert.ok((linked[0]?.confidence ?? 0) > (bare[0]?.confidence ?? 1));
+    assert.ok(linked[0]?.evidence?.some((entry) => entry.includes("Tracker-linked")));
+  });
+
   it("ranks FIXME higher than TODO", async () => {
     const src = `// FIXME: this is broken\nexport const x = 1;\n`;
     const issues = await runDetector(todoCommentDetector, { "x.ts": src });

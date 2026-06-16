@@ -68,6 +68,29 @@ export function buildScanResultSchema(): Record<string, unknown> {
       },
     },
   };
+  const duplicateCluster = {
+    type: "object",
+    additionalProperties: false,
+    required: ["clusterId", "issueCount", "locations"],
+    properties: {
+      clusterId: { type: "string" },
+      issueCount: { type: "integer", minimum: 1 },
+      locations: {
+        type: "array",
+        minItems: 2,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["file", "startLine"],
+          properties: {
+            file: { type: "string" },
+            startLine: { type: "integer", minimum: 1 },
+            endLine: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+  };
 
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -148,6 +171,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
             },
           },
           correlations: { type: "array", items: correlation },
+          duplicateClusters: { type: "array", items: duplicateCluster },
           profile: {
             type: "object",
             additionalProperties: false,

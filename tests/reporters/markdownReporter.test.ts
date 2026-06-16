@@ -86,6 +86,23 @@ describe("markdown reporter", () => {
     assert.match(md, /## Debt heatmap/);
   });
 
+  it("renders duplicate logic clusters", () => {
+    const result = makeResult([{ ...issue, ruleId: "duplicate-logic", ruleName: "Duplicate logic" }]);
+    result.summary.duplicateClusters = [{
+      clusterId: "dup_test",
+      issueCount: 2,
+      locations: [
+        { file: "src/a.ts", startLine: 10, endLine: 20 },
+        { file: "src/b.ts", startLine: 30, endLine: 40 },
+      ],
+    }];
+
+    const md = renderMarkdown(result);
+
+    assert.match(md, /## Duplicate logic clusters/);
+    assert.match(md, /\| `dup_test` \| 2 \| src\/a\.ts:10-20, src\/b\.ts:30-40 \|/);
+  });
+
   it("escapes Markdown table cells in correlations and heatmaps", () => {
     const result = makeResult([{ ...issue, file: "src/a|b.tsx\n" }]);
     result.summary.correlations = [{

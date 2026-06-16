@@ -133,6 +133,6 @@ describe("debtlens doctor", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Pack: core/);
-    assert.match(result.stdout, /Rules: duplicate-logic, dead-abstraction, todo-comment, naming-drift/);
+    assert.match(result.stdout, /Rules: duplicate-logic, large-function, dead-abstraction, duplicated-literal, todo-comment, naming-drift, barrel-file, weak-test-boundary, api-surface-sprawl/);
   });
 });

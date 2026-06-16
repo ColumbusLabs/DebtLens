@@ -59,8 +59,7 @@ describe("sarif reporter", () => {
     const driver = sarif.runs[0].tool.driver;
     assert.equal(driver.name, "DebtLens");
     assert.equal(driver.version, packageVersion);
-    // All 8 detectors should be present in the rule catalog.
-    assert.equal(driver.rules.length, 8);
+    assert.equal(driver.rules.length, allDetectors.length);
     assert.ok(driver.rules.some((r: { id: string }) => r.id === "prop-drilling"));
     for (const detector of allDetectors) {
       const rule = driver.rules.find((r: { id: string }) => r.id === detector.id);
@@ -95,7 +94,7 @@ describe("sarif reporter", () => {
   it("emits an empty results array when there are no issues", () => {
     const sarif = JSON.parse(renderSarif(makeResult([])));
     assert.deepEqual(sarif.runs[0].results, []);
-    assert.equal(sarif.runs[0].tool.driver.rules.length, 8);
+    assert.equal(sarif.runs[0].tool.driver.rules.length, allDetectors.length);
   });
 
   it("emits only referenced rules in compact mode", () => {

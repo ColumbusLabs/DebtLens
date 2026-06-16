@@ -37,7 +37,10 @@
         "core",
         "react",
         "react-native",
-        "next"
+        "next",
+        "expo",
+        "ai-assisted-maintainer",
+        "oss-maintainer"
       ],
       "description": "Built-in rule pack preset. Explicit rules override the pack."
     },
@@ -49,13 +52,21 @@
           {
             "enum": [
               "large-component",
+              "large-function",
               "state-sprawl",
               "effect-complexity",
+              "hook-dependency-smell",
+              "context-provider-sprawl",
               "duplicate-logic",
+              "duplicated-literal",
               "dead-abstraction",
               "prop-drilling",
               "todo-comment",
-              "naming-drift"
+              "naming-drift",
+              "barrel-file",
+              "weak-test-boundary",
+              "api-surface-sprawl",
+              "story-only-component"
             ]
           },
           {
@@ -100,6 +111,12 @@
         "large-component.maxHooks": {
           "type": "number"
         },
+        "large-function.maxLines": {
+          "type": "number"
+        },
+        "large-function.maxBranches": {
+          "type": "number"
+        },
         "state-sprawl.maxStatefulHooks": {
           "type": "number"
         },
@@ -109,6 +126,9 @@
         "effect-complexity.maxDependencies": {
           "type": "number"
         },
+        "context-provider-sprawl.maxProviders": {
+          "type": "number"
+        },
         "duplicate-logic.minSimilarity": {
           "type": "number"
         },
@@ -116,6 +136,12 @@
           "type": "number"
         },
         "duplicate-logic.maxSnippets": {
+          "type": "number"
+        },
+        "duplicated-literal.minLength": {
+          "type": "number"
+        },
+        "duplicated-literal.minCount": {
           "type": "number"
         },
         "dead-abstraction.maxWrapperLines": {
@@ -128,6 +154,15 @@
           "type": "number"
         },
         "duplicate-logic.minStructuralSimilarity": {
+          "type": "number"
+        },
+        "barrel-file.maxReExports": {
+          "type": "number"
+        },
+        "weak-test-boundary.allowTypeOnly": {
+          "type": "number"
+        },
+        "api-surface-sprawl.maxExports": {
           "type": "number"
         }
       },
@@ -157,6 +192,14 @@
             "high"
           ]
         },
+        "large-function": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "state-sprawl": {
           "enum": [
             "info",
@@ -173,7 +216,31 @@
             "high"
           ]
         },
+        "hook-dependency-smell": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "context-provider-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "duplicated-literal": {
           "enum": [
             "info",
             "low",
@@ -206,6 +273,38 @@
           ]
         },
         "naming-drift": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "barrel-file": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "weak-test-boundary": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "api-surface-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "story-only-component": {
           "enum": [
             "info",
             "low",
@@ -232,6 +331,11 @@
           "minimum": 0,
           "maximum": 1
         },
+        "large-function": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "state-sprawl": {
           "type": "number",
           "minimum": 0,
@@ -242,7 +346,22 @@
           "minimum": 0,
           "maximum": 1
         },
+        "hook-dependency-smell": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "context-provider-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "duplicated-literal": {
           "type": "number",
           "minimum": 0,
           "maximum": 1
@@ -263,6 +382,26 @@
           "maximum": 1
         },
         "naming-drift": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "barrel-file": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "weak-test-boundary": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "api-surface-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "story-only-component": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

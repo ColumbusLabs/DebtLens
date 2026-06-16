@@ -6,11 +6,14 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 4);
-    assert.equal(getRulePack("core").rules.length, 4);
-    assert.equal(getRulePack("react").rules.length, 8);
+    assert.equal(packs.length, 7);
+    assert.equal(getRulePack("core").rules.length, 9);
+    assert.equal(getRulePack("react").rules.length, 16);
     assert.deepEqual(getRulePack("react-native").rules, getRulePack("react").rules);
     assert.deepEqual(getRulePack("next").rules, getRulePack("react").rules);
+    assert.deepEqual(getRulePack("expo").rules, getRulePack("react").rules);
+    assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
+    assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });
 
   it("throws for unknown pack ids", () => {
@@ -21,6 +24,19 @@ describe("rule packs", () => {
     const options = mergeConfig(".", { pack: "core" }, { cwd: process.cwd() });
     assert.equal(options.pack, "core");
     assert.deepEqual(options.rules, getRulePack("core").rules);
+  });
+
+  it("applies pack threshold presets below config and CLI overrides", () => {
+    const packOnly = mergeConfig(".", { pack: "react-native" }, { cwd: process.cwd() });
+    const options = mergeConfig(
+      ".",
+      { pack: "react-native", thresholds: { "prop-drilling.maxForwardedProps": 7 } },
+      { cwd: process.cwd(), thresholds: { "large-component.maxLines": 180 } },
+    );
+
+    assert.equal(packOnly.thresholds["prop-drilling.maxForwardedProps"], 5);
+    assert.equal(options.thresholds["prop-drilling.maxForwardedProps"], 7);
+    assert.equal(options.thresholds["large-component.maxLines"], 180);
   });
 
   it("lets explicit config rules override a pack", () => {

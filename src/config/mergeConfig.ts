@@ -8,15 +8,13 @@ import type { CliOptions, DebtLensConfig, ScanOptions, Severity } from "../core/
 export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptions: CliOptions): ScanOptions {
   const cwd = resolve(cliOptions.cwd ?? process.cwd());
   const packId = cliOptions.pack ?? fileConfig.pack;
-  if (packId) {
-    getRulePack(packId);
-  }
+  const pack = packId ? getRulePack(packId) : undefined;
 
   const explicitRules = cliOptions.rules?.length ? cliOptions.rules : fileConfig.rules;
   const rules = explicitRules?.length
     ? explicitRules
-    : packId
-      ? [...getRulePack(packId).rules]
+    : pack
+      ? [...pack.rules]
       : undefined;
 
   return {
@@ -33,6 +31,7 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     rules,
     thresholds: {
       ...defaultConfig.thresholds,
+      ...(pack?.thresholds ?? {}),
       ...(cliOptions.pluginThresholds ?? {}),
       ...(fileConfig.thresholds ?? {}),
       ...(cliOptions.thresholds ?? {}),

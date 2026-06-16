@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
+import { allDetectors } from "../../src/detectors/index.js";
 import { packageVersion } from "../../src/utils/packageInfo.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -44,7 +45,7 @@ describe("debtlens root commands", () => {
     const parsed = JSON.parse(result.stdout);
 
     assert.equal(result.status, 0);
-    assert.equal(parsed.rules.length, 8);
+    assert.equal(parsed.rules.length, allDetectors.length);
     assert.ok(parsed.rules.some((rule: { id: string }) => rule.id === "effect-complexity"));
   });
 });

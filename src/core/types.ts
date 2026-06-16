@@ -42,7 +42,7 @@ export interface DebtLensConfig {
   include?: string[];
   exclude?: string[];
   minSeverity?: Severity;
-  /** Built-in rule pack preset (core, react, react-native, next). */
+  /** Built-in rule pack preset (for example core, react, next, expo, or maintainer packs). */
   pack?: string;
   rules?: string[];
   thresholds?: ScanThresholds;

@@ -66,6 +66,30 @@ When this is a false positive:
 
 Confidence: **0.86** when the line budget is exceeded; **0.74** when only hook or branch budgets are exceeded. Line count is the strongest structural signal.
 
+## `large-function`
+
+Flags non-component functions that exceed line or branch budgets. React-style components are left to `large-component`.
+
+Default thresholds:
+
+- `large-function.maxLines`: 120
+- `large-function.maxBranches`: 12
+
+Why it matters: oversized functions hide multiple responsibilities and make review harder because every change has to preserve several phases at once.
+
+Good fixes:
+
+- split phases into named helpers
+- move policy tables into data
+- isolate validation, normalization, and side effects
+
+When this is a false positive:
+
+- the function is generated or intentionally table-driven
+- the logic is a React component already handled by `large-component`
+
+Confidence: **0.76-0.82** depending on whether the line budget, branch budget, or both budgets are exceeded.
+
 ## `state-sprawl`
 
 Flags components/hooks with many calls to local stateful hooks such as `useState`, `useReducer`, and `useRef`.
@@ -116,6 +140,48 @@ When this is a false positive:
 
 Confidence: **0.80** for raw overloaded effects; lower when the callback only delegates to a custom hook.
 
+## `hook-dependency-smell`
+
+Flags React hook dependency arrays that contain inline object, array, or function literals.
+
+Why it matters: inline dependency values are recreated each render, so memoization and effects can run more often than the author expects.
+
+Good fixes:
+
+- move inline objects/arrays into `useMemo`
+- move inline callbacks into `useCallback`
+- depend on primitive inputs instead of aggregate literals
+
+When this is a false positive:
+
+- the hook intentionally re-runs every render
+- the dependency array belongs to a custom API with different semantics
+
+Confidence: **0.78**. The syntax is direct, but the runtime cost depends on the hook's role.
+
+## `context-provider-sprawl`
+
+Flags React components that wrap children in many distinct `*.Provider` contexts.
+
+Default threshold:
+
+- `context-provider-sprawl.maxProviders`: 4
+
+Why it matters: provider shells with unrelated concerns become global setup hubs and make app boundaries harder to reason about.
+
+Good fixes:
+
+- split unrelated providers into route or feature boundaries
+- colocate context closer to consumers
+- group provider values only when they share ownership and lifecycle
+
+When this is a false positive:
+
+- the providers form one deliberate app bootstrap boundary
+- the component stays below the configured provider threshold
+
+Confidence: **0.74**. Provider count is objective, but app-shell architecture varies.
+
 ## `duplicate-logic`
 
 Finds structurally similar functions/components after comments, identifiers, strings, and numeric literals are normalized.
@@ -143,6 +209,31 @@ When this is a false positive:
 - the shared shape is too short to clear the minimum line-count threshold
 
 Confidence: **dynamic** — set to the structural similarity score (typically 0.86–1.0 for reported pairs). Higher similarity means stronger evidence of duplication.
+
+## `duplicated-literal`
+
+Flags repeated string and number literals across multiple files.
+
+Default thresholds:
+
+- `duplicated-literal.minLength`: 6
+- `duplicated-literal.minCount`: 3
+
+Why it matters: repeated domain literals drift when one copy changes and the others do not.
+
+Good fixes:
+
+- promote repeated domain values to a named constant or enum
+- move shared test values into fixtures
+- keep literals inline when they are unrelated despite matching text
+
+When this is a false positive:
+
+- the repeated value is incidental rather than one shared concept
+- repetition stays inside one file
+- the value is a common framework literal
+
+Confidence: **0.74**. Cross-file repetition is useful evidence, but human review decides whether the concept is actually shared.
 
 ## `dead-abstraction`
 
@@ -191,6 +282,25 @@ When this is a false positive:
 
 Confidence: **0.73**. Prop counts are objective, but some drilling is acceptable when boundaries are stable.
 
+## `story-only-component`
+
+Flags exported React components whose known relative-import consumers are only Storybook story files.
+
+Why it matters: story-only exported components can grow public APIs without being exercised by app code.
+
+Good fixes:
+
+- move the component into the story if it is only a documentation fixture
+- connect the component to production code before expanding its API
+- keep it exported only when the story documents a planned app boundary
+
+When this is a false positive:
+
+- the component is consumed through dynamic imports or package boundaries outside the scan target
+- the story is intentionally the only current consumer during a migration
+
+Confidence: **0.70**. The signal depends on the scanned import graph.
+
 ## `todo-comment`
 
 Flags debt markers in comments, including TODO, FIXME, HACK, temporary, placeholder, and assistant-generation markers.
@@ -215,6 +325,75 @@ When this is a false positive:
 - the comment is already paired with explicit tracking and removal criteria
 
 Confidence: **0.90** for bare markers; higher for tracker-linked markers.
+
+## `barrel-file`
+
+Flags large re-export-only `index` or `barrel` files.
+
+Default threshold:
+
+- `barrel-file.maxReExports`: 6
+
+Why it matters: broad barrels can hide dependency graph shape and make imports look stable when they are really local plumbing.
+
+Good fixes:
+
+- keep only stable public entrypoints in barrels
+- import implementation modules directly inside a feature
+- split barrels by ownership or domain
+
+When this is a false positive:
+
+- the barrel is a deliberate public package entrypoint
+- the re-export count stays below the configured threshold
+
+Confidence: **0.80**. Re-export-only files are easy to identify, but package API policy is contextual.
+
+## `weak-test-boundary`
+
+Flags production files importing from test-only paths such as `__tests__`, `__mocks__`, `*.test.*`, or `*.spec.*`.
+
+Configuration:
+
+- `weak-test-boundary.allowTypeOnly`: set to `1` to allow type-only imports from test-only modules.
+
+Why it matters: production code depending on test helpers can accidentally pull fixtures, mocks, or unstable test contracts into runtime code.
+
+Good fixes:
+
+- move reusable helpers into production-safe support modules
+- keep fixtures and mocks behind test-only callers
+- use type-only imports only when the boundary is intentional
+
+When this is a false positive:
+
+- the importer is itself a test file
+- type-only imports are intentionally allowed by config
+
+Confidence: **0.86**. Test-only path conventions are strong signals.
+
+## `api-surface-sprawl`
+
+Flags files exporting too many public symbols.
+
+Default threshold:
+
+- `api-surface-sprawl.maxExports`: 12
+
+Why it matters: large public surfaces are hard to version, document, and review. Library entrypoints should make ownership obvious.
+
+Good fixes:
+
+- split implementation exports from public entrypoints
+- group related exports behind focused modules
+- move unstable internals behind non-exported helpers
+
+When this is a false positive:
+
+- the file is an intentional package-level public API
+- `export *` sources are deliberately unresolved entrypoints
+
+Confidence: **0.78**. Export counts are objective, but public API policy belongs to the package owner.
 
 ## `naming-drift`
 

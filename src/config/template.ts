@@ -1,4 +1,5 @@
 import type { DebtLensConfig } from "../core/types.js";
+import { getRulePack } from "./packs.js";
 import { SCHEMA_ID } from "./schema.js";
 
 /**
@@ -14,30 +15,44 @@ export const configTemplate: DebtLensConfig & { $schema: string } = {
   respectGitignore: false,
   rules: [
     "large-component",
+    "large-function",
     "state-sprawl",
     "effect-complexity",
+    "hook-dependency-smell",
+    "context-provider-sprawl",
     "duplicate-logic",
+    "duplicated-literal",
     "dead-abstraction",
     "prop-drilling",
     "todo-comment",
     "naming-drift",
+    "barrel-file",
+    "weak-test-boundary",
+    "api-surface-sprawl",
+    "story-only-component",
   ],
   thresholds: {
     "large-component.maxLines": 250,
+    "large-function.maxLines": 120,
     "state-sprawl.maxStatefulHooks": 6,
     "effect-complexity.maxLines": 30,
+    "context-provider-sprawl.maxProviders": 4,
     "duplicate-logic.minSimilarity": 0.86,
     "duplicate-logic.minLines": 8,
+    "duplicated-literal.minCount": 3,
+    "barrel-file.maxReExports": 6,
+    "api-surface-sprawl.maxExports": 12,
   },
 };
 
 export function renderConfigFile(pack?: string, thresholdOverrides: Record<string, number> = {}): string {
   if (pack) {
     const { rules: _rules, ...base } = configTemplate;
+    const rulePack = getRulePack(pack);
     return `${JSON.stringify({
       ...base,
       pack,
-      thresholds: { ...base.thresholds, ...thresholdOverrides },
+      thresholds: { ...base.thresholds, ...(rulePack.thresholds ?? {}), ...thresholdOverrides },
     }, null, 2)}\n`;
   }
 

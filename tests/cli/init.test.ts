@@ -24,7 +24,8 @@ describe("debtlens init", () => {
     const parsed = JSON.parse(readFileSync(result.path, "utf8"));
     assert.equal(parsed.minSeverity, "low");
     assert.ok(Array.isArray(parsed.rules));
-    assert.equal(parsed.rules.length, 8);
+    assert.equal(parsed.rules.length, 16);
+    assert.ok(parsed.rules.includes("api-surface-sprawl"));
   });
 
   it("refuses to overwrite an existing config without force", () => {
@@ -51,6 +52,15 @@ describe("debtlens init", () => {
     const parsed = JSON.parse(readFileSync(result.path, "utf8"));
     assert.equal(parsed.pack, "core");
     assert.equal(parsed.rules, undefined);
+  });
+
+  it("writes pack threshold presets when --pack is provided", () => {
+    const result = runInit(dir, false, "oss-maintainer");
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+
+    assert.equal(parsed.pack, "oss-maintainer");
+    assert.equal(parsed.thresholds["api-surface-sprawl.maxExports"], 10);
+    assert.equal(parsed.thresholds["weak-test-boundary.allowTypeOnly"], 1);
   });
 
   it("rejects unknown pack ids", () => {

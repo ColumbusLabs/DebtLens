@@ -309,10 +309,13 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 
 | Pack | Rules |
 | --- | --- |
-| `core` | duplicate-logic, dead-abstraction, todo-comment, naming-drift |
-| `react` | core + large-component, state-sprawl, effect-complexity, prop-drilling |
-| `react-native` | same as `react` |
-| `next` | same as `react` |
+| `core` | framework-neutral maintainability rules: duplication, large functions, barrels, test boundaries, API surface, TODOs, naming drift |
+| `react` | core + component, hook, provider, prop, and Storybook signals |
+| `react-native` | same as `react` with RN threshold tuning |
+| `next` | same as `react` with App Router/public-entrypoint tuning |
+| `expo` | React Native tuning for Expo Router projects |
+| `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
+| `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
 
 ```json
 {

@@ -13,7 +13,21 @@ cd "$action_path"
 if [ ! -f dist/cli/index.js ] && [[ "$action_ref" == v* ]]; then
   asset_path="$runner_temp/debtlens-action-dist.tgz"
   asset_url="https://github.com/${action_repo}/releases/download/${action_ref}/debtlens-action-dist.tgz"
+  checksum_path="${asset_path}.sha256"
+  checksum_url="${asset_url}.sha256"
   if curl -fsSL "$asset_url" -o "$asset_path"; then
+    if curl -fsSL "$checksum_url" -o "$checksum_path"; then
+      if command -v sha256sum >/dev/null 2>&1; then
+        (cd "$(dirname "$asset_path")" && sha256sum -c "$(basename "$checksum_path")")
+      else
+        expected="$(awk '{ print $1 }' "$checksum_path")"
+        actual="$(shasum -a 256 "$asset_path" | awk '{ print $1 }')"
+        if [ "$expected" != "$actual" ]; then
+          echo "DebtLens: release runtime checksum mismatch." >&2
+          exit 1
+        fi
+      fi
+    fi
     tar -xzf "$asset_path" -C "$action_path"
   else
     echo "DebtLens: release runtime asset not found; falling back to source build."

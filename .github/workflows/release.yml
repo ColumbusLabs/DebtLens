@@ -30,6 +30,7 @@ jobs:
           cp scripts/prepare-action-runtime.sh scripts/render-scan-result.mjs scripts/append-step-summary.mjs scripts/post-pr-comment.mjs .release/action/scripts/
           npm ci --omit=dev --prefix .release/action
           tar -C .release/action -czf debtlens-action-dist.tgz .
+          sha256sum debtlens-action-dist.tgz | tee debtlens-action-dist.tgz.sha256
       - name: Upload npm package tarball
         uses: actions/upload-artifact@v4
         with:
@@ -39,7 +40,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debtlens-action-dist
-          path: debtlens-action-dist.tgz
+          path: |
+            debtlens-action-dist.tgz
+            debtlens-action-dist.tgz.sha256
       - name: Attach release assets
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
@@ -47,3 +50,4 @@ jobs:
           files: |
             debtlens-*.tgz
             debtlens-action-dist.tgz
+            debtlens-action-dist.tgz.sha256

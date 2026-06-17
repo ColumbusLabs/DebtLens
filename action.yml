@@ -98,7 +98,7 @@ inputs:
     default: ""
   upload-json-artifact:
     description: Upload the canonical ScanResult JSON as an Actions artifact.
-    default: "true"
+    default: "false"
   json-artifact-name:
     description: Name for the uploaded JSON artifact.
     default: debtlens-scan-result

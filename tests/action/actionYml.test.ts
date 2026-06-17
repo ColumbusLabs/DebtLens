@@ -29,9 +29,11 @@ describe("GitHub Action metadata", () => {
     }
   });
 
-  it("renders reports from one canonical JSON scan and uploads the artifact before replaying status", () => {
+  it("renders reports from one canonical JSON scan and optionally uploads the artifact before replaying status", () => {
     assert.match(actionYml, /--format json --output "\$internal_json"/);
     assert.match(actionYml, /scripts\/render-scan-result\.mjs/);
+    assert.match(actionYml, /upload-json-artifact:\n    description:.*\n    default: "false"/s);
+    assert.match(actionYml, /inputs\.upload-json-artifact == 'true'/);
     assert.match(actionYml, /actions\/upload-artifact@v4/);
     assert.match(actionYml, /steps\.scan\.outputs\['scan-status'\]/);
   });

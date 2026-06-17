@@ -22,6 +22,7 @@ export function registerWatchCommand(program: Command): void {
     .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
     .option("--fail-on-regression", "exit with code 1 when counts increase versus --baseline or --diff-base")
     .option("--baseline <path>", "report only issues absent from this baseline file")
+    .option("--diff-base <ref>", "report only findings introduced since this git ref")
     .option("--write-baseline [path]", "not supported in watch mode")
     .option("--changed [ref]", "scan only files changed vs HEAD (or vs <ref> if given)")
     .option("--staged", "scan only files staged in git")

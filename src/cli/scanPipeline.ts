@@ -1,8 +1,9 @@
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { findConfigPath } from "../config/loadConfig.js";
 import { applyBaseline, createBaseline, loadBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
-import { getLineIntroducedDaysAgo, getRefSnapshot } from "../utils/git.js";
+import { canonicalizePath, getLineIntroducedDaysAgo, getRefSnapshot } from "../utils/git.js";
+import { normalizePath } from "../utils/nextSurface.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
 import type { DebtIssue, DebtLensConfig, Detector, ScanOptions, ScanResult, ScanThresholds, Severity } from "../core/types.js";
 import { detectorIds } from "../detectors/index.js";
@@ -20,6 +21,7 @@ export async function loadConfiguredPlugins(
   rawOptions: Record<string, unknown>,
   fileConfig: DebtLensConfig,
   configDirOverride?: string,
+  writeStderr: (text: string) => void = (text) => process.stderr.write(text),
 ): Promise<PluginContribution | undefined> {
   if (!fileConfig.plugins?.length) return undefined;
 
@@ -27,7 +29,7 @@ export async function loadConfiguredPlugins(
   const configDir = configDirOverride ?? (configPath ? dirname(configPath) : cwd);
   const loaded = await loadPlugins(configDir, fileConfig, new Set(detectorIds));
   for (const warning of loaded.warnings) {
-    process.stderr.write(`DebtLens: ${warning}\n`);
+    writeStderr(`DebtLens: ${warning}\n`);
   }
   return {
     detectors: loaded.detectors.length > 0 ? loaded.detectors : undefined,
@@ -121,14 +123,14 @@ export async function resolveReportedIssues(
   }
 
   const packageTarget = resolve(context.cwd, context.scanOptions.target);
-  const packagePrefix = `${packageTarget.replace(/[/\\]+$/, "")}/`;
-  const scopedToPackage = packageTarget !== snapshot.root;
+  const scopedToPackage = normalizePath(packageTarget) !== normalizePath(snapshot.root);
   const scopedFiles = scopedToPackage
-    ? snapshot.files.filter((file) => file === packageTarget || file.startsWith(packagePrefix))
+    ? snapshot.files.filter((file) => isPathWithinRoot(file, packageTarget))
     : snapshot.files;
+  const scopedCanonical = new Set(scopedFiles.map((file) => canonicalizePath(file)));
   const scopedContents = snapshot.contents
     ? Object.fromEntries(
-      Object.entries(snapshot.contents).filter(([file]) => scopedFiles.includes(file)),
+      Object.entries(snapshot.contents).filter(([file]) => scopedCanonical.has(file)),
     )
     : undefined;
 
@@ -140,4 +142,12 @@ export async function resolveReportedIssues(
     fileContents: scopedContents,
   });
   return applyBaseline(result, createBaseline(baseResult.issues));
+}
+
+function isPathWithinRoot(filePath: string, rootPath: string): boolean {
+  const file = normalizePath(resolve(filePath));
+  const root = normalizePath(resolve(rootPath));
+  if (file === root) return true;
+  const rel = relative(root, file).replaceAll("\\", "/");
+  return rel.length > 0 && !rel.startsWith("..");
 }

@@ -120,7 +120,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   }
   const effectiveConfig = loadEffectiveConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined, packageDirectory);
   const fileConfig = effectiveConfig.config;
-  const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig, effectiveConfig.pluginConfigDir);
+  const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig, effectiveConfig.pluginConfigDir, writeStderr);
   const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
   const failOn = resolveFailOn(rawOptions, fileConfig);
   const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);

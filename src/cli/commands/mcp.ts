@@ -70,8 +70,13 @@ async function handleLine(line: string, entrypoint: string, execArgv: string[]):
       writeResponse(request.id, undefined, { code: -32602, message: "Missing tool name" });
       return;
     }
-    const result = await callTool(toolName, request.params?.arguments ?? {}, entrypoint, execArgv);
-    writeResponse(request.id, result);
+    try {
+      const result = await callTool(toolName, request.params?.arguments ?? {}, entrypoint, execArgv);
+      writeResponse(request.id, result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      writeResponse(request.id, undefined, { code: -32603, message });
+    }
     return;
   }
 
@@ -89,10 +94,15 @@ function tools(): Array<Record<string, unknown>> {
           target: { type: "string" },
           cwd: { type: "string" },
           pack: { type: "string" },
+          package: { type: "string" },
           rules: { type: "string" },
           minSeverity: { type: "string" },
           format: { type: "string" },
-          package: { type: "string" },
+          config: { type: "string" },
+          changed: { type: "string" },
+          staged: { type: "boolean" },
+          diffBase: { type: "string" },
+          baseline: { type: "string" },
         },
       },
     },
@@ -130,16 +140,24 @@ async function callTool(
 ): Promise<Record<string, unknown>> {
   if (name === "scan") {
     const cwd = typeof args.cwd === "string" && args.cwd.length > 0 ? resolve(args.cwd) : process.cwd();
+    const format = typeof args.format === "string" ? parseFormat(args.format) : "json";
     const result = await runScanForMcp(stringArg(args.target, "."), {
+      baseline: args.baseline,
+      changed: args.changed,
+      config: args.config,
       cwd,
+      diffBase: args.diffBase,
       minSeverity: args.minSeverity,
       pack: args.pack,
       package: args.package,
       rules: args.rules,
+      staged: args.staged,
     }, {
-      format: typeof args.format === "string" ? parseFormat(args.format) : "json",
+      format,
     });
-    const text = `${result.stderr}${result.report}`.trim();
+    const text = format === "json"
+      ? result.report.trim()
+      : `${result.report}${result.stderr}`.trim();
     return {
       isError: result.exitCode !== 0,
       content: [{ type: "text", text }],

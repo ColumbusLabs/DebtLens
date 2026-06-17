@@ -11,6 +11,10 @@ describe("GitHub Action metadata", () => {
       "pack",
       "package",
       "profile",
+      "cache",
+      "cache-path",
+      "parallel",
+      "batch-size",
       "fail-on-regression",
       "json-output",
       "upload-json-artifact",
@@ -29,6 +33,15 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /scripts\/render-scan-result\.mjs/);
     assert.match(actionYml, /actions\/upload-artifact@v4/);
     assert.match(actionYml, /steps\.scan\.outputs\['scan-status'\]/);
+  });
+
+  it("passes performance controls through to the scanner", () => {
+    assert.match(actionYml, /DL_CACHE: \$\{\{ inputs\.cache \}\}/);
+    assert.match(actionYml, /DL_CACHE_PATH: \$\{\{ inputs\.cache-path \}\}/);
+    assert.match(actionYml, /args\+=\(--cache "\$DL_CACHE_PATH"\)/);
+    assert.match(actionYml, /args\+=\(--cache\)/);
+    assert.match(actionYml, /args\+=\(--parallel\)/);
+    assert.match(actionYml, /args\+=\(--batch-size "\$DL_BATCH_SIZE"\)/);
   });
 
   it("documents supported packs and bootstraps tagged release assets before source fallback", () => {

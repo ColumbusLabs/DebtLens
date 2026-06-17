@@ -180,6 +180,24 @@ export function buildScanResultSchema(): Record<string, unknown> {
               ruleTimingsMs: { type: "object", additionalProperties: { type: "number", minimum: 0 } },
             },
           },
+          performance: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              cache: {
+                type: "object",
+                additionalProperties: false,
+                required: ["enabled", "hit", "path"],
+                properties: {
+                  enabled: { type: "boolean" },
+                  hit: { type: "boolean" },
+                  path: { type: "string" },
+                },
+              },
+              batchSize: { type: "integer", minimum: 1 },
+              parallel: { type: "boolean" },
+            },
+          },
         },
       },
       options: {

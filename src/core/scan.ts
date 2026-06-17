@@ -4,15 +4,38 @@ import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
+import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
 import { suggestClosest } from "../utils/didYouMean.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
-import type { DebtIssue, Detector, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
+import type { DebtIssue, Detector, DetectorContext, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startedAt = Date.now();
   const filePaths = await resolveFilePaths(options);
+  const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
+  const detectors = selectDetectors(registry, options.rules);
+  const snapshots = loadFileSnapshots(filePaths, options);
+  const cacheDisabledReason = options.cache && options.pluginDetectors?.length
+    ? "scan cache disabled when plugin detectors are loaded because plugin implementations cannot be content-hash invalidated"
+    : undefined;
+  const cachePath = options.cache && !cacheDisabledReason ? getScanCachePath(options) : undefined;
+  const cacheKey = cachePath ? buildScanCacheKey(options, detectors) : undefined;
+
+  if (cachePath && cacheKey) {
+    const cached = readCachedScan(cachePath, cacheKey, snapshots);
+    if (cached) {
+      cached.summary.elapsedMs = Date.now() - startedAt;
+      cached.summary.performance = {
+        ...(cached.summary.performance ?? {}),
+        cache: { enabled: true, hit: true, path: cachePath },
+        ...(options.batchSize ? { batchSize: options.batchSize } : {}),
+        ...(options.parallel ? { parallel: true } : {}),
+      };
+      return cached;
+    }
+  }
 
   const project = new Project({
     compilerOptions: {
@@ -25,44 +48,34 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     skipAddingFilesFromTsConfig: true,
   });
 
-  const files: SourceFileInfo[] = [];
-  for (const absolutePath of filePaths) {
-    const contentOverride = getContentOverride(options, absolutePath);
-    const sourceFile = contentOverride === undefined
-      ? project.addSourceFileAtPathIfExists(absolutePath)
-      : project.createSourceFile(absolutePath, contentOverride, { overwrite: true });
-    if (!sourceFile) continue;
-    files.push({
-      absolutePath,
-      relativePath: relative(options.target, absolutePath).replaceAll("\\", "/"),
-      content: contentOverride ?? readFileSync(absolutePath, "utf8"),
-      sourceFile,
-    });
-  }
-
-  const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
-  const detectors = selectDetectors(registry, options.rules);
+  const files = await loadSourceFiles(project, snapshots, options);
   let issues: DebtIssue[] = [];
   const warnings: string[] = [];
   let filteredByMinSeverity = 0;
   let filteredByConfidenceFloor = 0;
   const ruleTimingsMs: Record<string, number> = {};
 
+  if (cacheDisabledReason) {
+    warnings.push(cacheDisabledReason);
+  }
   for (const warning of validatePerRuleOverrides(registry, options)) {
     if (!warnings.includes(warning)) warnings.push(warning);
   }
 
-  for (const detector of detectors) {
-    const detectorStartedAt = options.profile ? Date.now() : 0;
-    const detectorIssues = await detector.detect({
-      project,
-      files,
-      options,
-      getThreshold: (key, fallback) => getThreshold(options, key, fallback),
-      addWarning: (warning) => {
-        if (!warnings.includes(warning)) warnings.push(warning);
-      },
-    });
+  const detectorResults = await runDetectors(detectors, {
+    project,
+    files,
+    options,
+    getThreshold: (key, fallback) => getThreshold(options, key, fallback),
+  });
+
+  for (const { warnings: detectorWarnings } of detectorResults) {
+    for (const warning of detectorWarnings) {
+      if (!warnings.includes(warning)) warnings.push(warning);
+    }
+  }
+
+  for (const { detector, issues: detectorIssues, elapsedMs } of detectorResults) {
     for (const issue of detectorIssues) {
       normalizeIssueIdentity(issue);
       const severityOverride = options.ruleSeverities?.[issue.ruleId];
@@ -81,7 +94,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       }
     }
     if (options.profile) {
-      ruleTimingsMs[detector.id] = Date.now() - detectorStartedAt;
+      ruleTimingsMs[detector.id] = elapsedMs;
     }
   }
 
@@ -109,25 +122,30 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const issueSummary = summarizeIssues(issues);
   const correlations = buildRuleCorrelations(issues);
   const duplicateClusters = buildDuplicateLogicClusters(issues);
-  const summary = {
-    totalIssues: issueSummary.totalIssues,
-    bySeverity: issueSummary.bySeverity,
-    byRule: issueSummary.byRule,
-    filesScanned: files.length,
-    rulesRun: detectors.length,
-    elapsedMs: Date.now() - startedAt,
-    ...(warnings.length ? { warnings } : {}),
-    ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
-    ...(correlations.length > 0 ? { correlations } : {}),
-    ...(duplicateClusters.length > 0 ? { duplicateClusters } : {}),
-    ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
-  };
-
-  return {
+  const result: ScanResult = {
     schemaVersion: 1,
     issues,
     ...(suppression.suppressions.length > 0 ? { suppressions: suppression.suppressions } : {}),
-    summary,
+    summary: {
+      totalIssues: issueSummary.totalIssues,
+      bySeverity: issueSummary.bySeverity,
+      byRule: issueSummary.byRule,
+      filesScanned: files.length,
+      rulesRun: detectors.length,
+      elapsedMs: Date.now() - startedAt,
+      ...(warnings.length ? { warnings } : {}),
+      ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
+      ...(correlations.length > 0 ? { correlations } : {}),
+      ...(duplicateClusters.length > 0 ? { duplicateClusters } : {}),
+      ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
+      ...(cachePath || options.batchSize || options.parallel ? {
+        performance: {
+          ...(cachePath ? { cache: { enabled: true, hit: false, path: cachePath } } : {}),
+          ...(options.batchSize ? { batchSize: options.batchSize } : {}),
+          ...(options.parallel ? { parallel: true } : {}),
+        },
+      } : {}),
+    },
     options: {
       target: options.target,
       include: options.include,
@@ -136,6 +154,86 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       rules: options.rules,
     },
   };
+
+  if (cachePath && cacheKey) {
+    writeCachedScan(cachePath, cacheKey, snapshots, result);
+  }
+
+  return result;
+}
+
+function loadFileSnapshots(filePaths: string[], options: ScanOptions): FileSnapshot[] {
+  return filePaths.map((absolutePath) => {
+    const content = getContentOverride(options, absolutePath) ?? readFileSync(absolutePath, "utf8");
+    return {
+      absolutePath,
+      content,
+      hash: hashContent(content),
+    };
+  });
+}
+
+async function loadSourceFiles(project: Project, snapshots: FileSnapshot[], options: ScanOptions): Promise<SourceFileInfo[]> {
+  const files: SourceFileInfo[] = [];
+  const batchSize = Math.max(1, options.batchSize ?? (snapshots.length || 1));
+
+  for (let index = 0; index < snapshots.length; index += batchSize) {
+    const batch = snapshots.slice(index, index + batchSize);
+    for (const snapshot of batch) {
+      const sourceFile = project.createSourceFile(snapshot.absolutePath, snapshot.content, { overwrite: true });
+      files.push({
+        absolutePath: snapshot.absolutePath,
+        relativePath: relative(options.target, snapshot.absolutePath).replaceAll("\\", "/"),
+        content: snapshot.content,
+        sourceFile,
+      });
+    }
+    if (index + batchSize < snapshots.length) {
+      await new Promise<void>((resolveYield) => setImmediate(resolveYield));
+    }
+  }
+
+  return files;
+}
+
+interface DetectorRunResult {
+  detector: Detector;
+  issues: DebtIssue[];
+  elapsedMs: number;
+  warnings: string[];
+}
+
+async function runDetectors(
+  detectors: Detector[],
+  contextBase: Omit<DetectorContext, "addWarning">,
+): Promise<DetectorRunResult[]> {
+  const runOne = async (detector: Detector): Promise<DetectorRunResult> => {
+    const detectorStartedAt = contextBase.options.profile ? Date.now() : 0;
+    const warnings: string[] = [];
+    const context: DetectorContext = {
+      ...contextBase,
+      addWarning: (warning) => {
+        if (!warnings.includes(warning)) warnings.push(warning);
+      },
+    };
+    const issues = await detector.detect(context);
+    return {
+      detector,
+      issues,
+      elapsedMs: contextBase.options.profile ? Date.now() - detectorStartedAt : 0,
+      warnings,
+    };
+  };
+
+  if (contextBase.options.parallel) {
+    return Promise.all(detectors.map((detector) => runOne(detector)));
+  }
+
+  const results: DetectorRunResult[] = [];
+  for (const detector of detectors) {
+    results.push(await runOne(detector));
+  }
+  return results;
 }
 
 function normalizeIssueIdentity(issue: DebtIssue): void {

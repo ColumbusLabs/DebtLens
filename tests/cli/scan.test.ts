@@ -560,6 +560,57 @@ describe("debtlens scan profile", () => {
   });
 });
 
+describe("debtlens scan performance flags", () => {
+  it("passes cache, parallel, and batch-size options through merged config", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-performance-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove later\nexport const value = 1;\n");
+
+      const first = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--cache",
+        ".debtlens/cache.json",
+        "--parallel",
+        "--batch-size",
+        "1",
+        "--format",
+        "json",
+      ]);
+      const second = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--cache",
+        ".debtlens/cache.json",
+        "--parallel",
+        "--batch-size",
+        "1",
+        "--format",
+        "json",
+      ]);
+      const firstJson = JSON.parse(first.stdout);
+      const secondJson = JSON.parse(second.stdout);
+
+      assert.equal(first.status, 0);
+      assert.equal(firstJson.summary.performance.cache.hit, false);
+      assert.equal(firstJson.summary.performance.parallel, true);
+      assert.equal(firstJson.summary.performance.batchSize, 1);
+      assert.equal(second.status, 0);
+      assert.equal(secondJson.summary.performance.cache.hit, true);
+      assert.equal(secondJson.summary.totalIssues, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("debtlens scan git modes", () => {
   it("rejects --changed and --staged together", () => {
     const result = runScan(["examples/react", "--changed", "--staged"]);

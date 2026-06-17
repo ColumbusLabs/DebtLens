@@ -110,6 +110,14 @@ export interface ScanOptions {
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
   /** When true, collect per-rule timing in `summary.profile`. */
   profile?: boolean;
+  /** When true, reuse unchanged scan results from a content-hash cache. */
+  cache?: boolean;
+  /** Optional path to the scan cache file. Defaults to `.debtlens/cache.json` in cwd. */
+  cachePath?: string;
+  /** Load source files in bounded batches, yielding between batches for large scans. */
+  batchSize?: number;
+  /** Run detectors concurrently after source loading. Results remain sorted deterministically. */
+  parallel?: boolean;
   /** Detectors contributed by config-loaded plugins, merged after built-in rules. */
   pluginDetectors?: Detector[];
   /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
@@ -137,6 +145,10 @@ export interface CliOptions {
   changedFiles?: string[];
   fileContents?: Record<string, string>;
   profile?: boolean;
+  cache?: boolean;
+  cachePath?: string;
+  batchSize?: number;
+  parallel?: boolean;
   pluginDetectors?: Detector[];
   /** Threshold defaults contributed by plugins; user config and CLI thresholds override. */
   pluginThresholds?: ScanThresholds;
@@ -233,6 +245,16 @@ export interface ScanProfile {
   ruleTimingsMs: Record<string, number>;
 }
 
+export interface ScanPerformance {
+  cache?: {
+    enabled: boolean;
+    hit: boolean;
+    path: string;
+  };
+  batchSize?: number;
+  parallel?: boolean;
+}
+
 export interface ScanSummary {
   totalIssues: number;
   bySeverity: Record<Severity, number>;
@@ -246,6 +268,7 @@ export interface ScanSummary {
   correlations?: RuleCorrelation[];
   duplicateClusters?: DuplicateLogicCluster[];
   profile?: ScanProfile;
+  performance?: ScanPerformance;
 }
 
 export interface ScanResult {

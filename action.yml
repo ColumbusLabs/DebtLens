@@ -42,6 +42,18 @@ inputs:
   profile:
     description: Collect per-rule timing profile in the JSON report.
     default: "false"
+  cache:
+    description: Reuse unchanged scan results from a content-hash cache.
+    default: "false"
+  cache-path:
+    description: Path to the scan cache file when cache is enabled.
+    default: ""
+  parallel:
+    description: Run detectors concurrently after source loading.
+    default: "false"
+  batch-size:
+    description: Load source files in bounded batches.
+    default: ""
   respect-gitignore:
     description: Skip files ignored by git in addition to configured excludes.
     default: "false"
@@ -133,6 +145,10 @@ runs:
         DL_PACK: ${{ inputs.pack }}
         DL_PACKAGE: ${{ inputs.package }}
         DL_PROFILE: ${{ inputs.profile }}
+        DL_CACHE: ${{ inputs.cache }}
+        DL_CACHE_PATH: ${{ inputs.cache-path }}
+        DL_PARALLEL: ${{ inputs.parallel }}
+        DL_BATCH_SIZE: ${{ inputs.batch-size }}
         DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
         DL_CONFIG: ${{ inputs.config }}
@@ -159,6 +175,15 @@ runs:
           [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")
           [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
           [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
+          if [ "$DL_CACHE" = "true" ]; then
+            if [ -n "$DL_CACHE_PATH" ]; then
+              args+=(--cache "$DL_CACHE_PATH")
+            else
+              args+=(--cache)
+            fi
+          fi
+          [ "$DL_PARALLEL" = "true" ] && args+=(--parallel)
+          [ -n "$DL_BATCH_SIZE" ] && args+=(--batch-size "$DL_BATCH_SIZE")
           [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
           [ "$DL_RESPECT_GITIGNORE" = "true" ] && args+=(--respect-gitignore)
           node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"
@@ -182,6 +207,15 @@ runs:
         [ "$DL_RESPECT_GITIGNORE" = "true" ] && args+=(--respect-gitignore)
         [ -n "$DL_THRESHOLDS" ] && args+=(--threshold "$DL_THRESHOLDS")
         [ -n "$DL_MAX_FILES" ] && args+=(--max-files "$DL_MAX_FILES")
+        if [ "$DL_CACHE" = "true" ]; then
+          if [ -n "$DL_CACHE_PATH" ]; then
+            args+=(--cache "$DL_CACHE_PATH")
+          else
+            args+=(--cache)
+          fi
+        fi
+        [ "$DL_PARALLEL" = "true" ] && args+=(--parallel)
+        [ -n "$DL_BATCH_SIZE" ] && args+=(--batch-size "$DL_BATCH_SIZE")
         [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
         [ "$DL_PROFILE" = "true" ] && args+=(--profile)
         [ "$DL_FAIL_ON_REGRESSION" = "true" ] && args+=(--fail-on-regression)

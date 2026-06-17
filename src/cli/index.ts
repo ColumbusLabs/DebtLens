@@ -58,6 +58,9 @@ program.command("scan")
   .option("--no-color", "disable ANSI color in terminal output")
   .option("-q, --quiet", "print only the summary line, suppress individual findings")
   .option("--profile", "print per-rule timing without changing findings")
+  .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
+  .option("--parallel", "run detectors concurrently after source loading")
+  .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
   .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
   .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
   .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
@@ -111,6 +114,10 @@ program.command("scan")
         thresholds: parseThresholds(rawOptions.threshold as string | undefined),
         minSeverity,
         maxFiles: rawOptions.maxFiles as number | undefined,
+        cache: rawOptions.cache !== undefined ? true : undefined,
+        cachePath: typeof rawOptions.cache === "string" ? rawOptions.cache : undefined,
+        parallel: rawOptions.parallel === true ? true : undefined,
+        batchSize: rawOptions.batchSize as number | undefined,
         respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
         changedFiles,
         fileContents,

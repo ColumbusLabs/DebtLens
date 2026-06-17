@@ -112,7 +112,7 @@ DEBTLENS_BENCHMARK_BUDGET_SMALL_MS=7500 npm run benchmark:ci
 npm run benchmark -- --budget small=7500 --budget medium=45000
 ```
 
-Per-rule timing is available with `--profile`; CI can keep the raw timings in the canonical JSON report artifact.
+Per-rule timing is available with `--profile`; CI can keep the raw timings in the canonical JSON report artifact. For large repeat scans, `--cache` writes a content-hash cache at `.debtlens/cache.json` by default and returns cached results when the selected files and scan options are unchanged. Use `--batch-size <count>` to yield between source-loading batches, and `--parallel` to dispatch independent detectors concurrently while preserving deterministic output ordering.
 
 ## Install
 
@@ -168,6 +168,9 @@ Options:
 --no-color                     disable terminal color
 -q, --quiet                    terminal only: suppress per-finding detail
 --profile                      print per-rule timing to stderr without changing findings
+--cache [path]                 reuse unchanged scan results from a content-hash cache
+--parallel                     run detectors concurrently after source loading
+--batch-size <count>           load source files in bounded batches
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
@@ -468,7 +471,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 

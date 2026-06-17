@@ -60,6 +60,12 @@ export function runWatch(options: WatchRunOptions): void {
   const watcher = chokidar.watch(watchPaths, {
     ignoreInitial: true,
     persistent: true,
+    ignored: [
+      "**/node_modules/**",
+      "**/.git/**",
+      "**/.debtlens/**",
+      "**/dist/**",
+    ],
   });
   watcher.on("all", schedule);
 

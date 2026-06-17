@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { Command } from "commander";
 import { findConfigPath, loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
@@ -8,7 +8,8 @@ import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
-import { getChangedFiles, getLineIntroducedDaysAgo, getRefSnapshot, getStagedFiles } from "../utils/git.js";
+import { getChangedFiles, canonicalizePath, getLineIntroducedDaysAgo, getRefSnapshot, getStagedFiles } from "../utils/git.js";
+import { normalizePath } from "../utils/nextSurface.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
 import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, ScanThresholds, Severity, TerminalGroupBy } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
@@ -733,14 +734,14 @@ async function resolveReportedIssues(
   }
 
   const packageTarget = resolve(context.cwd, context.scanOptions.target);
-  const packagePrefix = `${packageTarget.replace(/[/\\]+$/, "")}/`;
-  const scopedToPackage = packageTarget !== snapshot.root;
+  const scopedToPackage = normalizePath(packageTarget) !== normalizePath(snapshot.root);
   const scopedFiles = scopedToPackage
-    ? snapshot.files.filter((file) => file === packageTarget || file.startsWith(packagePrefix))
+    ? snapshot.files.filter((file) => isPathWithinRoot(file, packageTarget))
     : snapshot.files;
+  const scopedCanonical = new Set(scopedFiles.map((file) => canonicalizePath(file)));
   const scopedContents = snapshot.contents
     ? Object.fromEntries(
-      Object.entries(snapshot.contents).filter(([file]) => scopedFiles.includes(file)),
+      Object.entries(snapshot.contents).filter(([file]) => scopedCanonical.has(file)),
     )
     : undefined;
 
@@ -752,6 +753,14 @@ async function resolveReportedIssues(
     fileContents: scopedContents,
   });
   return applyBaseline(result, createBaseline(baseResult.issues));
+}
+
+function isPathWithinRoot(filePath: string, rootPath: string): boolean {
+  const file = normalizePath(resolve(filePath));
+  const root = normalizePath(resolve(rootPath));
+  if (file === root) return true;
+  const rel = relative(root, file).replaceAll("\\", "/");
+  return rel.length > 0 && !rel.startsWith("..");
 }
 
 function formatProfileReport(ruleTimingsMs: Record<string, number>): string {

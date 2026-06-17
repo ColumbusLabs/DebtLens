@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { CONFIG_FILENAME, runInit } from "../../src/cli/init.js";
+import { suggestConfigFromEslint } from "../../src/cli/eslintMigration.js";
 import { configTemplate } from "../../src/config/template.js";
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
 
 describe("debtlens init", () => {
   let dir: string;
@@ -70,5 +76,52 @@ describe("debtlens init", () => {
 
   it("rejects unknown pack ids", () => {
     assert.throws(() => runInit(dir, false, "vue"), /Unknown rule pack "vue"/);
+  });
+
+  it("prints a suggested config from ESLint JSON without writing", () => {
+    writeFileSync(join(dir, "eslint.config.json"), JSON.stringify([
+      {
+        rules: {
+          "react-hooks/exhaustive-deps": "warn",
+          complexity: ["warn", 9],
+          "max-depth": ["error", 3],
+          "max-lines-per-function": ["warn", { max: 80 }],
+        },
+      },
+    ]));
+
+    const suggested = JSON.parse(suggestConfigFromEslint(dir, "eslint.config.json"));
+
+    assert.equal(suggested.pack, "react");
+    assert.equal(suggested.thresholds["complex-control-flow.maxComplexity"], 9);
+    assert.equal(suggested.thresholds["complex-control-flow.maxDepth"], 3);
+    assert.equal(suggested.thresholds["large-function.maxLines"], 80);
+    assert.equal(suggested.rules, undefined);
+    assert.equal(readFileSync(join(dir, "eslint.config.json"), "utf8").includes("react-hooks"), true);
+    assert.equal(existsSync(join(dir, CONFIG_FILENAME)), false);
+  });
+
+  it("wires --from-eslint through the init command", () => {
+    writeFileSync(join(dir, ".eslintrc.json"), JSON.stringify({
+      rules: {
+        complexity: ["warn", 7],
+      },
+    }));
+
+    const result = spawnSync(process.execPath, [
+      "--import",
+      "tsx",
+      cliEntrypoint,
+      "init",
+      "--cwd",
+      dir,
+      "--from-eslint",
+      ".eslintrc.json",
+    ], { encoding: "utf8" });
+    const suggested = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0);
+    assert.equal(suggested.thresholds["complex-control-flow.maxComplexity"], 7);
+    assert.equal(existsSync(join(dir, CONFIG_FILENAME)), false);
   });
 });

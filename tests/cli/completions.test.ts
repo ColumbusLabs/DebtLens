@@ -20,7 +20,8 @@ describe("debtlens completions", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /complete -F _debtlens_complete debtlens/);
-    assert.match(result.stdout, /scan doctor packs rules explain/);
+    assert.match(result.stdout, /scan doctor watch packs rules explain/);
+    assert.match(result.stdout, /adopt mcp completions/);
     assert.match(result.stdout, /prop-drilling/);
     assert.match(result.stdout, /react-native/);
     assert.match(result.stdout, /markdown/);

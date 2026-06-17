@@ -2,7 +2,7 @@ import { RULE_PACK_IDS } from "../config/packs.js";
 import { severities } from "../core/severity.js";
 import { detectorIds } from "../detectors/index.js";
 
-const commands = ["scan", "doctor", "packs", "rules", "explain", "suppress", "init", "adopt", "completions"];
+const commands = ["scan", "doctor", "watch", "packs", "rules", "explain", "suppress", "init", "adopt", "mcp", "completions"];
 const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit"];
 const scanFlags = [
   "--include",
@@ -36,6 +36,8 @@ const scanFlags = [
   "--group-by",
   "--sarif-compact",
   "--markdown-heatmap",
+  "--from-eslint",
+  "--debounce",
 ];
 
 export type CompletionShell = "bash" | "zsh" | "fish";

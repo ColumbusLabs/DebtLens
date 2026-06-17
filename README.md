@@ -136,8 +136,11 @@ npx debtlens scan
 ```bash
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
 debtlens init --pack core # starter config using the core rule pack preset
+debtlens init --from-eslint eslint.config.json # print a migration suggestion without writing
 debtlens adopt            # adoption report (dry run; recommends minSeverity)
+debtlens watch examples/react --rules todo-comment # rescan on file changes
 debtlens completions zsh  # print shell completions
+debtlens mcp              # stdio MCP server for Cursor/Claude-style agents
 debtlens packs            # list built-in rule pack presets
 debtlens doctor           # inspect resolved config and matched files without scanning
 debtlens rules            # list built-in rule ids and descriptions
@@ -227,6 +230,9 @@ debtlens scan --respect-gitignore
 # Debug config and file matching without running detectors
 debtlens doctor --pack core
 debtlens doctor --include "src/**/*.ts,src/**/*.tsx" --changed
+
+# Local iteration: run once, then rescan after file changes until Ctrl+C
+debtlens watch examples/react --rules todo-comment --debounce 300
 
 # List rule ids for config, CI, or --rules
 debtlens rules
@@ -546,6 +552,7 @@ Other CI templates: [GitLab](./docs/ci-gitlab.md), [Bitbucket](./docs/ci-bitbuck
 
 For local hooks, see [pre-commit hooks](./docs/pre-commit.md). For monorepo rollout, see [per-package baselines](./docs/monorepo-baselines.md).
 For shared organization policy, see [policy packs as npm packages](./docs/policy-packages.md). For hosted GitHub integration tradeoffs, see the [GitHub App RFC](./docs/github-app-rfc.md).
+For agent integrations, see the [MCP server setup](./docs/mcp.md).
 
 Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`):
 

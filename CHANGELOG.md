@@ -7,6 +7,13 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Changed
 
+- **CLI layout** splits the monolithic `src/cli/index.ts` into per-command modules under
+  `src/cli/commands/`, shared parsers in `src/cli/parse.ts`, and scan pipeline helpers in
+  `src/cli/scanPipeline.ts` (no user-facing behavior change).
+- **Python detectors** live under `src/detectors/python/` with `async def` parsing and decorator
+  line skipping in function extraction.
+- **MCP scan and doctor tools** call the scan and doctor pipelines in-process instead of
+  spawning CLI subprocesses; `rules` and `explain` still use subprocesses.
 - **Package config merge** now union-merges `include`, `exclude`, and `rules` arrays when
   `--package` overlays a workspace package config on the repo root.
 - **Scan cache writes** use a temp file plus atomic rename so interrupted writes cannot

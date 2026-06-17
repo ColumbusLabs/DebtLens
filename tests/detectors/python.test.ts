@@ -74,6 +74,30 @@ def format_customer(customer):
     }
   });
 
+  it("detects async def functions and skips decorator lines when parsing bodies", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-python-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(join(dir, "src", "service.py"), `
+@router.get("/items")
+async def list_items(session):
+    return await fetch_items(session)
+
+
+async def load_items(session):
+    return await fetch_items(session)
+`, "utf8");
+
+      const result = await pythonScan(dir, ["python-dead-abstraction"]);
+
+      assert.equal(result.summary.totalIssues, 2);
+      assert.ok(result.issues.some((issue) => issue.message.includes("list_items")));
+      assert.ok(result.issues.some((issue) => issue.message.includes("load_items")));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("does not flag Python wrappers that add behavior", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-python-"));
     try {

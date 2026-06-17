@@ -45,7 +45,7 @@ describe("debtlens mcp", () => {
     assert.match(response.result.content[0].text, /large-component/);
   });
 
-  it("passes cwd through to scan subprocesses", () => {
+  it("runs scan in-process with cwd and package options", () => {
     const result = runMcp(`${JSON.stringify({
       jsonrpc: "2.0",
       id: 3,

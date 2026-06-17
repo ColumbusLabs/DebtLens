@@ -24,6 +24,8 @@ All notable changes to DebtLens are documented here. This project adheres to
   of a hand-rolled line parser.
 - Consolidated shared Next.js surface helpers and string utilities used by multiple
   detectors (no user-facing behavior change).
+- **VS Code extension diagnostics** mapping (`toRange`, `toSeverity`, issue grouping) lives
+  in `extensions/vscode/diagnostics.js` for isolated testing.
 
 ### Fixed
 
@@ -33,6 +35,12 @@ All notable changes to DebtLens are documented here. This project adheres to
   so enrichment does not exit the surrounding scan handler early.
 - **`debtlens init --from-eslint`** rejects non-`.json` ESLint config paths with a clear
   migration error.
+- **Watch mode** now discovers `debtlens.config.json` and `.debtlensrc.json` via
+  `findConfigPath` and rescans through the shared argv/spawn helpers.
+- **MCP `scan` and `doctor` tools** accept `cwd` so agents can target monorepo
+  packages without changing the server process directory.
+- **`--diff-base` with `--package`** now compares only files inside the selected
+  workspace package instead of the entire repository snapshot.
 
 ### Added
 
@@ -80,15 +88,6 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`debtlens suppress`** helper printing a copy-paste inline suppression directive
   (`--rule`, `--reason`, optional `--file`)
   ([#146](https://github.com/ColumbusLabs/DebtLens/issues/146)).
-
-### Fixed
-
-- **Watch mode** now discovers `debtlens.config.json` and `.debtlensrc.json` via
-  `findConfigPath` and rescans through the shared argv/spawn helpers.
-- **MCP `scan` and `doctor` tools** accept `cwd` so agents can target monorepo
-  packages without changing the server process directory.
-- **`--diff-base` with `--package`** now compares only files inside the selected
-  workspace package instead of the entire repository snapshot.
 
 ## [0.3.0] - 2026-06-09
 

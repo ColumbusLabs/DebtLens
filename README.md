@@ -16,6 +16,15 @@ See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **frame
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
 For Python and future Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
+## Migration
+
+The **[Unreleased]** section of [`CHANGELOG.md`](./CHANGELOG.md) tracks breaking and
+behavioral changes landing on `main` before the next semver tag. Notable recent items:
+MCP scan/doctor run in-process (no subprocess spawn), package config arrays union-merge
+with the repo root, atomic scan-cache writes, and stricter ESLint migration validation in
+`debtlens init --from-eslint`. Review that section when upgrading from an earlier dev
+build or pinned Action tag.
+
 ```bash
 npx debtlens scan
 npx debtlens scan src --format markdown

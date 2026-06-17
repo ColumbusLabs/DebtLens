@@ -1,8 +1,8 @@
 "use strict";
 
 const cp = require("node:child_process");
-const path = require("node:path");
 const vscode = require("vscode");
+const { groupIssuesByUri } = require("./diagnostics.js");
 
 let collection;
 let output;
@@ -101,22 +101,7 @@ function scanWorkspaceFolder(folder) {
 
 function applyDiagnostics(folder, issues) {
   clearWorkspaceDiagnostics(folder);
-  const diagnosticsByFile = new Map();
-
-  for (const issue of issues) {
-    const filePath = path.resolve(folder.uri.fsPath, issue.file);
-    const uri = vscode.Uri.file(filePath);
-    const diagnostic = new vscode.Diagnostic(
-      toRange(issue.location),
-      `${issue.ruleName}: ${issue.message}`,
-      toSeverity(issue.severity),
-    );
-    diagnostic.code = issue.ruleId;
-    diagnostic.source = "DebtLens";
-    const existing = diagnosticsByFile.get(uri.toString()) ?? { uri, diagnostics: [] };
-    existing.diagnostics.push(diagnostic);
-    diagnosticsByFile.set(uri.toString(), existing);
-  }
+  const diagnosticsByFile = groupIssuesByUri(folder.uri.fsPath, issues);
 
   for (const { uri, diagnostics } of diagnosticsByFile.values()) {
     collection.set(uri, diagnostics);
@@ -130,27 +115,6 @@ function clearWorkspaceDiagnostics(folder) {
     collection.delete(uri);
   }
   diagnosticUrisByFolder.delete(folderKey);
-}
-
-function toRange(location) {
-  const startLine = Math.max(0, (location?.startLine ?? 1) - 1);
-  const startColumn = Math.max(0, (location?.startColumn ?? 1) - 1);
-  const endLine = Math.max(startLine, (location?.endLine ?? location?.startLine ?? 1) - 1);
-  const endColumn = Math.max(startColumn + 1, location?.endColumn ?? startColumn + 1);
-  return new vscode.Range(startLine, startColumn, endLine, endColumn);
-}
-
-function toSeverity(severity) {
-  switch (severity) {
-    case "high":
-      return vscode.DiagnosticSeverity.Error;
-    case "medium":
-      return vscode.DiagnosticSeverity.Warning;
-    case "low":
-      return vscode.DiagnosticSeverity.Information;
-    default:
-      return vscode.DiagnosticSeverity.Hint;
-  }
 }
 
 module.exports = { activate, deactivate };

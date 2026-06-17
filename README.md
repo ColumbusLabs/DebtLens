@@ -83,15 +83,28 @@ Synthetic fixtures under `tests/benchmarks/fixtures/` exercise small (5 files), 
 npm run build
 npm run benchmark        # all fixtures + local budget check
 npm run benchmark:ci     # small fixture only (used in CI)
+npm run benchmark -- --budget small=7500
 ```
 
-Local budgets (generous; CI enforces small `< 5000ms` only):
+Default budgets are generous local regression caps. Override them in CI with
+`DEBTLENS_BENCHMARK_BUDGETS=small=5000` or repeated `--budget fixture=ms`
+arguments instead of editing the script for each runner class. `benchmark:ci`
+wraps `--small-only`, which keeps pull-request checks fast on huge repos while
+still failing when the small fixture exceeds the configured cap.
 
 | Fixture | Files | Budget |
 | --- | ---: | ---: |
 | small | 5 | 5s |
 | medium | 30 | 30s |
 | large | 100 | 120s |
+
+Examples:
+
+```bash
+DEBTLENS_BENCHMARK_BUDGETS=small=5000 npm run benchmark:ci
+DEBTLENS_BENCHMARK_BUDGET_SMALL_MS=7500 npm run benchmark:ci
+npm run benchmark -- --budget small=7500 --budget medium=45000
+```
 
 Per-rule timing is available via `--profile` in [PR #62](https://github.com/ColumbusLabs/DebtLens/pull/62) once merged.
 
@@ -511,18 +524,30 @@ permissions:
     fail-on: high
 ```
 
-For very large repos, keep the first rollout intentionally narrow:
+For very large monorepos, keep the first Action rollout intentionally narrow.
+Diff against the pull request base, limit to the package or changed files you
+own, start with the `core` pack or a small rule list, and cap file volume so
+new contributors get deterministic feedback before you widen coverage:
 
 ```yaml
 - uses: ColumbusLabs/debtlens@v0
   with:
     changed: origin/${{ github.base_ref }}
     package: web
-    pack: core
     rules: todo-comment,duplicate-logic
     max-files: 500
     profile: true
     step-summary: true
+```
+
+If that workflow also runs the repository benchmark gate, prefer the small
+fixture check so the job does not spend time on synthetic medium/large fixtures:
+
+```yaml
+- name: Benchmark regression gate
+  run: npm run benchmark:ci
+  env:
+    DEBTLENS_BENCHMARK_BUDGETS: small=5000
 ```
 
 To post a grouped PR comment manually instead, write the `pr-comment` output and post it with `actions/github-script`:

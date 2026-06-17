@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import type { SourceFileInfo } from "../../src/core/types.js";
-import { duplicateLogicDetector } from "../../src/detectors/duplicateLogic.js";
+import { buildDuplicateLogicCandidatePairs, duplicateLogicDetector } from "../../src/detectors/duplicateLogic.js";
 import { runDetector } from "../helpers/runDetector.js";
 
 const movie = `
@@ -33,6 +33,75 @@ export function normalizeGameRelease(payload) {
 `;
 
 describe("duplicate-logic detector", () => {
+  it("prunes obvious fingerprint mismatches before pairwise text comparison", () => {
+    const candidatePairs = buildDuplicateLogicCandidatePairs([
+      {
+        file: "branchy.ts",
+        startLine: 1,
+        fingerprint: new Map([
+          ["if", 1],
+          ["return", 2],
+          ["binop", 1],
+        ]),
+      },
+      {
+        file: "view.tsx",
+        startLine: 1,
+        fingerprint: new Map([
+          ["jsx", 4],
+          ["call.prop", 2],
+        ]),
+      },
+      {
+        file: "branchy-copy.ts",
+        startLine: 1,
+        fingerprint: new Map([
+          ["if", 1],
+          ["return", 2],
+          ["binop", 1],
+        ]),
+      },
+    ], 0.6);
+
+    assert.deepEqual(candidatePairs, [{ leftIndex: 0, rightIndex: 2 }]);
+  });
+
+  it("preserves old pair semantics for zero thresholds, empty fingerprints, and local snippets", () => {
+    const candidates = [
+      {
+        file: "a.ts",
+        startLine: 10,
+        fingerprint: new Map([["if", 1]]),
+      },
+      {
+        file: "a.ts",
+        startLine: 12,
+        fingerprint: new Map([["if", 1]]),
+      },
+      {
+        file: "b.ts",
+        startLine: 10,
+        fingerprint: new Map(),
+      },
+      {
+        file: "c.ts",
+        startLine: 10,
+        fingerprint: new Map(),
+      },
+    ];
+
+    assert.deepEqual(buildDuplicateLogicCandidatePairs(candidates, 0), [
+      { leftIndex: 0, rightIndex: 2 },
+      { leftIndex: 0, rightIndex: 3 },
+      { leftIndex: 1, rightIndex: 2 },
+      { leftIndex: 1, rightIndex: 3 },
+      { leftIndex: 2, rightIndex: 3 },
+    ]);
+    assert.deepEqual(buildDuplicateLogicCandidatePairs(candidates, 1), [
+      { leftIndex: 2, rightIndex: 3 },
+    ]);
+  });
+
   it("flags two structurally identical functions across files", async () => {
     const issues = await runDetector(duplicateLogicDetector, {
       "movie.ts": movie,
@@ -41,6 +110,43 @@ describe("duplicate-logic detector", () => {
     assert.equal(issues.length, 1);
     assert.equal(issues[0]?.ruleId, "duplicate-logic");
     assert.ok((issues[0]?.confidence ?? 0) >= 0.86);
+  });
+
+  it("still reports matching duplicates when unrelated snippets are pruned", async () => {
+    const unrelatedWorker = `
+export async function loadAccountSnapshot(client, accountId) {
+  const response = await client.fetchAccount(accountId);
+  try {
+    const records = await response.json();
+    return records.map((record) => ({
+      id: record.id,
+      balance: Number(record.balance || 0),
+    }));
+  } catch (error) {
+    return [];
+  }
+}
+`;
+    const unrelatedView = `
+export function ReleaseCard(props) {
+  const rows = props.items.map((item) => (
+    <li key={item.id}>
+      <span>{item.title}</span>
+      <strong>{item.status}</strong>
+    </li>
+  ));
+  return <section><h2>{props.heading}</h2><ul>{rows}</ul></section>;
+}
+`;
+    const issues = await runDetector(duplicateLogicDetector, {
+      "movie.ts": movie,
+      "worker.ts": unrelatedWorker,
+      "game.ts": game,
+      "view.tsx": unrelatedView,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /normalizeMovieRelease|normalizeGameRelease/);
   });
 
   it("does NOT flag two structurally different functions", async () => {

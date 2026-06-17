@@ -15,6 +15,17 @@ interface Snippet {
   fingerprint: Map<string, number>;
 }
 
+export interface DuplicateLogicCandidateInput {
+  file: string;
+  startLine: number;
+  fingerprint: Map<string, number>;
+}
+
+export interface DuplicateLogicCandidatePair {
+  leftIndex: number;
+  rightIndex: number;
+}
+
 export const duplicateLogicDetector: Detector = {
   id: "duplicate-logic",
   name: "Duplicate logic",
@@ -55,42 +66,132 @@ export const duplicateLogicDetector: Detector = {
     }
 
     const limited = snippets.slice(0, maxSnippets);
+    const candidatePairs = buildDuplicateLogicCandidatePairs(limited, minStructural);
     const seenPairs = new Set<string>();
 
-    for (let i = 0; i < limited.length; i += 1) {
-      for (let j = i + 1; j < limited.length; j += 1) {
-        const a = limited[i];
-        const b = limited[j];
-        if (!a || !b) continue;
-        if (a.file === b.file && Math.abs(a.startLine - b.startLine) < 4) continue;
-        // Cheap structural pre-filter: reject pairs whose control-flow/call shape
-        // differs before doing the more expensive text-shingle comparison.
-        if (cosineSimilarity(a.fingerprint, b.fingerprint) < minStructural) continue;
-        const similarity = jaccard(a.shingles, b.shingles);
-        if (similarity < minSimilarity) continue;
+    for (const { leftIndex, rightIndex } of candidatePairs) {
+      const a = limited[leftIndex];
+      const b = limited[rightIndex];
+      if (!a || !b) continue;
+      const similarity = jaccard(a.shingles, b.shingles);
+      if (similarity < minSimilarity) continue;
 
-        const key = [a.file, a.startLine, b.file, b.startLine].sort().join("|");
-        if (seenPairs.has(key)) continue;
-        seenPairs.add(key);
+      const key = [a.file, a.startLine, b.file, b.startLine].sort().join("|");
+      if (seenPairs.has(key)) continue;
+      seenPairs.add(key);
 
-        issues.push(createIssue({
-          detector: duplicateLogicDetector,
-          severity: similarity > 0.93 ? "high" : "medium",
-          confidence: similarity,
-          file: a.file,
-          location: { startLine: a.startLine, endLine: a.endLine },
-          message: `${a.name} is ${Math.round(similarity * 100)}% structurally similar to ${b.name}.`,
-          evidence: [
-            `${a.file}:${a.startLine}-${a.endLine} (${a.lines} lines)`,
-            `${b.file}:${b.startLine}-${b.endLine} (${b.lines} lines)`,
-          ],
-          suggestion: "Compare the two implementations. Extract shared behavior only if the variation is intentional and stable; otherwise delete the weaker duplicate.",
-        }));
+      issues.push(createIssue({
+        detector: duplicateLogicDetector,
+        severity: similarity > 0.93 ? "high" : "medium",
+        confidence: similarity,
+        file: a.file,
+        location: { startLine: a.startLine, endLine: a.endLine },
+        message: `${a.name} is ${Math.round(similarity * 100)}% structurally similar to ${b.name}.`,
+        evidence: [
+          `${a.file}:${a.startLine}-${a.endLine} (${a.lines} lines)`,
+          `${b.file}:${b.startLine}-${b.endLine} (${b.lines} lines)`,
+        ],
+        suggestion: "Compare the two implementations. Extract shared behavior only if the variation is intentional and stable; otherwise delete the weaker duplicate.",
+      }));
 
-        if (issues.length >= 50) return issues;
-      }
+      if (issues.length >= 50) return issues;
     }
 
     return issues;
   },
 };
+
+export function buildDuplicateLogicCandidatePairs(
+  snippets: readonly DuplicateLogicCandidateInput[],
+  minStructural: number,
+): DuplicateLogicCandidatePair[] {
+  if (snippets.length < 2) return [];
+
+  if (minStructural <= 0) {
+    return buildAllOrderedPairs(snippets);
+  }
+
+  const pairs: DuplicateLogicCandidatePair[] = [];
+  const fingerprintNorms = snippets.map(({ fingerprint }) => fingerprintNorm(fingerprint));
+  const snippetsByToken = new Map<string, Array<{ index: number; count: number }>>();
+  const emptyFingerprintIndexes: number[] = [];
+
+  for (let rightIndex = 0; rightIndex < snippets.length; rightIndex += 1) {
+    const current = snippets[rightIndex];
+    if (!current) continue;
+
+    if (current.fingerprint.size === 0) {
+      for (const leftIndex of emptyFingerprintIndexes) {
+        const previous = snippets[leftIndex];
+        if (!previous || isSameLocalSnippet(previous, current)) continue;
+        if (minStructural <= 1) {
+          pairs.push({ leftIndex, rightIndex });
+        }
+      }
+    } else {
+      const dotProductsByIndex = new Map<number, number>();
+
+      for (const [token, count] of current.fingerprint) {
+        const priorSnippets = snippetsByToken.get(token);
+        if (!priorSnippets) continue;
+
+        for (const prior of priorSnippets) {
+          dotProductsByIndex.set(
+            prior.index,
+            (dotProductsByIndex.get(prior.index) ?? 0) + count * prior.count,
+          );
+        }
+      }
+
+      for (const [leftIndex, dotProduct] of dotProductsByIndex) {
+        const previous = snippets[leftIndex];
+        if (!previous || isSameLocalSnippet(previous, current)) continue;
+        const leftNorm = fingerprintNorms[leftIndex] ?? 0;
+        const rightNorm = fingerprintNorms[rightIndex] ?? 0;
+        const structuralSimilarity = leftNorm === 0 || rightNorm === 0
+          ? cosineSimilarity(previous.fingerprint, current.fingerprint)
+          : dotProduct / (leftNorm * rightNorm);
+        if (structuralSimilarity >= minStructural) {
+          pairs.push({ leftIndex, rightIndex });
+        }
+      }
+    }
+
+    if (current.fingerprint.size === 0) {
+      emptyFingerprintIndexes.push(rightIndex);
+    } else {
+      for (const [token, count] of current.fingerprint) {
+        const bucket = snippetsByToken.get(token) ?? [];
+        bucket.push({ index: rightIndex, count });
+        snippetsByToken.set(token, bucket);
+      }
+    }
+  }
+
+  return pairs.sort((a, b) => a.leftIndex - b.leftIndex || a.rightIndex - b.rightIndex);
+}
+
+function buildAllOrderedPairs(snippets: readonly DuplicateLogicCandidateInput[]): DuplicateLogicCandidatePair[] {
+  const pairs: DuplicateLogicCandidatePair[] = [];
+  for (let leftIndex = 0; leftIndex < snippets.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < snippets.length; rightIndex += 1) {
+      const left = snippets[leftIndex];
+      const right = snippets[rightIndex];
+      if (!left || !right || isSameLocalSnippet(left, right)) continue;
+      pairs.push({ leftIndex, rightIndex });
+    }
+  }
+  return pairs;
+}
+
+function fingerprintNorm(fingerprint: Map<string, number>): number {
+  let squared = 0;
+  for (const count of fingerprint.values()) {
+    squared += count * count;
+  }
+  return Math.sqrt(squared);
+}
+
+function isSameLocalSnippet(a: DuplicateLogicCandidateInput, b: DuplicateLogicCandidateInput): boolean {
+  return a.file === b.file && Math.abs(a.startLine - b.startLine) < 4;
+}

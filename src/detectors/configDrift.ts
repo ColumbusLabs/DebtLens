@@ -65,7 +65,10 @@ function collectConfigFiles(
 ): Array<Pick<SourceFileInfo, "relativePath" | "content">> {
   const existing = context.files
     .filter((file) => isJsonConfig(file.relativePath))
-    .map((file) => ({ relativePath: file.relativePath, content: file.content }));
+    .map((file) => ({ relativePath: file.relativePath, content: file.content }))
+    .slice(0, maxConfigFiles);
+  if (existing.length >= maxConfigFiles) return existing;
+
   const seen = new Set(existing.map((file) => file.relativePath));
 
   if (!isAbsolute(context.options.target) || !existsSync(context.options.target)) return existing;
@@ -79,9 +82,10 @@ function collectConfigFiles(
         ignore: context.options.exclude,
         dot: true,
         unique: true,
-      }).slice(0, maxConfigFiles);
+      });
 
   for (const absolutePath of absolutePaths) {
+    if (existing.length >= maxConfigFiles) break;
     const relativePath = stats.isFile()
       ? basename(absolutePath)
       : relative(context.options.target, absolutePath).replaceAll("\\", "/");

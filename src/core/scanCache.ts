@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import type { Detector, ScanOptions, ScanResult } from "./types.js";
@@ -54,8 +54,17 @@ export function writeCachedScan(cachePath: string, key: string, files: FileSnaps
   mkdirSync(dirname(cachePath), { recursive: true });
   const payload = `${JSON.stringify({ version: CACHE_VERSION, entries }, null, 2)}\n`;
   const tempPath = `${cachePath}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync(tempPath, payload, "utf8");
-  renameSync(tempPath, cachePath);
+  try {
+    writeFileSync(tempPath, payload, "utf8");
+    renameSync(tempPath, cachePath);
+  } catch (error) {
+    try {
+      unlinkSync(tempPath);
+    } catch {
+      // Best-effort cleanup of the temp file.
+    }
+    throw error;
+  }
 }
 
 export function buildScanCacheKey(options: ScanOptions, detectors: Detector[]): string {

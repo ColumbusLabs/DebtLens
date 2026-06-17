@@ -27,6 +27,9 @@ if [ ! -f dist/cli/index.js ] && [[ "$action_ref" == v* ]]; then
           exit 1
         fi
       fi
+    else
+      echo "DebtLens: release runtime checksum missing; refusing to extract untrusted asset." >&2
+      exit 1
     fi
     tar -xzf "$asset_path" -C "$action_path"
   else

@@ -65,7 +65,11 @@
               "handler-depth",
               "route-sprawl",
               "duplicate-logic",
+              "test-duplication",
               "duplicated-literal",
+              "import-cycle",
+              "complex-control-flow",
+              "config-drift",
               "dead-abstraction",
               "prop-drilling",
               "todo-comment",
@@ -181,6 +185,15 @@
         "duplicate-logic.maxSnippets": {
           "type": "number"
         },
+        "test-duplication.minSimilarity": {
+          "type": "number"
+        },
+        "test-duplication.minStructuralSimilarity": {
+          "type": "number"
+        },
+        "test-duplication.minLines": {
+          "type": "number"
+        },
         "duplicated-literal.minLength": {
           "type": "number"
         },
@@ -206,6 +219,18 @@
           "type": "number"
         },
         "api-surface-sprawl.maxExports": {
+          "type": "number"
+        },
+        "import-cycle.minCycleSize": {
+          "type": "number"
+        },
+        "import-cycle.allowTypeOnly": {
+          "type": "number"
+        },
+        "complex-control-flow.maxComplexity": {
+          "type": "number"
+        },
+        "complex-control-flow.maxDepth": {
           "type": "number"
         }
       },
@@ -331,7 +356,39 @@
             "high"
           ]
         },
+        "test-duplication": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "duplicated-literal": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "import-cycle": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "complex-control-flow": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "config-drift": {
           "enum": [
             "info",
             "low",
@@ -482,7 +539,27 @@
           "minimum": 0,
           "maximum": 1
         },
+        "test-duplication": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "duplicated-literal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "import-cycle": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "complex-control-flow": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "config-drift": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

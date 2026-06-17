@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { CONFIG_FILENAME, runInit } from "../../src/cli/init.js";
+import { configTemplate } from "../../src/config/template.js";
 
 describe("debtlens init", () => {
   let dir: string;
@@ -24,7 +25,9 @@ describe("debtlens init", () => {
     const parsed = JSON.parse(readFileSync(result.path, "utf8"));
     assert.equal(parsed.minSeverity, "low");
     assert.ok(Array.isArray(parsed.rules));
-    assert.equal(parsed.rules.length, 22);
+    const templateRules = configTemplate.rules ?? [];
+    assert.equal(parsed.rules.length, templateRules.length);
+    assert.deepEqual(parsed.rules, templateRules);
     assert.ok(parsed.rules.includes("api-surface-sprawl"));
     assert.ok(parsed.rules.includes("server-client-boundary"));
     assert.ok(parsed.rules.includes("route-sprawl"));

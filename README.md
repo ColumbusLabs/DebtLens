@@ -67,6 +67,10 @@ Built-in rules are grouped into a **core** pack (any TS/JS project) and a **reac
 | Rule | Pack | What it catches | Default severity |
 | --- | --- | --- | --- |
 | `duplicate-logic` | core | Near-duplicate functions/components using normalized AST/text similarity | Medium |
+| `test-duplication` | core | Structurally identical test cases across test files | Medium |
+| `import-cycle` | core | Circular relative import graphs | Medium |
+| `complex-control-flow` | core | Branch-heavy or deeply nested functions | Medium |
+| `config-drift` | core | Conflicting repeated values across JSON config files | Medium |
 | `dead-abstraction` | core | Thin wrappers that add little behavior | Low |
 | `todo-comment` | core | TODO/FIXME/HACK/temporary implementation comments | Low |
 | `naming-drift` | core | Files with multiple competing names for the same domain concept | Info |

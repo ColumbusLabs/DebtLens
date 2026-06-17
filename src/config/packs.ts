@@ -7,7 +7,11 @@ export interface RulePack {
 
 const CORE_RULES = [
   "duplicate-logic",
+  "test-duplication",
   "large-function",
+  "complex-control-flow",
+  "import-cycle",
+  "config-drift",
   "dead-abstraction",
   "duplicated-literal",
   "todo-comment",
@@ -54,6 +58,7 @@ const AI_ASSISTED_MAINTAINER_RULES = [
   "todo-comment",
   "naming-drift",
   "weak-test-boundary",
+  "test-duplication",
 ] as const;
 
 const OSS_MAINTAINER_RULES = [
@@ -64,6 +69,7 @@ const OSS_MAINTAINER_RULES = [
   "todo-comment",
   "barrel-file",
   "weak-test-boundary",
+  "test-duplication",
   "api-surface-sprawl",
 ] as const;
 

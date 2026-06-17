@@ -1,0 +1,131 @@
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { basename, isAbsolute, relative, resolve } from "node:path";
+import fg from "fast-glob";
+import { ts } from "ts-morph";
+import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
+import { createIssue } from "../utils/createIssue.js";
+
+interface DriftValue {
+  file: string;
+  value: string;
+}
+
+export const configDriftDetector: Detector = {
+  id: "config-drift",
+  name: "Config drift",
+  description: "Flags conflicting repeated values across JSON config files without executing JS config.",
+  defaultSeverity: "medium",
+  tags: ["config", "maintainability", "monorepo"],
+  detect(context: DetectorContext): DebtIssue[] {
+    const values = new Map<string, DriftValue[]>();
+
+    for (const file of collectConfigFiles(context)) {
+      const parsed = parseJsonConfig(file.relativePath, file.content);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
+      collectPackageScripts(values, file.relativePath, parsed);
+      collectTsConfigOptions(values, file.relativePath, parsed);
+      collectArrayField(values, file.relativePath, parsed, "include");
+      collectArrayField(values, file.relativePath, parsed, "exclude");
+    }
+
+    const issues: DebtIssue[] = [];
+    for (const [key, entries] of values) {
+      const distinct = new Map(entries.map((entry) => [entry.value, entry]));
+      if (entries.length < 2 || distinct.size < 2) continue;
+      const first = entries[0];
+      if (!first) continue;
+      issues.push(createIssue({
+        detector: configDriftDetector,
+        severity: distinct.size > 2 ? "high" : "medium",
+        confidence: 0.78,
+        file: first.file,
+        location: { startLine: 1 },
+        message: `${key} has conflicting values across JSON config files.`,
+        evidence: entries.map((entry) => `${entry.file}: ${entry.value}`),
+        suggestion: "Consolidate shared config in one base file or document why each package needs a different value.",
+      }));
+    }
+
+    return issues.slice(0, 50);
+  },
+};
+
+function isJsonConfig(path: string): boolean {
+  const name = basename(path);
+  return name === "package.json"
+    || /^tsconfig(?:\..+)?\.json$/.test(name)
+    || name === ".eslintrc.json"
+    || name === "eslint.config.json";
+}
+
+function collectConfigFiles(context: DetectorContext): Array<Pick<SourceFileInfo, "relativePath" | "content">> {
+  const existing = context.files
+    .filter((file) => isJsonConfig(file.relativePath))
+    .map((file) => ({ relativePath: file.relativePath, content: file.content }));
+  const seen = new Set(existing.map((file) => file.relativePath));
+
+  if (!isAbsolute(context.options.target) || !existsSync(context.options.target)) return existing;
+  const stats = statSync(context.options.target);
+  const absolutePaths = stats.isFile()
+    ? [context.options.target]
+    : fg.sync(["**/package.json", "**/tsconfig*.json", "**/.eslintrc.json", "**/eslint.config.json"], {
+        cwd: context.options.target,
+        absolute: true,
+        onlyFiles: true,
+        ignore: context.options.exclude,
+        dot: true,
+        unique: true,
+      });
+
+  for (const absolutePath of absolutePaths) {
+    const relativePath = stats.isFile()
+      ? basename(absolutePath)
+      : relative(context.options.target, absolutePath).replaceAll("\\", "/");
+    if (seen.has(relativePath) || !isJsonConfig(relativePath)) continue;
+    seen.add(relativePath);
+    existing.push({ relativePath, content: readFileSync(resolve(absolutePath), "utf8") });
+  }
+
+  return existing;
+}
+
+function parseJsonConfig(file: string, content: string): unknown {
+  const parsed = ts.parseConfigFileTextToJson(file, content);
+  return parsed.error ? undefined : parsed.config;
+}
+
+function collectPackageScripts(values: Map<string, DriftValue[]>, file: string, parsed: object): void {
+  if (basename(file) !== "package.json") return;
+  const scripts = (parsed as { scripts?: unknown }).scripts;
+  if (!scripts || typeof scripts !== "object" || Array.isArray(scripts)) return;
+  for (const [scriptName, command] of Object.entries(scripts)) {
+    if (typeof command === "string") {
+      pushValue(values, `package.json scripts.${scriptName}`, file, command);
+    }
+  }
+}
+
+function collectTsConfigOptions(values: Map<string, DriftValue[]>, file: string, parsed: object): void {
+  if (!/^tsconfig(?:\..+)?\.json$/.test(basename(file))) return;
+  const compilerOptions = (parsed as { compilerOptions?: unknown }).compilerOptions;
+  if (!compilerOptions || typeof compilerOptions !== "object" || Array.isArray(compilerOptions)) return;
+  for (const optionName of ["target", "module", "jsx", "strict", "moduleResolution"]) {
+    const value = (compilerOptions as Record<string, unknown>)[optionName];
+    if (value !== undefined) {
+      pushValue(values, `tsconfig compilerOptions.${optionName}`, file, JSON.stringify(value));
+    }
+  }
+}
+
+function collectArrayField(values: Map<string, DriftValue[]>, file: string, parsed: object, key: "include" | "exclude"): void {
+  const value = (parsed as Record<string, unknown>)[key];
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
+    pushValue(values, `${basename(file)} ${key}`, file, JSON.stringify([...value].sort()));
+  }
+}
+
+function pushValue(values: Map<string, DriftValue[]>, key: string, file: string, value: string): void {
+  const entries = values.get(key) ?? [];
+  entries.push({ file, value });
+  values.set(key, entries);
+}

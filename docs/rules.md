@@ -90,6 +90,98 @@ When this is a false positive:
 
 Confidence: **0.76-0.82** depending on whether the line budget, branch budget, or both budgets are exceeded.
 
+## `complex-control-flow`
+
+Flags functions whose branch count or control-flow nesting makes behavior hard to review.
+
+Default thresholds:
+
+- `complex-control-flow.maxComplexity`: 12
+- `complex-control-flow.maxDepth`: 4
+
+Why it matters: branch-heavy functions hide policy decisions inside procedural code. Deeply nested switches, loops, catches, and ternaries are especially easy to break during fast edits.
+
+Good fixes:
+
+- replace nested conditionals with guard clauses
+- move policy into lookup tables or strategy objects
+- extract branch-specific helpers with descriptive names
+
+When this is a false positive:
+
+- the function is intentionally generated or table-driven
+- the branch structure mirrors a stable external protocol
+
+Confidence scales with how far the function exceeds the configured complexity or nesting threshold.
+
+## `import-cycle`
+
+Flags circular relative import graphs among scanned TypeScript and JavaScript modules.
+
+Default thresholds:
+
+- `import-cycle.minCycleSize`: 2
+- `import-cycle.allowTypeOnly`: 1
+
+Why it matters: import cycles make initialization order and ownership boundaries harder to reason about. They are often a sign that shared contracts need to move down a layer.
+
+Good fixes:
+
+- move shared types or constants into a lower-level module
+- invert one dependency through an interface or callback
+- split bidirectional modules by responsibility
+
+When this is a false positive:
+
+- the cycle is type-only and `import-cycle.allowTypeOnly` is enabled
+- the modules are generated glue code
+
+Type-only imports are ignored by default.
+
+## `config-drift`
+
+Flags conflicting repeated values across JSON config files such as `package.json` scripts and `tsconfig*.json` compiler options. JavaScript config files are not executed.
+
+Why it matters: monorepo config drift makes package behavior unpredictable and causes CI, editor, or build differences that are hard to diagnose.
+
+Good fixes:
+
+- move shared settings into a base config
+- document intentional package-specific differences
+- align repeated scripts when they are meant to be interchangeable
+
+When this is a false positive:
+
+- packages deliberately use different build systems
+- a migration is temporarily running two config styles side by side
+
+Confidence is **0.78** because repeated JSON values are direct evidence, but project intent still matters.
+
+## `test-duplication`
+
+Flags structurally identical test callback bodies across test files. Parameterized tests such as `test.each` are ignored.
+
+Default thresholds:
+
+- `test-duplication.minSimilarity`: 0.88
+- `test-duplication.minStructuralSimilarity`: 0.72
+- `test-duplication.minLines`: 3
+
+Why it matters: copy-pasted tests often drift apart without strengthening coverage. They can also obscure the small set of scenario variables that actually matter.
+
+Good fixes:
+
+- extract shared test setup helpers
+- convert parallel examples into table-driven tests
+- keep duplicated tests only when they intentionally protect separate public contracts
+
+When this is a false positive:
+
+- the repeated assertions document separate externally visible behaviors
+- the test is already parameterized
+
+Confidence follows normalized text and structural similarity between test bodies.
+
 ## `state-sprawl`
 
 Flags components/hooks with many calls to local stateful hooks such as `useState`, `useReducer`, and `useRef`.

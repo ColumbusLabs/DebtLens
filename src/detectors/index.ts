@@ -2,6 +2,8 @@ import type { Detector } from "../core/types.js";
 import { apiSurfaceSprawlDetector } from "./apiSurfaceSprawl.js";
 import { barrelFileDetector } from "./barrelFile.js";
 import { contextProviderSprawlDetector } from "./contextProviderSprawl.js";
+import { complexControlFlowDetector } from "./complexControlFlow.js";
+import { configDriftDetector } from "./configDrift.js";
 import { dataLoaderSprawlDetector } from "./dataLoaderSprawl.js";
 import { deadAbstractionDetector } from "./deadAbstraction.js";
 import { duplicateLogicDetector } from "./duplicateLogic.js";
@@ -9,6 +11,7 @@ import { duplicatedLiteralDetector } from "./duplicatedLiteral.js";
 import { effectComplexityDetector } from "./effectComplexity.js";
 import { handlerDepthDetector } from "./handlerDepth.js";
 import { hookDependencySmellDetector } from "./hookDependencySmell.js";
+import { importCycleDetector } from "./importCycle.js";
 import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
 import { namingDriftDetector } from "./namingDrift.js";
@@ -19,6 +22,7 @@ import { routeSprawlDetector } from "./routeSprawl.js";
 import { serverClientBoundaryDetector } from "./serverClientBoundary.js";
 import { stateSprawlDetector } from "./stateSprawl.js";
 import { storyOnlyComponentDetector } from "./storyOnlyComponent.js";
+import { testDuplicationDetector } from "./testDuplication.js";
 import { todoCommentDetector } from "./todoComment.js";
 import { weakTestBoundaryDetector } from "./weakTestBoundary.js";
 
@@ -36,7 +40,11 @@ export const allDetectors: Detector[] = [
   handlerDepthDetector,
   routeSprawlDetector,
   duplicateLogicDetector,
+  testDuplicationDetector,
   duplicatedLiteralDetector,
+  importCycleDetector,
+  complexControlFlowDetector,
+  configDriftDetector,
   deadAbstractionDetector,
   propDrillingDetector,
   todoCommentDetector,

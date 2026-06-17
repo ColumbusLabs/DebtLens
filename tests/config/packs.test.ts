@@ -7,15 +7,15 @@ describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
     assert.equal(packs.length, 8);
-    assert.equal(getRulePack("core").rules.length, 9);
-    assert.equal(getRulePack("react").rules.length, 16);
-    assert.equal(getRulePack("react-native").rules.length, 17);
+    assert.equal(getRulePack("core").rules.length, 13);
+    assert.equal(getRulePack("react").rules.length, 20);
+    assert.equal(getRulePack("react-native").rules.length, 21);
     assert.ok(getRulePack("react-native").rules.includes("rn-host-forwarding"));
-    assert.equal(getRulePack("next").rules.length, 19);
+    assert.equal(getRulePack("next").rules.length, 23);
     assert.ok(getRulePack("next").rules.includes("server-client-boundary"));
     assert.ok(getRulePack("next").rules.includes("route-handler-size"));
     assert.ok(getRulePack("next").rules.includes("data-loader-sprawl"));
-    assert.equal(getRulePack("expo").rules.length, 17);
+    assert.equal(getRulePack("expo").rules.length, 21);
     assert.ok(getRulePack("node").rules.includes("handler-depth"));
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));

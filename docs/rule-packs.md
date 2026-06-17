@@ -20,7 +20,11 @@ Today all built-in rules run together by default. Select a pack in config or use
 | Rule | Pack | What it catches | Default severity |
 | --- | --- | --- | --- |
 | `duplicate-logic` | **core** | Near-duplicate functions/components using normalized AST/text similarity | Medium |
+| `test-duplication` | **core** | Structurally identical test cases across test files | Medium |
 | `large-function` | **core** | Non-component functions over line or branch budgets | Medium |
+| `complex-control-flow` | **core** | Branch-heavy or deeply nested functions | Medium |
+| `import-cycle` | **core** | Circular relative import graphs | Medium |
+| `config-drift` | **core** | Conflicting repeated values across JSON config files | Medium |
 | `dead-abstraction` | **core** | Thin wrappers that add little behavior | Low |
 | `duplicated-literal` | **core** | Repeated string/number literals across files | Low |
 | `todo-comment` | **core** | TODO/FIXME/HACK/temporary implementation comments | Low |
@@ -47,7 +51,11 @@ Today all built-in rules run together by default. Select a pack in config or use
 These apply to any TypeScript or JavaScript codebase:
 
 - **`duplicate-logic`** — copy-paste drift, parallel implementations, AI-generated twins.
+- **`test-duplication`** — copied test bodies that should become helpers or table-driven cases.
 - **`large-function`** — non-component functions that hide multiple responsibilities.
+- **`complex-control-flow`** — branch-heavy functions that need policy extraction.
+- **`import-cycle`** — relative import cycles that blur module ownership.
+- **`config-drift`** — conflicting JSON config values in package and TypeScript config files.
 - **`dead-abstraction`** — one-line wrappers and pass-through helpers that add indirection without value.
 - **`duplicated-literal`** — repeated domain literals that should often become named constants.
 - **`todo-comment`** — deferred work and temporary hacks left in source.
@@ -56,7 +64,7 @@ These apply to any TypeScript or JavaScript codebase:
 - **`weak-test-boundary`** — production code importing from test-only fixtures or mocks.
 - **`api-surface-sprawl`** — files with too many public exports.
 
-Future core rules might cover import tangles, complex control flow, and config drift.
+Future core rules may expand these signals into language-specific packs or richer project graph analysis.
 
 ### React pack (shipped today)
 
@@ -171,7 +179,7 @@ List all rule ids with `debtlens rules`.
 
 | Layer | Good for | Examples |
 | --- | --- | --- |
-| **Core rule** | Any TS/JS project | `duplicate-logic`, `large-function`, import-cycle detector |
+| **Core rule** | Any TS/JS project | `duplicate-logic`, `large-function`, `import-cycle`, `config-drift` |
 | **React pack** | UI maintainability | extend `large-component`, hook/provider rules |
 | **Framework pack** | Next.js, RN, Node APIs | server/client boundary rule, route handler size |
 | **Language pack** | Swift, Python, Kotlin, … | duplicate logic, large modules, SwiftUI view size |

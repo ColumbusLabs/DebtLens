@@ -1,6 +1,6 @@
 # DebtLens Report
 
-Scanned **3** files with **22** rules in **174ms**.
+Scanned **3** files with **26** rules in **174ms**.
 
 ## Summary
 

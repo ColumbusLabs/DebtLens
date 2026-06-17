@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildConfigSchema, SCHEMA_ID } from "../../src/config/schema.js";
-import { renderConfigFile } from "../../src/config/template.js";
+import { configTemplate, renderConfigFile } from "../../src/config/template.js";
 import { severities } from "../../src/core/severity.js";
 import { detectorIds } from "../../src/detectors/index.js";
 
@@ -66,6 +66,7 @@ describe("config JSON schema", () => {
     for (const rule of example.rules) {
       assert.ok(ruleEnum.includes(rule), `example uses unknown rule: ${rule}`);
     }
+    assert.deepEqual(example.rules, configTemplate.rules);
     assert.ok(schema.properties.minSeverity.enum.includes(example.minSeverity));
     assert.equal(schema.properties.respectGitignore.type, "boolean");
     assert.equal(typeof example.respectGitignore, "boolean");

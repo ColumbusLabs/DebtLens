@@ -42,4 +42,29 @@ describe("debtlens mcp", () => {
     assert.equal(response.result.isError, false);
     assert.match(response.result.content[0].text, /large-component/);
   });
+
+  it("passes cwd through to scan subprocesses", () => {
+    const result = runMcp(`${JSON.stringify({
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "scan",
+        arguments: {
+          cwd: join(repoRoot, "tests", "fixtures", "monorepo"),
+          target: ".",
+          package: "pkg-a",
+          rules: "todo-comment",
+          format: "json",
+        },
+      },
+    })}\n`);
+    const response = JSON.parse(result.stdout.trim());
+
+    assert.equal(result.status, 0);
+    assert.equal(response.result.isError, false);
+    const parsed = JSON.parse(response.result.content[0].text);
+    assert.equal(parsed.summary.totalIssues, 1);
+    assert.match(parsed.issues[0].file, /^src\/index\.ts$/);
+  });
 });

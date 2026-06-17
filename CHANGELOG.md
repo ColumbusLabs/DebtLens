@@ -12,6 +12,11 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **Shared `buildScanArgv` helper** and `SCAN_ARG_FLAGS` for watch, MCP, and shell
+  completions so scan flags stay in sync with the CLI.
+- **`spawnCliSync` with a 64MB output buffer** for watch and MCP subprocess scans.
+- **`chokidar`-based watch mode** replacing recursive `fs.watch` for reliable file
+  change detection across platforms.
 - **`debtlens explain <rule>`** command printing rule docs, default thresholds, and
   false-positive guidance from `docs/rules.md` ([#145](https://github.com/ColumbusLabs/DebtLens/issues/145)).
 - **Did-you-mean suggestions** for unknown rule ids in `--rules`, config `rules`, inline
@@ -51,6 +56,15 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`debtlens suppress`** helper printing a copy-paste inline suppression directive
   (`--rule`, `--reason`, optional `--file`)
   ([#146](https://github.com/ColumbusLabs/DebtLens/issues/146)).
+
+### Fixed
+
+- **Watch mode** now discovers `debtlens.config.json` and `.debtlensrc.json` via
+  `findConfigPath` and rescans through the shared argv/spawn helpers.
+- **MCP `scan` and `doctor` tools** accept `cwd` so agents can target monorepo
+  packages without changing the server process directory.
+- **`--diff-base` with `--package`** now compares only files inside the selected
+  workspace package instead of the entire repository snapshot.
 
 ## [0.3.0] - 2026-06-09
 

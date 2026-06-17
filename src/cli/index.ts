@@ -732,12 +732,24 @@ async function resolveReportedIssues(
     return result;
   }
 
+  const packageTarget = resolve(context.cwd, context.scanOptions.target);
+  const packagePrefix = `${packageTarget.replace(/[/\\]+$/, "")}/`;
+  const scopedToPackage = packageTarget !== snapshot.root;
+  const scopedFiles = scopedToPackage
+    ? snapshot.files.filter((file) => file === packageTarget || file.startsWith(packagePrefix))
+    : snapshot.files;
+  const scopedContents = snapshot.contents
+    ? Object.fromEntries(
+      Object.entries(snapshot.contents).filter(([file]) => scopedFiles.includes(file)),
+    )
+    : undefined;
+
   const baseResult = await scan({
     ...context.scanOptions,
     cwd: context.cwd,
-    target: snapshot.root,
-    changedFiles: snapshot.files,
-    fileContents: snapshot.contents,
+    target: scopedToPackage ? context.scanOptions.target : snapshot.root,
+    changedFiles: scopedFiles,
+    fileContents: scopedContents,
   });
   return applyBaseline(result, createBaseline(baseResult.issues));
 }

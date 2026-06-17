@@ -170,6 +170,48 @@ describe("monorepo scan --package", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("scopes --diff-base snapshot files to the selected workspace package", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-monorepo-diff-base-"));
+    try {
+      mkdirSync(join(dir, "packages", "api", "src"), { recursive: true });
+      mkdirSync(join(dir, "packages", "web", "src"), { recursive: true });
+      writeFileSync(join(dir, "package.json"), JSON.stringify({
+        private: true,
+        workspaces: ["packages/*"],
+      }), "utf8");
+      writeFileSync(join(dir, "packages", "api", "package.json"), JSON.stringify({ name: "api" }), "utf8");
+      writeFileSync(join(dir, "packages", "web", "package.json"), JSON.stringify({ name: "web" }), "utf8");
+      writeFileSync(join(dir, "packages", "api", "src", "index.ts"), "export const api = 1;\n", "utf8");
+      writeFileSync(join(dir, "packages", "web", "src", "index.ts"), "export const web = 1;\n", "utf8");
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["add", "."], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["-c", "user.name=DebtLens Test", "-c", "user.email=test@example.com", "commit", "-m", "base"], { cwd: dir, stdio: "ignore" });
+
+      writeFileSync(join(dir, "packages", "api", "src", "index.ts"), "// TODO api only\nexport const api = 1;\n", "utf8");
+      writeFileSync(join(dir, "packages", "web", "src", "index.ts"), "// TODO web outside package\nexport const web = 1;\n", "utf8");
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--package",
+        "api",
+        "--diff-base",
+        "HEAD",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.match(parsed.issues[0].file, /^src\/index\.ts$/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("monorepo doctor --package", () => {

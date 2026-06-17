@@ -1,44 +1,11 @@
 import { RULE_PACK_IDS } from "../config/packs.js";
 import { severities } from "../core/severity.js";
 import { detectorIds } from "../detectors/index.js";
+import { SCAN_ARG_FLAGS } from "./argv.js";
 
 const commands = ["scan", "doctor", "watch", "packs", "rules", "explain", "suppress", "init", "adopt", "mcp", "completions"];
 const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit"];
-const scanFlags = [
-  "--include",
-  "--exclude",
-  "--min-severity",
-  "--pack",
-  "--rules",
-  "--threshold",
-  "--max-files",
-  "--format",
-  "--output",
-  "--fail-on",
-  "--fail-on-confidence",
-  "--fail-on-regression",
-  "--baseline",
-  "--diff-base",
-  "--write-baseline",
-  "--changed",
-  "--staged",
-  "--respect-gitignore",
-  "--config",
-  "--cwd",
-  "--package",
-  "--no-color",
-  "--quiet",
-  "--profile",
-  "--cache",
-  "--parallel",
-  "--batch-size",
-  "--blame-age",
-  "--group-by",
-  "--sarif-compact",
-  "--markdown-heatmap",
-  "--from-eslint",
-  "--debounce",
-];
+const scanFlags = [...SCAN_ARG_FLAGS, "--from-eslint", "--debounce"];
 
 export type CompletionShell = "bash" | "zsh" | "fish";
 

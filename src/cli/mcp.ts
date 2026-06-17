@@ -1,5 +1,7 @@
-import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import { packageVersion } from "../utils/packageInfo.js";
+import { spawnCliSync } from "../utils/spawn.js";
+import { buildDoctorArgv, buildScanArgv } from "./argv.js";
 
 interface JsonRpcRequest {
   jsonrpc?: string;
@@ -74,6 +76,7 @@ function tools(): Array<Record<string, unknown>> {
         type: "object",
         properties: {
           target: { type: "string" },
+          cwd: { type: "string" },
           pack: { type: "string" },
           rules: { type: "string" },
           minSeverity: { type: "string" },
@@ -84,7 +87,14 @@ function tools(): Array<Record<string, unknown>> {
     {
       name: "doctor",
       description: "Run `debtlens doctor` for config and file-matching diagnostics.",
-      inputSchema: { type: "object", properties: { target: { type: "string" }, pack: { type: "string" } } },
+      inputSchema: {
+        type: "object",
+        properties: {
+          target: { type: "string" },
+          cwd: { type: "string" },
+          pack: { type: "string" },
+        },
+      },
     },
     {
       name: "rules",
@@ -105,10 +115,8 @@ function callTool(name: string, args: Record<string, unknown>, entrypoint: strin
     return { isError: true, content: [{ type: "text", text: `Unknown tool ${name}` }] };
   }
 
-  const result = spawnSync(process.execPath, [...execArgv, entrypoint, ...cliArgs], {
-    encoding: "utf8",
-    env: process.env,
-  });
+  const cwd = typeof args.cwd === "string" && args.cwd.length > 0 ? resolve(args.cwd) : undefined;
+  const result = spawnCliSync(cliArgs, { cwd, entrypoint, execArgv });
   const text = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
   return {
     isError: Boolean(result.error) || (typeof result.status === "number" && result.status !== 0),
@@ -118,21 +126,21 @@ function callTool(name: string, args: Record<string, unknown>, entrypoint: strin
 
 function toolToCliArgs(name: string, args: Record<string, unknown>): string[] | undefined {
   if (name === "scan") {
-    const cli = ["scan", stringArg(args.target, ".")];
-    addString(cli, "--pack", args.pack);
-    addString(cli, "--rules", args.rules);
-    addString(cli, "--min-severity", args.minSeverity);
-    addString(cli, "--format", args.format ?? "json");
-    return cli;
+    return buildScanArgv(stringArg(args.target, "."), {
+      ...args,
+      format: args.format ?? "json",
+    });
   }
   if (name === "doctor") {
-    const cli = ["doctor", stringArg(args.target, ".")];
-    addString(cli, "--pack", args.pack);
-    return cli;
+    return buildDoctorArgv(stringArg(args.target, "."), args);
   }
   if (name === "rules") {
     const cli = ["rules"];
-    addString(cli, "--format", args.format ?? "json");
+    if (typeof args.format === "string" && args.format.length > 0) {
+      cli.push("--format", args.format);
+    } else {
+      cli.push("--format", "json");
+    }
     return cli;
   }
   if (name === "explain") {
@@ -148,8 +156,4 @@ function writeResponse(id: JsonRpcRequest["id"], result?: unknown, error?: { cod
 
 function stringArg(value: unknown, fallback: string): string {
   return typeof value === "string" && value.length > 0 ? value : fallback;
-}
-
-function addString(args: string[], flag: string, value: unknown): void {
-  if (typeof value === "string" && value.length > 0) args.push(flag, value);
 }

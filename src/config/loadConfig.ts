@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { DEBTLENS_PLUGIN_API_VERSION } from "../plugins/version.js";
 import type { DebtLensConfig } from "../core/types.js";
 
@@ -16,6 +16,10 @@ export function findConfigPath(cwd: string, explicitPath?: string): string | und
   return configNames.map((name) => resolve(cwd, name)).find((candidate) => existsSync(candidate));
 }
 
+export function findLocalConfigPath(cwd: string): string | undefined {
+  return configNames.map((name) => resolve(cwd, name)).find((candidate) => existsSync(candidate));
+}
+
 export function loadConfig(cwd: string, explicitPath?: string): DebtLensConfig {
   const configPath = findConfigPath(cwd, explicitPath);
 
@@ -23,6 +27,60 @@ export function loadConfig(cwd: string, explicitPath?: string): DebtLensConfig {
     return {};
   }
 
+  return loadConfigAtPath(configPath);
+}
+
+export interface EffectiveConfig {
+  config: DebtLensConfig;
+  paths: string[];
+  pluginConfigDir: string;
+}
+
+export function loadEffectiveConfig(
+  cwd: string,
+  explicitPath?: string,
+  packageDirectory?: string,
+): EffectiveConfig {
+  const rootConfigPath = findConfigPath(cwd, explicitPath);
+  const rootConfig = rootConfigPath && existsSync(rootConfigPath)
+    ? loadConfigAtPath(rootConfigPath)
+    : {};
+  const packageConfigPath = packageDirectory ? findLocalConfigPath(packageDirectory) : undefined;
+  const shouldLoadPackageConfig = packageConfigPath !== undefined && packageConfigPath !== rootConfigPath;
+  const packageConfig = shouldLoadPackageConfig
+    ? loadConfigAtPath(packageConfigPath)
+    : undefined;
+  const paths = [
+    rootConfigPath && existsSync(rootConfigPath) ? rootConfigPath : undefined,
+    shouldLoadPackageConfig ? packageConfigPath : undefined,
+  ].filter((path): path is string => path !== undefined);
+
+  return {
+    config: packageConfig ? mergeDebtLensConfig(rootConfig, packageConfig) : rootConfig,
+    paths,
+    pluginConfigDir: packageConfig?.plugins?.length && packageConfigPath
+      ? dirname(packageConfigPath)
+      : rootConfigPath
+        ? dirname(rootConfigPath)
+        : cwd,
+  };
+}
+
+export function mergeDebtLensConfig(base: DebtLensConfig, override: DebtLensConfig): DebtLensConfig {
+  return stripUndefined({
+    ...base,
+    ...override,
+    thresholds: mergeRecord(base.thresholds, override.thresholds),
+    vocabulary: mergeRecord(base.vocabulary, override.vocabulary),
+    propDrilling: mergeRecord(base.propDrilling, override.propDrilling),
+    namingDrift: mergeRecord(base.namingDrift, override.namingDrift),
+    todoComment: mergeRecord(base.todoComment, override.todoComment),
+    ruleSeverities: mergeRecord(base.ruleSeverities, override.ruleSeverities),
+    ruleConfidenceFloors: mergeRecord(base.ruleConfidenceFloors, override.ruleConfidenceFloors),
+  });
+}
+
+export function loadConfigAtPath(configPath: string): DebtLensConfig {
   let config: DebtLensConfig;
   try {
     const raw = readFileSync(configPath, "utf8");
@@ -34,6 +92,17 @@ export function loadConfig(cwd: string, explicitPath?: string): DebtLensConfig {
 
   validatePluginApiVersion(config, configPath);
   return config;
+}
+
+function mergeRecord<T extends object>(base: T | undefined, override: T | undefined): T | undefined {
+  if (!base && !override) return undefined;
+  return { ...(base ?? {}), ...(override ?? {}) } as T;
+}
+
+function stripUndefined(config: DebtLensConfig): DebtLensConfig {
+  return Object.fromEntries(
+    Object.entries(config).filter(([, value]) => value !== undefined),
+  ) as DebtLensConfig;
 }
 
 function validatePluginApiVersion(config: DebtLensConfig, configPath: string): void {

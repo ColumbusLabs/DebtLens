@@ -1,0 +1,5 @@
+{
+  "thresholds": {
+    "large-component.maxLines": 1
+  }
+}

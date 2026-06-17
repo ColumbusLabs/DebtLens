@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { findConfigPath, loadConfig } from "../config/loadConfig.js";
+import { findConfigPath, findLocalConfigPath, loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { validateConfigShape } from "../config/validateConfig.js";
+import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { allDetectors } from "../detectors/index.js";
 import { resolveFilePaths } from "../core/resolveFiles.js";
 import type { CliOptions, ScanOptions } from "../core/types.js";
@@ -13,6 +14,7 @@ export interface DoctorInput {
   target: string;
   cwd: string;
   configPath?: string;
+  packageName?: string;
   baselinePath?: string;
   usedChanged: boolean;
   usedStaged: boolean;
@@ -29,16 +31,37 @@ export interface DoctorReport {
 }
 
 export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
+  let target = input.target;
+  let packageDirectory: string | undefined;
+  if (input.packageName) {
+    const workspacePackage = resolveWorkspacePackage(input.cwd, input.packageName);
+    packageDirectory = workspacePackage.directory;
+    target = packageDirectory;
+  }
+
   const configPath = findConfigPath(input.cwd, input.configPath);
+  const packageConfigPath = packageDirectory ? findLocalConfigPath(packageDirectory) : undefined;
   const explicitConfigPath = input.configPath ? resolve(input.cwd, input.configPath) : undefined;
   const missingConfigPath = explicitConfigPath && !existsSync(explicitConfigPath)
     ? explicitConfigPath
     : undefined;
-  const configValidation = validateConfigAtPath(configPath, missingConfigPath);
+  const displayConfigPaths = [
+    configPath && existsSync(configPath) ? configPath : undefined,
+    packageConfigPath && packageConfigPath !== configPath ? packageConfigPath : undefined,
+  ].filter((path): path is string => path !== undefined);
+  const configValidation = combineConfigValidations([
+    { path: configPath, result: validateConfigAtPath(configPath, missingConfigPath) },
+    packageConfigPath && packageConfigPath !== configPath
+      ? { path: packageConfigPath, result: validateConfigAtPath(packageConfigPath, undefined) }
+      : undefined,
+  ]);
+  const effectiveConfig = configValidation.state === "invalid"
+    ? { config: {}, paths: [], pluginConfigDir: input.cwd }
+    : loadEffectiveConfig(input.cwd, input.configPath, packageDirectory);
   const fileConfig = configValidation.state === "invalid"
     ? {}
-    : loadConfig(input.cwd, input.configPath);
-  const options = mergeConfig(input.target, fileConfig, input.cliOptions);
+    : effectiveConfig.config;
+  const options = mergeConfig(target, fileConfig, input.cliOptions);
   const filePaths = await resolveFilePaths(options);
   const resolvedRules = resolveRuleIds(options);
   const warnings = missingConfigPath
@@ -51,11 +74,13 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     "DebtLens Doctor",
     "===============",
     `Working directory: ${options.cwd}`,
-    `Config: ${missingConfigPath ? `${missingConfigPath} (missing)` : configPath ?? "(none found)"}`,
+    `Config: ${formatConfigPaths(missingConfigPath, displayConfigPaths)}`,
     `Config schema: ${formatConfigSchemaStatus(configValidation)}`,
     `Target: ${options.target}`,
+    ...(input.packageName ? [`Package: ${input.packageName}`] : []),
     `Pack: ${options.pack ?? "(none)"}`,
     `Rules: ${resolvedRules.join(", ")}`,
+    `Thresholds: ${formatThresholds(options.thresholds)}`,
     `Min severity: ${options.minSeverity}`,
     `Max files: ${options.maxFiles ?? "(unlimited)"}`,
     `Include globs: ${options.include.join(", ")}`,
@@ -124,10 +149,48 @@ type ConfigValidationResultForDoctor =
   | { state: "valid" }
   | { state: "invalid"; errors: string[] };
 
+interface NamedConfigValidation {
+  path?: string;
+  result: ConfigValidationResultForDoctor;
+}
+
+function combineConfigValidations(
+  validations: Array<NamedConfigValidation | undefined>,
+): ConfigValidationResultForDoctor {
+  const present = validations.filter((entry): entry is NamedConfigValidation => entry !== undefined);
+  const invalid = present.filter((entry) => entry.result.state === "invalid");
+  if (invalid.length > 0) {
+    return {
+      state: "invalid",
+      errors: invalid.flatMap((entry) => {
+        const prefix = entry.path ? `${entry.path}: ` : "";
+        return entry.result.state === "invalid"
+          ? entry.result.errors.map((error) => `${prefix}${error}`)
+          : [];
+      }),
+    };
+  }
+  return present.some((entry) => entry.result.state === "valid")
+    ? { state: "valid" }
+    : { state: "not-found" };
+}
+
 function formatConfigSchemaStatus(result: ConfigValidationResultForDoctor): string {
   if (result.state === "not-found") return "(not checked)";
   if (result.state === "valid") return "valid";
   return `invalid (${result.errors.join("; ")})`;
+}
+
+function formatConfigPaths(missingConfigPath: string | undefined, configPaths: string[]): string {
+  if (missingConfigPath) return `${missingConfigPath} (missing)`;
+  if (configPaths.length === 0) return "(none found)";
+  return configPaths.join(" + ");
+}
+
+function formatThresholds(thresholds: ScanOptions["thresholds"]): string {
+  const entries = Object.entries(thresholds).sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length === 0) return "(none)";
+  return entries.map(([key, value]) => `${key}=${value}`).join(", ");
 }
 
 function resolveRuleIds(options: ScanOptions): string[] {

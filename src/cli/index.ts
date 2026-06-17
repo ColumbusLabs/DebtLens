@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { findConfigPath, loadConfig } from "../config/loadConfig.js";
+import { findConfigPath, loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
@@ -73,8 +73,16 @@ program.command("scan")
       const format = parseFormat(String(rawOptions.format ?? "terminal"));
       const groupBy = parseGroupBy(String(rawOptions.groupBy ?? "severity"));
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
-      const fileConfig = loadConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
-      const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig);
+      let scanTarget = target;
+      let packageDirectory: string | undefined;
+      if (rawOptions.package) {
+        const workspacePackage = resolveWorkspacePackage(cwd, String(rawOptions.package));
+        scanTarget = workspacePackage.directory;
+        packageDirectory = workspacePackage.directory;
+      }
+      const effectiveConfig = loadEffectiveConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined, packageDirectory);
+      const fileConfig = effectiveConfig.config;
+      const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig, effectiveConfig.pluginConfigDir);
       const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
       const failOn = resolveFailOn(rawOptions, fileConfig);
       const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
@@ -101,12 +109,6 @@ program.command("scan")
           changedFiles = staged.files;
           fileContents = staged.contents;
         }
-      }
-
-      let scanTarget = target;
-      if (rawOptions.package) {
-        const workspacePackage = resolveWorkspacePackage(cwd, String(rawOptions.package));
-        scanTarget = workspacePackage.directory;
       }
 
       const options = mergeConfig(scanTarget, fileConfig, {
@@ -221,6 +223,7 @@ program.command("doctor")
   .option("--respect-gitignore", "skip files ignored by git")
   .option("--config <path>", "path to debtlens.config.json")
   .option("--cwd <path>", "working directory", process.cwd())
+  .option("--package <name>", "inspect a single workspace package by name")
   .action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {
       const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
@@ -257,6 +260,7 @@ program.command("doctor")
         target,
         cwd,
         configPath: rawOptions.config ? String(rawOptions.config) : undefined,
+        packageName: rawOptions.package ? String(rawOptions.package) : undefined,
         baselinePath: rawOptions.baseline ? String(rawOptions.baseline) : undefined,
         usedChanged: rawOptions.changed !== undefined,
         usedStaged: rawOptions.staged === true,
@@ -574,11 +578,12 @@ async function loadConfiguredPlugins(
   cwd: string,
   rawOptions: Record<string, unknown>,
   fileConfig: DebtLensConfig,
+  configDirOverride?: string,
 ): Promise<PluginContribution | undefined> {
   if (!fileConfig.plugins?.length) return undefined;
 
   const configPath = findConfigPath(cwd, rawOptions.config ? String(rawOptions.config) : undefined);
-  const configDir = configPath ? dirname(configPath) : cwd;
+  const configDir = configDirOverride ?? (configPath ? dirname(configPath) : cwd);
   const loaded = await loadPlugins(configDir, fileConfig, new Set(detectorIds));
   for (const warning of loaded.warnings) {
     process.stderr.write(`DebtLens: ${warning}\n`);

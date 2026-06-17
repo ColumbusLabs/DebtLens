@@ -1,0 +1,5 @@
+{
+  "name": "debtlens-fixture-nested-monorepo",
+  "private": true,
+  "type": "module"
+}

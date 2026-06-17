@@ -4,8 +4,7 @@
  * `View`) is ordinary composition, not prop drilling. Covers React Native core plus the
  * common icon/gradient/blur libraries used across the RN/Expo ecosystem.
  */
-export const HOST_COMPONENTS = new Set<string>([
-  // React Native core
+export const REACT_NATIVE_CORE_HOST_COMPONENTS = new Set<string>([
   "View",
   "Text",
   "Image",
@@ -28,8 +27,12 @@ export const HOST_COMPONENTS = new Set<string>([
   "StatusBar",
   "SafeAreaView",
   "KeyboardAvoidingView",
+]);
+
+export const HOST_COMPONENTS = new Set<string>([
+  // React Native core
+  ...REACT_NATIVE_CORE_HOST_COMPONENTS,
   "Animated",
-  // Common ecosystem libraries
   "LinearGradient",
   "BlurView",
   "MaterialIcons",

@@ -1,0 +1,50 @@
+{
+  "name": "debtlens-vscode",
+  "displayName": "DebtLens",
+  "description": "Show DebtLens maintainability findings as VS Code diagnostics.",
+  "version": "0.1.0",
+  "publisher": "columbuslabs",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:debtlens.scanWorkspace",
+    "workspaceContains:debtlens.config.json",
+    "workspaceContains:.debtlensrc.json"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "debtlens.scanWorkspace",
+        "title": "DebtLens: Scan Workspace"
+      }
+    ],
+    "configuration": {
+      "title": "DebtLens",
+      "properties": {
+        "debtlens.executable": {
+          "type": "string",
+          "default": "debtlens",
+          "description": "DebtLens CLI executable. Use an absolute path if debtlens is not on PATH."
+        },
+        "debtlens.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run DebtLens for the containing workspace folder when a file is saved."
+        },
+        "debtlens.extraArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Extra arguments appended before --format json, for example --pack core,python."
+        }
+      }
+    }
+  }
+}

@@ -5,16 +5,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-**DebtLens is a maintainability scanner for TypeScript and JavaScript codebases.** The first
-supported rule pack targets React (including React Native, Expo, and Next.js apps), but the
-core idea applies broadly: catch duplicated logic, bloated modules, weak boundaries, TODO
-debt, and naming drift before it becomes permanent.
+**DebtLens is a maintainability scanner for TypeScript, JavaScript, and Python codebases.**
+The first supported rule packs target React (including React Native, Expo, and Next.js apps)
+and core Python modules, but the core idea applies broadly: catch duplicated logic, bloated
+modules, weak boundaries, TODO debt, and naming drift before it becomes permanent.
 
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
 
 See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework packs**, and **language-agnostic reporting** fit together.
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
-For future Python, Vue, and multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
+For Python and future Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
 ```bash
 npx debtlens scan
@@ -62,8 +62,8 @@ DebtLens gives maintainers and newer contributors a neutral, explainable report 
 
 ## Current rule set
 
-Built-in rules are grouped into a **core** pack (any TS/JS project) and a **react** pack
-(components and hooks). Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
+Built-in rules are grouped into **core** TS/JS, **react**, framework, maintainer, and
+**python** packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 | Rule | Pack | What it catches | Default severity |
 | --- | --- | --- | --- |
@@ -85,6 +85,9 @@ Built-in rules are grouped into a **core** pack (any TS/JS project) and a **reac
 | `data-loader-sprawl` | next | Server loaders/components with many fetches or awaits | Medium |
 | `handler-depth` | node | Deeply nested Express/Fastify handlers | Medium |
 | `route-sprawl` | node | Route modules registering too many endpoints | Medium |
+| `python-duplicate-logic` | python | Near-duplicate Python functions | Medium |
+| `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
+| `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
 
 ## Performance benchmarks
 
@@ -172,7 +175,7 @@ Options:
 --respect-gitignore            skip files ignored by git
 --config <path>                path to debtlens.config.json
 --cwd <path>                   working directory
---package <name>               scan a single npm workspace package (MVP: `packages/*` layouts)
+--package <name>               scan a single npm/pnpm/Nx workspace package
 --no-color                     disable terminal color
 -q, --quiet                    terminal only: suppress per-finding detail
 --profile                      print per-rule timing to stderr without changing findings
@@ -352,6 +355,7 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 | `react-native` | react + RN host primitive forwarding |
 | `next` | react + App Router boundary, route size, and data-loader checks |
 | `node` | core + Express/Fastify handler depth and route sprawl |
+| `python` | Python duplicate functions, thin wrappers, and TODO comments |
 | `expo` | React Native tuning for Expo Router projects |
 | `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
@@ -365,6 +369,12 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 ```
 
 Explicit `rules` in config override the pack. Use `debtlens packs` to list presets.
+
+Use comma-separated packs for mixed-language scans:
+
+```bash
+debtlens scan . --pack core,python
+```
 
 ### Per-rule severities and confidence floors
 

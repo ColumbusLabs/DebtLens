@@ -40,6 +40,7 @@
         "next",
         "expo",
         "node",
+        "python",
         "ai-assisted-maintainer",
         "oss-maintainer"
       ],
@@ -77,7 +78,10 @@
               "barrel-file",
               "weak-test-boundary",
               "api-surface-sprawl",
-              "story-only-component"
+              "story-only-component",
+              "python-todo-comment",
+              "python-duplicate-logic",
+              "python-dead-abstraction"
             ]
           },
           {
@@ -459,6 +463,30 @@
             "medium",
             "high"
           ]
+        },
+        "python-todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "python-duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "python-dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
         }
       },
       "additionalProperties": {
@@ -600,6 +628,21 @@
           "maximum": 1
         },
         "story-only-component": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-dead-abstraction": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

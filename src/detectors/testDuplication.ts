@@ -100,7 +100,7 @@ function collectTestFiles(context: DetectorContext): SourceFileInfo[] {
     if (seen.has(relativePath)) continue;
     const content = readFileSync(absolutePath, "utf8");
     const sourceFile = context.project.createSourceFile(absolutePath, content, { overwrite: true });
-    files.push({ absolutePath, relativePath, content, sourceFile });
+    files.push({ absolutePath, relativePath, content, language: "tsjs", sourceFile });
     seen.add(relativePath);
   }
 

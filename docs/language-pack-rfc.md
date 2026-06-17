@@ -1,11 +1,10 @@
 # Language Pack RFC
 
-Status: **Parser evaluation**
+Status: **First Python pack shipped**
 
-DebtLens is currently a TypeScript/JavaScript scanner. The reporting contract, baselines,
-CI workflows, and GitHub Action are language-neutral, but detector execution is tied to
-`ts-morph`. Language packs should extend detection without forcing every reporter or
-integration to learn a new result shape.
+DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
+CI workflows, and GitHub Action are language-neutral, and the first Python pack now
+proves that language-specific detectors can share the same `ScanResult` shape.
 
 ## Shared requirements
 
@@ -15,7 +14,7 @@ integration to learn a new result shape.
 - Allow one command to scan multiple language roots and merge results deterministically.
 - Keep language-specific dependencies optional until a pack is selected.
 
-Proposed runtime interface:
+Longer-term runtime interface:
 
 ```ts
 export interface LanguagePack {
@@ -38,7 +37,7 @@ export interface LanguageContext {
 ## Multi-language scan model
 
 ```bash
-debtlens scan . --pack core --pack python
+debtlens scan . --pack core,python
 ```
 
 The scanner should:
@@ -53,15 +52,15 @@ This keeps reporters, baselines, PR comments, SARIF, HTML, and JSON schemas stab
 
 ## Python parser recommendation
 
-Recommended path: use Python's built-in `ast` module through a small sidecar process for
-the first production pack.
+Recommendation: use Python's built-in `ast` module plus `tokenize` through a small
+sidecar process when Python rules need higher-fidelity syntax.
 
 Why:
 
 - The standard `ast` module is stable, fast enough for static shape rules, and avoids
   vendoring a Python parser into Node.
-- A sidecar lets Python-specific rules evolve in Python while the Node CLI remains the
-  orchestration layer.
+- A sidecar would let Python-specific rules evolve in Python while the Node CLI remains
+  the orchestration layer.
 - The first rules map well to syntax trees: TODO comments, duplicate function shape, and
   thin wrappers.
 
@@ -71,7 +70,14 @@ Why:
 | `tree-sitter-python` | Embeddable from Node and consistent across machines | Adds native/parser dependency complexity before the language-pack interface is proven |
 | Text-only heuristics | Very cheap prototype | Not enough structure for duplicate logic or dead-abstraction confidence |
 
-Prototype command:
+Current implementation:
+
+- `python-todo-comment` uses conservative in-process comment scanning and shared TODO marker patterns.
+- `python-duplicate-logic` extracts function spans, normalizes tokens, and reuses the duplicate-pair pruning shared with TS/JS.
+- `python-dead-abstraction` flags single-statement pass-through functions such as `def f(x): return g(x)`.
+- `--pack python` widens discovery to `.py` files. Use `--pack core,python` for one merged TS/JS + Python scan.
+
+Possible future sidecar command:
 
 ```bash
 python -m debtlens_python_adapter --json-lines < file-list.json
@@ -119,6 +125,6 @@ Known limitations:
 
 ## Example fixture
 
-[`examples/python/`](../examples/python/) is a small future-facing fixture for parser
-spikes. It is intentionally not scanned by the current TS/JS pack; use it to validate
-Python language-pack experiments without conflating them with existing detector behavior.
+[`examples/python/`](../examples/python/) is the calibrated Python pack fixture. It is
+intentionally scanned only when `python` or explicit `python-*` rules are selected, so
+TS/JS defaults do not change for existing users.

@@ -1,23 +1,22 @@
 # Python Fixture
 
-This fixture is for future Python language-pack experiments. The current DebtLens runtime
-does not parse Python; use this directory to test adapter prototypes described in
-[`docs/language-pack-rfc.md`](../../docs/language-pack-rfc.md).
+This fixture calibrates the built-in Python language pack. DebtLens scans it only when the
+`python` pack or explicit `python-*` rules are selected.
 
-Suggested future smoke command:
+Smoke command:
 
 ```bash
-python -m debtlens_python_adapter --root examples/python --format json
+npx debtlens scan examples/python --pack python --format json
 ```
 
 The fixture includes:
 
-- a thin wrapper that a future `python-dead-abstraction` rule should flag,
-- repeated data-shaping logic for a future `python-duplicate-logic` rule,
-- a tracked TODO comment for a future `python-todo-comment` rule,
+- a thin wrapper that `python-dead-abstraction` should flag,
+- repeated data-shaping logic for `python-duplicate-logic`,
+- a tracked TODO comment for `python-todo-comment`,
 - a parameterized test that duplication rules should not treat as copy-paste.
 
-Expected future bounds when a Python pack is enabled:
+Expected bounds when the Python pack is enabled:
 
 | Rule | Min | Max | Notes |
 | --- | ---: | ---: | --- |

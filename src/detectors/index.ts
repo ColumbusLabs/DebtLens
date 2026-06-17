@@ -16,6 +16,7 @@ import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
 import { namingDriftDetector } from "./namingDrift.js";
 import { propDrillingDetector } from "./propDrilling.js";
+import { pythonDeadAbstractionDetector, pythonDuplicateLogicDetector, pythonTodoCommentDetector } from "./python.js";
 import { rnHostForwardingDetector } from "./rnHostForwarding.js";
 import { routeHandlerSizeDetector } from "./routeHandlerSize.js";
 import { routeSprawlDetector } from "./routeSprawl.js";
@@ -53,6 +54,9 @@ export const allDetectors: Detector[] = [
   weakTestBoundaryDetector,
   apiSurfaceSprawlDetector,
   storyOnlyComponentDetector,
+  pythonTodoCommentDetector,
+  pythonDuplicateLogicDetector,
+  pythonDeadAbstractionDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);

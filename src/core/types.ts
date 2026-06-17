@@ -33,8 +33,11 @@ export interface SourceFileInfo {
   absolutePath: string;
   relativePath: string;
   content: string;
+  language: SourceLanguage;
   sourceFile: SourceFile;
 }
+
+export type SourceLanguage = "tsjs" | "python";
 
 export interface ScanThresholds {
   [key: string]: number;
@@ -172,6 +175,8 @@ export interface Detector {
   description: string;
   defaultSeverity: Severity;
   tags: string[];
+  /** Languages this detector understands. Omitted means TypeScript/JavaScript only. */
+  languages?: SourceLanguage[];
   detect: (context: DetectorContext) => Promise<DebtIssue[]> | DebtIssue[];
 }
 

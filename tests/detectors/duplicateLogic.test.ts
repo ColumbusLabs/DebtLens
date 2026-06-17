@@ -210,6 +210,7 @@ export function normalize${index}(input) {
         absolutePath: `/${relativePath}`,
         relativePath,
         content,
+        language: "tsjs",
         sourceFile,
       });
     }

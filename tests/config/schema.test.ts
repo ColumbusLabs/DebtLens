@@ -87,6 +87,7 @@ describe("config JSON schema", () => {
       "next",
       "expo",
       "node",
+      "python",
       "ai-assisted-maintainer",
       "oss-maintainer",
     ]);

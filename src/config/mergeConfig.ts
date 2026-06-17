@@ -7,31 +7,33 @@ import type { CliOptions, DebtLensConfig, ScanOptions, Severity } from "../core/
 
 export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptions: CliOptions): ScanOptions {
   const cwd = resolve(cliOptions.cwd ?? process.cwd());
-  const packId = cliOptions.pack ?? fileConfig.pack;
-  const pack = packId ? getRulePack(packId) : undefined;
+  const packIds = parsePackIds(cliOptions.pack ?? fileConfig.pack);
+  const packs = packIds.map((packId) => getRulePack(packId));
 
   const explicitRules = cliOptions.rules?.length ? cliOptions.rules : fileConfig.rules;
   const rules = explicitRules?.length
     ? explicitRules
-    : pack
-      ? [...pack.rules]
+    : packs.length
+      ? unique(packs.flatMap((pack) => pack.rules))
       : undefined;
+  const shouldIncludePython = packIds.includes("python")
+    || rules?.some((ruleId) => ruleId.startsWith("python-")) === true;
 
   return {
     cwd,
     target: resolve(cwd, target),
-    include: cliOptions.include?.length ? cliOptions.include : fileConfig.include ?? defaultConfig.include,
+    include: resolveIncludeGlobs(fileConfig, cliOptions, shouldIncludePython),
     exclude: [
       ...defaultConfig.exclude,
       ...(fileConfig.exclude ?? []),
       ...(cliOptions.exclude ?? []),
     ],
     minSeverity: cliOptions.minSeverity ?? fileConfig.minSeverity ?? defaultConfig.minSeverity,
-    pack: packId,
+    pack: packIds.length ? packIds.join(",") : undefined,
     rules,
     thresholds: {
       ...defaultConfig.thresholds,
-      ...(pack?.thresholds ?? {}),
+      ...Object.assign({}, ...packs.map((pack) => pack.thresholds ?? {})),
       ...(cliOptions.pluginThresholds ?? {}),
       ...(fileConfig.thresholds ?? {}),
       ...(cliOptions.thresholds ?? {}),
@@ -65,6 +67,25 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     ruleSeverities: validateRuleSeverities(fileConfig.ruleSeverities),
     ruleConfidenceFloors: validateRuleConfidenceFloors(fileConfig.ruleConfidenceFloors),
   };
+}
+
+function parsePackIds(pack: string | undefined): string[] {
+  if (!pack) return [];
+  return unique(pack.split(",").map((packId) => packId.trim()).filter(Boolean));
+}
+
+function resolveIncludeGlobs(
+  fileConfig: DebtLensConfig,
+  cliOptions: CliOptions,
+  shouldIncludePython: boolean,
+): string[] {
+  if (cliOptions.include?.length) return cliOptions.include;
+  const base = fileConfig.include ?? defaultConfig.include;
+  return shouldIncludePython ? unique([...base, "**/*.py"]) : base;
+}
+
+function unique<T>(values: readonly T[]): T[] {
+  return [...new Set(values)];
 }
 
 function validateRuleSeverities(ruleSeverities: DebtLensConfig["ruleSeverities"]): Record<string, Severity> | undefined {

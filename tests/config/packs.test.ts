@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 8);
+    assert.equal(packs.length, 9);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.equal(getRulePack("react").rules.length, 20);
     assert.equal(getRulePack("react-native").rules.length, 21);
@@ -18,6 +18,11 @@ describe("rule packs", () => {
     assert.equal(getRulePack("expo").rules.length, 21);
     assert.ok(getRulePack("node").rules.includes("handler-depth"));
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
+    assert.deepEqual(getRulePack("python").rules, [
+      "python-duplicate-logic",
+      "python-dead-abstraction",
+      "python-todo-comment",
+    ]);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });
@@ -54,5 +59,14 @@ describe("rule packs", () => {
   it("lets CLI rules override a pack", () => {
     const options = mergeConfig(".", { pack: "react" }, { cwd: process.cwd(), rules: ["naming-drift"] });
     assert.deepEqual(options.rules, ["naming-drift"]);
+  });
+
+  it("combines comma-separated packs and widens includes for python", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python" });
+
+    assert.equal(options.pack, "core,python");
+    assert.ok(options.rules?.includes("todo-comment"));
+    assert.ok(options.rules?.includes("python-todo-comment"));
+    assert.ok(options.include.includes("**/*.py"));
   });
 });

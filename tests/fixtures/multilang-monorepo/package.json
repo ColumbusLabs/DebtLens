@@ -1,0 +1,6 @@
+{
+  "name": "debtlens-fixture-multilang-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": ["src", "backend"]
+}

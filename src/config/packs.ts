@@ -73,6 +73,12 @@ const OSS_MAINTAINER_RULES = [
   "api-surface-sprawl",
 ] as const;
 
+const PYTHON_RULES = [
+  "python-duplicate-logic",
+  "python-dead-abstraction",
+  "python-todo-comment",
+] as const;
+
 export const RULE_PACKS: Record<string, RulePack> = {
   core: {
     id: "core",
@@ -122,6 +128,11 @@ export const RULE_PACKS: Record<string, RulePack> = {
       "handler-depth.maxDepth": 4,
       "route-sprawl.maxRoutes": 8,
     },
+  },
+  python: {
+    id: "python",
+    description: "Core Python maintainability rules for duplicate functions, thin wrappers, and debt comments.",
+    rules: [...PYTHON_RULES],
   },
   "ai-assisted-maintainer": {
     id: "ai-assisted-maintainer",

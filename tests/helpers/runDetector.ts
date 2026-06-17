@@ -50,6 +50,7 @@ export async function runDetector(
       absolutePath: `/${relativePath}`,
       relativePath,
       content,
+      language: "tsjs",
       sourceFile,
     });
   }

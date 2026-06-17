@@ -46,6 +46,9 @@ and presets on top of these built-ins; see [`policy-packages.md`](./policy-packa
 | `data-loader-sprawl` | **next** | Server loaders/components with many fetches or awaits | Medium |
 | `handler-depth` | **node** | Deeply nested Express/Fastify handlers | Medium |
 | `route-sprawl` | **node** | Route modules registering too many endpoints | Medium |
+| `python-duplicate-logic` | **python** | Near-duplicate Python functions using normalized function-body similarity | Medium |
+| `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
+| `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
 
 ### Core rules
 
@@ -96,6 +99,17 @@ The `node` pack combines core rules with route ownership checks:
 - **`handler-depth`**
 - **`route-sprawl`**
 
+### Python pack (shipped today)
+
+The `python` pack widens discovery to `.py` files and emits the same `ScanResult` shape
+as TS/JS rules:
+
+- **`python-duplicate-logic`**
+- **`python-dead-abstraction`**
+- **`python-todo-comment`**
+
+Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
+
 ### Maintainer packs
 
 - **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, and test-boundary signals. It is about maintainability review only; it does not claim to detect AI-generated authorship.
@@ -109,6 +123,7 @@ The `node` pack combines core rules with route ownership checks:
 | `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN host forwarding) |
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
+| `python` | Python duplicate functions, thin wrappers, and TODO debt | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
@@ -117,22 +132,22 @@ The `node` pack combines core rules with route ownership checks:
 Vue and Svelte are planned JS framework packs. See [`language-pack-rfc.md`](./language-pack-rfc.md)
 for the Vue parser recommendation and [`ROADMAP.md`](../ROADMAP.md) for sequencing.
 
-## Future language packs
+## Language packs
 
-TypeScript and JavaScript are the **first language**. Detection is language-specific; reporting,
-baselines, CI, and the issue contract are not. Future languages plug in via a language pack
-and (eventually) the plugin API ([#26](https://github.com/ColumbusLabs/DebtLens/issues/26)).
+Detection is language-specific; reporting, baselines, CI, and the issue contract are not.
+Python is the first non-TS/JS built-in language pack, and future languages should follow
+the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, dead abstractions, TODO debt, naming drift | Django/Flask route sprawl (TBD) | Parser recommendation documented; fixture in `examples/python/` |
+| **Python** | duplicate logic, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 | **Kotlin** | same core patterns as Swift row | Jetpack Compose, Android UI layers | Direction |
 
-Each language needs its own parser/AST path (today the scanner uses `ts-morph` for TS/JS
-only). Rules that map well across languages — duplication, thin wrappers, deferred TODOs,
-naming inconsistency — ship first; framework-specific packs follow once core coverage is
-solid. The current parser evaluation is captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
+Each language needs its own parser/AST path. Rules that map well across languages —
+duplication, thin wrappers, deferred TODOs, naming inconsistency — ship first;
+framework-specific packs follow once core coverage is solid. Python's current built-in
+pack and future parser recommendation are captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
 
 These are intentional direction items, not near-term commitments. Discuss proposals in
 [GitHub Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) or open a
@@ -170,6 +185,12 @@ debtlens scan --pack next
 
 # Node API preset
 debtlens scan --pack node
+
+# Python sources
+debtlens scan examples/python --pack python
+
+# Mixed TS/JS plus Python scan
+debtlens scan . --pack core,python
 
 # Library-maintainer preset
 debtlens scan --pack oss-maintainer

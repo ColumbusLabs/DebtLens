@@ -10,6 +10,7 @@ function file(relativePath: string, content: string): SourceFileInfo {
     absolutePath: `/${relativePath}`,
     relativePath,
     content,
+    language: relativePath.endsWith(".py") ? "python" : "tsjs",
     sourceFile: {} as SourceFileInfo["sourceFile"],
   };
 }

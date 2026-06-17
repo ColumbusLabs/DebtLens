@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { relative } from "node:path";
+import { basename, extname, relative } from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
@@ -9,13 +9,13 @@ import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
 import { suggestClosest } from "../utils/didYouMean.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
-import type { DebtIssue, Detector, DetectorContext, ScanOptions, ScanResult, SourceFileInfo } from "./types.js";
+import type { DebtIssue, Detector, DetectorContext, ScanOptions, ScanResult, SourceFileInfo, SourceLanguage } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startedAt = Date.now();
   const filePaths = await resolveFilePaths(options);
   const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
-  const detectors = selectDetectors(registry, options.rules);
+  const detectors = selectDetectors(registry, options.rules, filePaths.map(detectSourceLanguage));
   const snapshots = loadFileSnapshots(filePaths, options);
   const cacheDisabledReason = options.cache && options.pluginDetectors?.length
     ? "scan cache disabled when plugin detectors are loaded because plugin implementations cannot be content-hash invalidated"
@@ -181,10 +181,14 @@ async function loadSourceFiles(project: Project, snapshots: FileSnapshot[], opti
     const batch = snapshots.slice(index, index + batchSize);
     for (const snapshot of batch) {
       const sourceFile = project.createSourceFile(snapshot.absolutePath, snapshot.content, { overwrite: true });
+      const relativePath = snapshot.absolutePath === options.target
+        ? basename(snapshot.absolutePath)
+        : relative(options.target, snapshot.absolutePath).replaceAll("\\", "/");
       files.push({
         absolutePath: snapshot.absolutePath,
-        relativePath: relative(options.target, snapshot.absolutePath).replaceAll("\\", "/"),
+        relativePath,
         content: snapshot.content,
+        language: detectSourceLanguage(snapshot.absolutePath),
         sourceFile,
       });
     }
@@ -212,6 +216,7 @@ async function runDetectors(
     const warnings: string[] = [];
     const context: DetectorContext = {
       ...contextBase,
+      files: filesForDetector(detector, contextBase.files),
       addWarning: (warning) => {
         if (!warnings.includes(warning)) warnings.push(warning);
       },
@@ -236,6 +241,16 @@ async function runDetectors(
   return results;
 }
 
+function filesForDetector(detector: Detector, files: SourceFileInfo[]): SourceFileInfo[] {
+  const languages = detector.languages ?? ["tsjs"];
+  const allowed = new Set(languages);
+  return files.filter((file) => allowed.has(file.language));
+}
+
+function detectSourceLanguage(path: string): SourceLanguage {
+  return extname(path).toLowerCase() === ".py" ? "python" : "tsjs";
+}
+
 function normalizeIssueIdentity(issue: DebtIssue): void {
   const fingerprint = issue.fingerprint ?? computeIssueFingerprint(issue);
   issue.fingerprint = fingerprint;
@@ -247,9 +262,13 @@ function getContentOverride(options: ScanOptions, absolutePath: string): string 
   return options.fileContents[canonicalize(absolutePath)] ?? options.fileContents[absolutePath];
 }
 
-function selectDetectors(registry: Detector[], ruleIds: string[] | undefined): Detector[] {
+function selectDetectors(
+  registry: Detector[],
+  ruleIds: string[] | undefined,
+  sourceLanguages: SourceLanguage[],
+): Detector[] {
   if (!ruleIds || ruleIds.length === 0) {
-    return registry;
+    return registry.filter((detector) => detectorCanRunOnSourceLanguages(detector, sourceLanguages));
   }
 
   const requested = new Set(ruleIds);
@@ -266,6 +285,12 @@ function selectDetectors(registry: Detector[], ruleIds: string[] | undefined): D
   }
 
   return selected;
+}
+
+function detectorCanRunOnSourceLanguages(detector: Detector, sourceLanguages: SourceLanguage[]): boolean {
+  const languages = detector.languages ?? ["tsjs"];
+  const available = new Set(sourceLanguages.length > 0 ? sourceLanguages : ["tsjs"]);
+  return languages.some((language) => available.has(language));
 }
 
 function getThreshold(options: ScanOptions, key: string, fallback: number): number {

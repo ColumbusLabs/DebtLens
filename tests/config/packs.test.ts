@@ -6,12 +6,18 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 7);
+    assert.equal(packs.length, 8);
     assert.equal(getRulePack("core").rules.length, 9);
     assert.equal(getRulePack("react").rules.length, 16);
-    assert.deepEqual(getRulePack("react-native").rules, getRulePack("react").rules);
-    assert.deepEqual(getRulePack("next").rules, getRulePack("react").rules);
-    assert.deepEqual(getRulePack("expo").rules, getRulePack("react").rules);
+    assert.equal(getRulePack("react-native").rules.length, 17);
+    assert.ok(getRulePack("react-native").rules.includes("rn-host-forwarding"));
+    assert.equal(getRulePack("next").rules.length, 19);
+    assert.ok(getRulePack("next").rules.includes("server-client-boundary"));
+    assert.ok(getRulePack("next").rules.includes("route-handler-size"));
+    assert.ok(getRulePack("next").rules.includes("data-loader-sprawl"));
+    assert.equal(getRulePack("expo").rules.length, 17);
+    assert.ok(getRulePack("node").rules.includes("handler-depth"));
+    assert.ok(getRulePack("node").rules.includes("route-sprawl"));
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });
@@ -35,6 +41,7 @@ describe("rule packs", () => {
     );
 
     assert.equal(packOnly.thresholds["prop-drilling.maxForwardedProps"], 5);
+    assert.equal(packOnly.thresholds["rn-host-forwarding.maxForwardedProps"], 6);
     assert.equal(options.thresholds["prop-drilling.maxForwardedProps"], 7);
     assert.equal(options.thresholds["large-component.maxLines"], 180);
   });

@@ -2,7 +2,7 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
-Rules are grouped into **core** and **react** packs. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy and planned framework packs.
+Rules are grouped into **core**, **react**, and framework packs such as **next**, **react-native**, and **node**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
 ## Confidence scoring
 
@@ -181,6 +181,147 @@ When this is a false positive:
 - the component stays below the configured provider threshold
 
 Confidence: **0.74**. Provider count is objective, but app-shell architecture varies.
+
+## `rn-host-forwarding`
+
+Flags React Native wrapper components that forward many wrapper props into RN host primitives such as `View`, `Pressable`, `FlatList`, `TextInput`, and aliased imports from `react-native`.
+
+Default thresholds:
+
+- `rn-host-forwarding.maxForwardedProps`: 6
+- `rn-host-forwarding.maxHostTargets`: 3
+
+Why it matters: RN wrapper components can quietly become wide pass-through APIs where style, accessibility, and event ownership is unclear.
+
+Good fixes:
+
+- narrow the wrapper API to the variants it owns
+- split visual variants from interaction wrappers
+- let callers own raw host primitives when passthrough is the real purpose
+
+When this is a false positive:
+
+- the component is a deliberate low-level primitive
+- rest props are intentionally part of a design-system contract
+
+Confidence: **0.78-0.84** depending on whether broad rest spreading is present.
+
+## `server-client-boundary`
+
+Flags likely Next.js App Router boundary mistakes: client files importing server-only modules, or server component files using client-only React hooks without a `"use client"` directive.
+
+Why it matters: server/client boundary mistakes often pass code review until runtime or bundling reveals that stateful browser code and server-only APIs were mixed.
+
+Good fixes:
+
+- move server-only imports behind a server component, route handler, or server action
+- pass serializable data into focused client components
+- add `"use client"` only to the smallest file that owns interactivity
+
+When this is a false positive:
+
+- the file is not part of a Next App Router tree
+- a custom build layer deliberately aliases server-only modules
+
+Confidence: **0.86-0.90**. The syntax is direct, but boundary conventions vary by framework setup.
+
+## `route-handler-size`
+
+Flags oversized Next.js `app/**/route.*`, `app/**/page.*`, and `pages` route modules that exceed line, branch, or await budgets.
+
+Default thresholds:
+
+- `route-handler-size.maxLines`: 220
+- `route-handler-size.maxBranches`: 14
+- `route-handler-size.maxAwaits`: 6
+
+Why it matters: large route/page modules tend to mix request parsing, validation, fetching, authorization, and rendering in one review surface.
+
+Good fixes:
+
+- keep route/page files thin
+- move validation and orchestration into server helpers
+- colocate data loading with the segment or resource that owns it
+
+When this is a false positive:
+
+- the module is generated
+- a small page intentionally performs one simple await chain
+
+Confidence: **0.76-0.86** depending on how many budgets are exceeded.
+
+## `data-loader-sprawl`
+
+Flags async server components and loader-like functions with many awaits or fetch calls in one server-side path.
+
+Default thresholds:
+
+- `data-loader-sprawl.maxAwaits`: 6
+- `data-loader-sprawl.maxFetches`: 5
+- `data-loader-sprawl.maxBranches`: 5
+- `data-loader-sprawl.maxLines`: 90
+
+Why it matters: sequential data loading grows into slow, tightly coupled route code. The right fix is often colocation, batching, or a named server helper.
+
+Good fixes:
+
+- split independent data requirements into focused loaders
+- batch related requests behind one server helper
+- move segment-specific loading closer to the route segment
+
+When this is a false positive:
+
+- the awaits are intentionally sequential due to dependencies
+- the loader is already the owned orchestration boundary
+
+Confidence: **0.64-0.92** based on fetch/await and line pressure.
+
+## `handler-depth`
+
+Flags Express/Fastify-style route handlers with excessive nested control flow or callback depth.
+
+Default thresholds:
+
+- `handler-depth.maxDepth`: 4
+- `handler-depth.maxMiddleware`: 5
+
+Why it matters: deeply nested handlers are hard to review and hard to test because validation, loading, and response branches are interleaved.
+
+Good fixes:
+
+- move validation into middleware
+- extract loading and policy checks into named helpers
+- return early instead of nesting branches
+
+When this is a false positive:
+
+- the route is a generated adapter
+- the nesting is a short, deliberate parser boundary
+
+Confidence: **0.76**. Nesting is objective, but route style varies.
+
+## `route-sprawl`
+
+Flags Node route modules that register too many Express/Fastify-style endpoints in one file.
+
+Default threshold:
+
+- `route-sprawl.maxRoutes`: 8
+
+Why it matters: route modules with many endpoints usually have unclear ownership and become hotspots for auth, validation, and response-shape drift.
+
+Good fixes:
+
+- split routes by resource or workflow
+- move shared middleware to a module-level helper
+- keep one route module per stable ownership boundary
+
+When this is a false positive:
+
+- the file is generated from an API spec
+- the endpoints are a deliberately tiny compatibility surface
+
+Confidence: **0.80**. Route call counting is direct, but API shape is project-specific.
 
 ## `duplicate-logic`
 

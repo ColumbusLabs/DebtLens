@@ -85,6 +85,7 @@ describe("config JSON schema", () => {
       "react-native",
       "next",
       "expo",
+      "node",
       "ai-assisted-maintainer",
       "oss-maintainer",
     ]);

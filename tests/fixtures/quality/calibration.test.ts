@@ -42,9 +42,15 @@ const cases: CalibrationCase[] = [
     minSeverity: "info",
     minIssuesByRule: {
       "dead-abstraction": 1,
+      "server-client-boundary": 1,
+      "route-handler-size": 1,
+      "data-loader-sprawl": 1,
     },
     maxIssuesByRule: {
       "dead-abstraction": 2,
+      "server-client-boundary": 2,
+      "route-handler-size": 2,
+      "data-loader-sprawl": 2,
       "large-component": 0,
       "state-sprawl": 0,
     },

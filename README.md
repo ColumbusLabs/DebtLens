@@ -74,6 +74,12 @@ Built-in rules are grouped into a **core** pack (any TS/JS project) and a **reac
 | `state-sprawl` | react | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | react | Long or overloaded React effect hooks | Medium |
 | `prop-drilling` | react | Components that forward many props to children | Medium |
+| `rn-host-forwarding` | react-native | RN wrappers forwarding many props into host primitives | Medium |
+| `server-client-boundary` | next | App Router server/client boundary mistakes | High |
+| `route-handler-size` | next | Oversized Next route/page modules | Medium |
+| `data-loader-sprawl` | next | Server loaders/components with many fetches or awaits | Medium |
+| `handler-depth` | node | Deeply nested Express/Fastify handlers | Medium |
+| `route-sprawl` | node | Route modules registering too many endpoints | Medium |
 
 ## Performance benchmarks
 
@@ -324,8 +330,9 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 | --- | --- |
 | `core` | framework-neutral maintainability rules: duplication, large functions, barrels, test boundaries, API surface, TODOs, naming drift |
 | `react` | core + component, hook, provider, prop, and Storybook signals |
-| `react-native` | same as `react` with RN threshold tuning |
-| `next` | same as `react` with App Router/public-entrypoint tuning |
+| `react-native` | react + RN host primitive forwarding |
+| `next` | react + App Router boundary, route size, and data-loader checks |
+| `node` | core + Express/Fastify handler depth and route sprawl |
 | `expo` | React Native tuning for Expo Router projects |
 | `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |

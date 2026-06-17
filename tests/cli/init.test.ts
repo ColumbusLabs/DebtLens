@@ -24,8 +24,10 @@ describe("debtlens init", () => {
     const parsed = JSON.parse(readFileSync(result.path, "utf8"));
     assert.equal(parsed.minSeverity, "low");
     assert.ok(Array.isArray(parsed.rules));
-    assert.equal(parsed.rules.length, 16);
+    assert.equal(parsed.rules.length, 22);
     assert.ok(parsed.rules.includes("api-surface-sprawl"));
+    assert.ok(parsed.rules.includes("server-client-boundary"));
+    assert.ok(parsed.rules.includes("route-sprawl"));
   });
 
   it("refuses to overwrite an existing config without force", () => {

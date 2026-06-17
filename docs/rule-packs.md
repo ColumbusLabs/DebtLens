@@ -35,6 +35,12 @@ Today all built-in rules run together by default. Select a pack in config or use
 | `context-provider-sprawl` | **react** | Components wrapping many unrelated Context providers | Medium |
 | `prop-drilling` | **react** | Components that forward many props to children | Medium |
 | `story-only-component` | **react** | Exported components whose known consumers are only Storybook stories | Low |
+| `rn-host-forwarding` | **react-native** | RN wrappers forwarding many props into host primitives | Medium |
+| `server-client-boundary` | **next** | Next App Router server/client boundary mistakes | High |
+| `route-handler-size` | **next** | Oversized Next route/page modules | Medium |
+| `data-loader-sprawl` | **next** | Server loaders/components with many fetches or awaits | Medium |
+| `handler-depth` | **node** | Deeply nested Express/Fastify handlers | Medium |
+| `route-sprawl` | **node** | Route modules registering too many endpoints | Medium |
 
 ### Core rules
 
@@ -64,9 +70,22 @@ These rules assume React component and hook patterns:
 - **`prop-drilling`**
 - **`story-only-component`**
 
-React Native and Expo use the React pack with slightly looser defaults for prop and provider
-forwarding. RN-specific tuning (host components, platform primitives) also lives in detector
-configuration — for example `propDrilling.ignoreComponents` — not in separate rule IDs yet.
+React Native and Expo use the React pack plus `rn-host-forwarding`, with slightly looser defaults for prop/provider forwarding and RN host primitive passthrough.
+
+### Next.js pack (shipped today)
+
+The `next` pack combines React rules with App Router and route-module checks:
+
+- **`server-client-boundary`**
+- **`route-handler-size`**
+- **`data-loader-sprawl`**
+
+### Node pack (shipped today)
+
+The `node` pack combines core rules with route ownership checks:
+
+- **`handler-depth`**
+- **`route-sprawl`**
 
 ### Maintainer packs
 
@@ -78,9 +97,9 @@ configuration — for example `propDrilling.ignoreComponents` — not in separat
 | Pack | Focus | Status |
 | --- | --- | --- |
 | `react` | Components, hooks, props, effects, providers, and Storybook usage | **Shipped** |
-| `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN threshold tuning) |
-| `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus API/barrel threshold tuning) |
-| `node` | Express/Fastify handlers, middleware depth, route sprawl | Planned |
+| `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN host forwarding) |
+| `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
+| `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
@@ -135,6 +154,12 @@ debtlens scan --pack core
 
 # React-focused subset
 debtlens scan --rules large-component,state-sprawl,effect-complexity,prop-drilling
+
+# Next.js App Router preset
+debtlens scan --pack next
+
+# Node API preset
+debtlens scan --pack node
 
 # Library-maintainer preset
 debtlens scan --pack oss-maintainer

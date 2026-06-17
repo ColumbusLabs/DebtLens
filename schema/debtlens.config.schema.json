@@ -39,6 +39,7 @@
         "react-native",
         "next",
         "expo",
+        "node",
         "ai-assisted-maintainer",
         "oss-maintainer"
       ],
@@ -57,6 +58,12 @@
               "effect-complexity",
               "hook-dependency-smell",
               "context-provider-sprawl",
+              "rn-host-forwarding",
+              "server-client-boundary",
+              "route-handler-size",
+              "data-loader-sprawl",
+              "handler-depth",
+              "route-sprawl",
               "duplicate-logic",
               "duplicated-literal",
               "dead-abstraction",
@@ -127,6 +134,42 @@
           "type": "number"
         },
         "context-provider-sprawl.maxProviders": {
+          "type": "number"
+        },
+        "rn-host-forwarding.maxForwardedProps": {
+          "type": "number"
+        },
+        "rn-host-forwarding.maxHostTargets": {
+          "type": "number"
+        },
+        "route-handler-size.maxLines": {
+          "type": "number"
+        },
+        "route-handler-size.maxBranches": {
+          "type": "number"
+        },
+        "route-handler-size.maxAwaits": {
+          "type": "number"
+        },
+        "data-loader-sprawl.maxAwaits": {
+          "type": "number"
+        },
+        "data-loader-sprawl.maxFetches": {
+          "type": "number"
+        },
+        "data-loader-sprawl.maxBranches": {
+          "type": "number"
+        },
+        "data-loader-sprawl.maxLines": {
+          "type": "number"
+        },
+        "handler-depth.maxDepth": {
+          "type": "number"
+        },
+        "handler-depth.maxMiddleware": {
+          "type": "number"
+        },
+        "route-sprawl.maxRoutes": {
           "type": "number"
         },
         "duplicate-logic.minSimilarity": {
@@ -225,6 +268,54 @@
           ]
         },
         "context-provider-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "rn-host-forwarding": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "server-client-boundary": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "route-handler-size": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "data-loader-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "handler-depth": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "route-sprawl": {
           "enum": [
             "info",
             "low",
@@ -352,6 +443,36 @@
           "maximum": 1
         },
         "context-provider-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rn-host-forwarding": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "server-client-boundary": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "route-handler-size": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "data-loader-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "handler-depth": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "route-sprawl": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

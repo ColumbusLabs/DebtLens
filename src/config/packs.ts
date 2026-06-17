@@ -28,6 +28,24 @@ const REACT_RULES = [
   "story-only-component",
 ] as const;
 
+const REACT_NATIVE_RULES = [
+  ...REACT_RULES,
+  "rn-host-forwarding",
+] as const;
+
+const NEXT_RULES = [
+  ...REACT_RULES,
+  "server-client-boundary",
+  "route-handler-size",
+  "data-loader-sprawl",
+] as const;
+
+const NODE_RULES = [
+  ...CORE_RULES,
+  "handler-depth",
+  "route-sprawl",
+] as const;
+
 const AI_ASSISTED_MAINTAINER_RULES = [
   "duplicate-logic",
   "duplicated-literal",
@@ -62,17 +80,18 @@ export const RULE_PACKS: Record<string, RulePack> = {
   },
   "react-native": {
     id: "react-native",
-    description: "React rule pack for React Native apps (same rules; tune via propDrilling config).",
-    rules: [...REACT_RULES],
+    description: "React rule pack for React Native apps with host-primitive forwarding signals.",
+    rules: [...REACT_NATIVE_RULES],
     thresholds: {
       "prop-drilling.maxForwardedProps": 5,
       "context-provider-sprawl.maxProviders": 5,
+      "rn-host-forwarding.maxForwardedProps": 6,
     },
   },
   next: {
     id: "next",
     description: "React rule pack for Next.js apps with App Router boundary signals.",
-    rules: [...REACT_RULES],
+    rules: [...NEXT_RULES],
     thresholds: {
       "api-surface-sprawl.maxExports": 14,
       "barrel-file.maxReExports": 8,
@@ -81,11 +100,21 @@ export const RULE_PACKS: Record<string, RulePack> = {
   expo: {
     id: "expo",
     description: "React Native pack tuned for Expo Router projects.",
-    rules: [...REACT_RULES],
+    rules: [...REACT_NATIVE_RULES],
     thresholds: {
       "prop-drilling.maxForwardedProps": 5,
       "context-provider-sprawl.maxProviders": 5,
       "barrel-file.maxReExports": 8,
+      "rn-host-forwarding.maxForwardedProps": 6,
+    },
+  },
+  node: {
+    id: "node",
+    description: "Core rules plus Express/Fastify route depth and route-count checks for Node APIs.",
+    rules: [...NODE_RULES],
+    thresholds: {
+      "handler-depth.maxDepth": 4,
+      "route-sprawl.maxRoutes": 8,
     },
   },
   "ai-assisted-maintainer": {

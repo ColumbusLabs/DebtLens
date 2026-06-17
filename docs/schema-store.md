@@ -6,7 +6,9 @@ DebtLens publishes its config schema at:
 https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json
 ```
 
-Until SchemaStore includes DebtLens, add `$schema` manually:
+Until SchemaStore includes DebtLens, add `$schema` manually. `debtlens init` writes this
+URL into new configs, so VS Code and other JSON-schema-aware editors get autocomplete
+without extra local settings:
 
 ```json
 {

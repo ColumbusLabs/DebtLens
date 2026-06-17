@@ -39,6 +39,24 @@ npm test
 npm run build
 ```
 
+## Rule review bar
+
+Maintainers should be able to review a detector without guessing its policy. A rule PR
+should include:
+
+- one true-positive fixture,
+- one near-miss or false-positive fixture that must stay quiet,
+- documented default thresholds and severity,
+- confidence scoring rationale,
+- reviewable evidence and a concrete suggestion,
+- docs in `docs/rules.md` and `docs/rule-packs.md`,
+- schema/template updates when new config keys are added,
+- calibration fixture updates when existing showcase or quality bounds change.
+
+For language or framework packs that need a new parser, start with an RFC-style doc before
+adding runtime dependencies. See [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md)
+for the Python and Vue parser evaluation pattern.
+
 ## Adding a rule
 
 1. Decide whether the rule belongs in the **core** pack or a **framework pack** (see
@@ -54,6 +72,8 @@ npm run build
 8. Add or update a calibration fixture when the rule changes cross-rule finding volume.
 9. Explain the confidence score and include reviewable evidence/suggestions.
 10. Check whether the rule affects baselines, SARIF, JSON schema examples, or showcase docs.
+11. If the rule will ship through a plugin or organization policy package, document the
+    package install and CI path (see [`docs/policy-packages.md`](./docs/policy-packages.md)).
 
 A detector must return issues with:
 

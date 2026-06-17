@@ -13,7 +13,8 @@ The product splits into layers:
 
 Today all built-in rules run together by default. Select a pack in config or use
 `debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config or
-`--rules` on the CLI override the pack.
+`--rules` on the CLI override the pack. Organization policy packages can layer plugins
+and presets on top of these built-ins; see [`policy-packages.md`](./policy-packages.md).
 
 ## Current built-in rules
 
@@ -113,7 +114,8 @@ The `node` pack combines core rules with route ownership checks:
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
 | `monorepo` | `--package` for single-level npm workspaces (`packages/*`); per-package configs planned | Partial ([#23](https://github.com/ColumbusLabs/DebtLens/issues/23)) |
 
-Vue and Svelte are planned JS framework packs. See [`ROADMAP.md`](../ROADMAP.md).
+Vue and Svelte are planned JS framework packs. See [`language-pack-rfc.md`](./language-pack-rfc.md)
+for the Vue parser recommendation and [`ROADMAP.md`](../ROADMAP.md) for sequencing.
 
 ## Future language packs
 
@@ -123,14 +125,14 @@ and (eventually) the plugin API ([#26](https://github.com/ColumbusLabs/DebtLens/
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, dead abstractions, TODO debt, naming drift | Django/Flask route sprawl (TBD) | Roadmap v0.4 |
+| **Python** | duplicate logic, dead abstractions, TODO debt, naming drift | Django/Flask route sprawl (TBD) | Parser recommendation documented; fixture in `examples/python/` |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 | **Kotlin** | same core patterns as Swift row | Jetpack Compose, Android UI layers | Direction |
 
 Each language needs its own parser/AST path (today the scanner uses `ts-morph` for TS/JS
 only). Rules that map well across languages — duplication, thin wrappers, deferred TODOs,
 naming inconsistency — ship first; framework-specific packs follow once core coverage is
-solid.
+solid. The current parser evaluation is captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
 
 These are intentional direction items, not near-term commitments. Discuss proposals in
 [GitHub Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) or open a

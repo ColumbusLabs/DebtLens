@@ -14,6 +14,7 @@ It is not an "AI code detector." It does not try to prove who wrote a line of co
 
 See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework packs**, and **language-agnostic reporting** fit together.
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
+For future Python, Vue, and multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
 ```bash
 npx debtlens scan
@@ -518,9 +519,28 @@ For example:
 jq '{schemaVersion: 1, label: "DebtLens", message: (.summary.totalIssues|tostring + " issues"), color: (if .summary.totalIssues == 0 then "brightgreen" elif .summary.bySeverity.high > 0 then "red" else "orange" end)}' debtlens-report.json > debtlens-badge.json
 ```
 
+For a stricter "0 new high debt" badge after `--baseline` or `--diff-base`, derive the
+message from the remaining high-severity issues in the filtered report:
+
+```bash
+jq '{
+  schemaVersion: 1,
+  label: "DebtLens",
+  message: (if [.issues[] | select(.severity == "high")] | length == 0 then "0 new high debt" else (([.issues[] | select(.severity == "high")] | length | tostring) + " new high") end),
+  color: (if [.issues[] | select(.severity == "high")] | length == 0 then "brightgreen" else "red" end)
+}' debtlens-report.json > debtlens-high-badge.json
+```
+
+Publish that JSON file from any static endpoint and use the Shields endpoint badge:
+
+```markdown
+![DebtLens](https://img.shields.io/endpoint?url=https://example.com/debtlens-high-badge.json)
+```
+
 Other CI templates: [GitLab](./docs/ci-gitlab.md), [Bitbucket](./docs/ci-bitbucket.md), and [Azure Pipelines](./docs/ci-azure.md).
 
 For local hooks, see [pre-commit hooks](./docs/pre-commit.md). For monorepo rollout, see [per-package baselines](./docs/monorepo-baselines.md).
+For shared organization policy, see [policy packs as npm packages](./docs/policy-packages.md). For hosted GitHub integration tradeoffs, see the [GitHub App RFC](./docs/github-app-rfc.md).
 
 Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`):
 
@@ -608,7 +628,8 @@ template, or the [plugin API RFC](./docs/plugin-api-rfc.md).
 
 Contribution paths: **core TS/JS rules**, **React pack rules**, **framework packs**
 (Next.js, RN, Node), **scanner/CI** (baselines, monorepos, inline suppressions), and
-**reporters**.
+**reporters**. New rule authors should follow the rule checklist in
+[CONTRIBUTING.md](./CONTRIBUTING.md#rule-review-bar).
 
 ## Development
 

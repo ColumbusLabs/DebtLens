@@ -176,6 +176,7 @@ Options:
 --cache [path]                 reuse unchanged scan results from a content-hash cache
 --parallel                     run detectors concurrently after source loading
 --batch-size <count>           load source files in bounded batches
+--blame-age                    add introducedDaysAgo metadata to JSON issues via git blame
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
@@ -257,6 +258,10 @@ When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns tha
 `debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
 
 Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
+
+Pass `--blame-age` to enrich JSON issues with optional `introducedDaysAgo` metadata from
+`git blame`. This is best-effort: outside git repositories, uncommitted lines, and staged
+blob scans omit the field without changing detector output or exit codes.
 
 ## Inline suppressions
 
@@ -476,7 +481,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 

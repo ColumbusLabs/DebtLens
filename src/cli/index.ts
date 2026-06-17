@@ -8,7 +8,7 @@ import { listRulePacks, RULE_PACK_IDS } from "../config/packs.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, applyBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
-import { getChangedFiles, getRefSnapshot, getStagedFiles } from "../utils/git.js";
+import { getChangedFiles, getLineIntroducedDaysAgo, getRefSnapshot, getStagedFiles } from "../utils/git.js";
 import { parseSeverity, severityRank } from "../core/severity.js";
 import type { DebtIssue, DebtLensConfig, Detector, OutputFormat, ScanOptions, ScanResult, ScanThresholds, Severity, TerminalGroupBy } from "../core/types.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
@@ -61,6 +61,7 @@ program.command("scan")
   .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
   .option("--parallel", "run detectors concurrently after source loading")
   .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
+  .option("--blame-age", "add introducedDaysAgo metadata to JSON issues using git blame")
   .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
   .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
   .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
@@ -168,6 +169,9 @@ program.command("scan")
         diffBase: rawOptions.diffBase ? String(rawOptions.diffBase) : undefined,
         scanOptions: options,
       });
+      if (rawOptions.blameAge === true) {
+        enrichIssuesWithBlameAge(cwd, options, reported);
+      }
 
       const report = renderReport(reported, format, {
         color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
@@ -559,6 +563,28 @@ function shouldFailOnRegression(result: ScanResult): boolean {
   if (delta.severityRegressions > 0) return true;
   if (!delta.hasBaselineSummary) return false;
   return Object.values(delta.byRule).some((ruleDelta) => ruleDelta.delta > 0);
+}
+
+function enrichIssuesWithBlameAge(cwd: string, options: ScanOptions, result: ScanResult): void {
+  if (options.fileContents) return;
+
+  let warnedNotGit = false;
+  for (const issue of result.issues) {
+    const line = issue.location?.startLine;
+    if (line === undefined) continue;
+    const issuePath = resolve(options.target, issue.file);
+    const introducedDaysAgo = getLineIntroducedDaysAgo(cwd, issuePath, line);
+    if (introducedDaysAgo === null) {
+      if (!warnedNotGit) {
+        process.stderr.write("DebtLens: --blame-age ignored (not a git repository).\n");
+        warnedNotGit = true;
+      }
+      return;
+    }
+    if (introducedDaysAgo !== undefined) {
+      issue.introducedDaysAgo = introducedDaysAgo;
+    }
+  }
 }
 
 function parseFormat(value: string): OutputFormat {

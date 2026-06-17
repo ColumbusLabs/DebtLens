@@ -644,6 +644,69 @@ describe("debtlens scan git modes", () => {
     }
   });
 
+  it("adds optional git blame age metadata to JSON findings", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-blame-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO committed marker\nexport const value = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--blame-age", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(typeof parsed.issues[0].introducedDaysAgo, "number");
+      assert.ok(parsed.issues[0].introducedDaysAgo >= 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves blame age when findings are relative to a scanned subdirectory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-blame-subdir-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO subdir marker\nexport const value = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan(["src", "--cwd", dir, "--rules", "todo-comment", "--blame-age", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.issues[0].file, "Widget.ts");
+      assert.equal(typeof parsed.issues[0].introducedDaysAgo, "number");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores blame age enrichment outside git repositories", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-blame-plain-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO plain marker\nexport const value = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--blame-age", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stderr, /--blame-age ignored \(not a git repository\)/);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].introducedDaysAgo, undefined);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("supports opt-in gitignore filtering", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-gitignore-"));
     try {

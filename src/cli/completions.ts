@@ -32,6 +32,7 @@ const scanFlags = [
   "--cache",
   "--parallel",
   "--batch-size",
+  "--blame-age",
   "--group-by",
   "--sarif-compact",
   "--markdown-heatmap",

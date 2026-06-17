@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getChangedFiles, getIgnoredFiles, getRefSnapshot, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
+import { getChangedFiles, getIgnoredFiles, getLineIntroducedDaysAgo, getRefSnapshot, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
 
 function git(cwd: string, args: string[]): void {
   execFileSync("git", args, { cwd, stdio: "ignore" });
@@ -38,6 +38,7 @@ describe("git changed-files", () => {
     assert.equal(getChangedFiles(plain), null);
     assert.equal(getIgnoredFiles(plain, []), null);
     assert.equal(getStagedFiles(plain), null);
+    assert.equal(getLineIntroducedDaysAgo(plain, "src/file.ts", 1), null);
     rmSync(plain, { recursive: true, force: true });
   });
 
@@ -103,5 +104,19 @@ describe("git changed-files", () => {
     assert.ok(snapshot.files.some((file) => file.endsWith("src/committed.ts")));
     const committedPath = snapshot.files.find((file) => file.endsWith("src/committed.ts"));
     assert.equal(snapshot.contents?.[committedPath!], "export const a = 1;\n");
+  });
+
+  it("reports whole-day blame age for committed lines", () => {
+    const age = getLineIntroducedDaysAgo(dir, "src/committed.ts", 1);
+
+    assert.equal(typeof age, "number");
+    assert.ok((age ?? -1) >= 0);
+  });
+
+  it("reports blame age when cwd is inside a work tree subdirectory", () => {
+    const age = getLineIntroducedDaysAgo(join(dir, "src"), join(dir, "src", "committed.ts"), 1);
+
+    assert.equal(typeof age, "number");
+    assert.ok((age ?? -1) >= 0);
   });
 });

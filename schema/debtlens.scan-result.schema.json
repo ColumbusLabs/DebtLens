@@ -65,6 +65,10 @@
           "file": {
             "type": "string"
           },
+          "introducedDaysAgo": {
+            "type": "integer",
+            "minimum": 0
+          },
           "location": {
             "type": "object",
             "additionalProperties": false,
@@ -193,6 +197,10 @@
               },
               "file": {
                 "type": "string"
+              },
+              "introducedDaysAgo": {
+                "type": "integer",
+                "minimum": 0
               },
               "location": {
                 "type": "object",

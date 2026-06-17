@@ -194,6 +194,55 @@ export function getIgnoredFiles(cwd: string, files: string[]): Set<string> | nul
   );
 }
 
+/**
+ * Return the age in whole days of the commit that introduced `line` in `file`.
+ * Returns `null` outside git repos and `undefined` when the line cannot be blamed,
+ * including uncommitted "Not Committed Yet" blame records.
+ */
+export function getLineIntroducedDaysAgo(
+  cwd: string,
+  file: string,
+  line: number,
+  nowMs = Date.now(),
+): number | null | undefined {
+  if (!isGitRepo(cwd)) return null;
+  if (!Number.isInteger(line) || line < 1) return undefined;
+
+  let root: string;
+  let blamePath = file;
+  try {
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
+    const relativePath = relative(root, canonicalize(resolve(file))).replaceAll("\\", "/");
+    if (relativePath && !relativePath.startsWith("..")) {
+      blamePath = relativePath;
+    }
+  } catch {
+    return null;
+  }
+
+  let output = "";
+  try {
+    output = gitRaw(root, ["blame", "--line-porcelain", "-L", `${line},${line}`, "--", blamePath]);
+  } catch {
+    return undefined;
+  }
+
+  const firstLine = output.split("\n")[0] ?? "";
+  if (/^0{40}\s/.test(firstLine)) return undefined;
+
+  const authorTime = output
+    .split("\n")
+    .find((entry) => entry.startsWith("author-time "))
+    ?.slice("author-time ".length);
+  if (!authorTime) return undefined;
+
+  const introducedMs = Number(authorTime) * 1000;
+  if (!Number.isFinite(introducedMs)) return undefined;
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.floor((nowMs - introducedMs) / dayMs));
+}
+
 function canonicalize(path: string): string {
   try {
     return realpathSync.native(path);

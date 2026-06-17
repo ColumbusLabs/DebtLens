@@ -22,6 +22,8 @@ export interface DebtIssue {
   message: string;
   file: string;
   location?: IssueLocation;
+  /** Optional git blame age in whole days for the finding start line. */
+  introducedDaysAgo?: number;
   evidence?: string[];
   suggestion?: string;
   tags: string[];

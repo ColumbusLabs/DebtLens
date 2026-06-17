@@ -19,6 +19,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
       confidence: { type: "number", minimum: 0, maximum: 1 },
       message: { type: "string" },
       file: { type: "string" },
+      introducedDaysAgo: { type: "integer", minimum: 0 },
       location: {
         type: "object",
         additionalProperties: false,

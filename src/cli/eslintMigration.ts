@@ -12,6 +12,12 @@ export function suggestConfigFromEslint(cwd: string, configPath: string): string
   if (!existsSync(absolutePath)) {
     throw new Error(`ESLint config not found at ${absolutePath}.`);
   }
+  if (!absolutePath.endsWith(".json")) {
+    throw new Error(
+      `ESLint migration supports JSON configs only (.json); received "${configPath}". ` +
+      "Point --from-eslint at .eslintrc.json or eslint.config.json.",
+    );
+  }
 
   const parsed = JSON.parse(readFileSync(absolutePath, "utf8")) as EslintConfigLike | EslintConfigLike[];
   const rules = mergeEslintRules(Array.isArray(parsed) ? parsed : [parsed]);

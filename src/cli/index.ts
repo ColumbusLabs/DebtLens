@@ -635,7 +635,10 @@ function shouldFailOnRegression(result: ScanResult): boolean {
 }
 
 function enrichIssuesWithBlameAge(cwd: string, options: ScanOptions, result: ScanResult): void {
-  if (options.fileContents) return;
+  if (options.fileContents) {
+    process.stderr.write("DebtLens: --blame-age ignored when scanning staged blob contents.\n");
+    return;
+  }
 
   let warnedNotGit = false;
   for (const issue of result.issues) {
@@ -648,7 +651,7 @@ function enrichIssuesWithBlameAge(cwd: string, options: ScanOptions, result: Sca
         process.stderr.write("DebtLens: --blame-age ignored (not a git repository).\n");
         warnedNotGit = true;
       }
-      return;
+      break;
     }
     if (introducedDaysAgo !== undefined) {
       issue.introducedDaysAgo = introducedDaysAgo;

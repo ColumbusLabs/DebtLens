@@ -3,6 +3,8 @@ import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, Source
 import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
 export interface RunDetectorOptions {
+  /** Absolute scan target for detectors that read config from disk. */
+  target?: string;
   /** Threshold overrides, e.g. `{ "state-sprawl.maxStatefulHooks": 6 }`. */
   thresholds?: ScanThresholds;
   /** Minimum severity passed through on the synthetic ScanOptions. */
@@ -58,7 +60,7 @@ export async function runDetector(
   const thresholds = options.thresholds ?? {};
   const scanOptions: ScanOptions = {
     cwd: "/",
-    target: ".",
+    target: options.target ?? ".",
     include: [],
     exclude: [],
     minSeverity: options.minSeverity ?? "info",

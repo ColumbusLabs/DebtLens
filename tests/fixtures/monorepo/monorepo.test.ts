@@ -49,6 +49,25 @@ describe("workspace package resolution", () => {
       /Workspace package "missing" not found\. Available: api-service, ui-lib, web-app/,
     );
   });
+
+  it("reads pnpm-workspace.yaml package globs via the yaml parser", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-pnpm-yaml-"));
+    try {
+      mkdirSync(join(dir, "packages", "alpha"), { recursive: true });
+      mkdirSync(join(dir, "packages", "beta"), { recursive: true });
+      writeFileSync(join(dir, "pnpm-workspace.yaml"), `packages:
+  - "packages/*"
+  - '!packages/ignored'
+`, "utf8");
+      writeFileSync(join(dir, "packages", "alpha", "package.json"), JSON.stringify({ name: "alpha" }), "utf8");
+      writeFileSync(join(dir, "packages", "beta", "package.json"), JSON.stringify({ name: "beta" }), "utf8");
+
+      const packages = listWorkspacePackages(dir);
+      assert.deepEqual(packages.map((pkg) => pkg.name), ["alpha", "beta"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("monorepo scan --package", () => {

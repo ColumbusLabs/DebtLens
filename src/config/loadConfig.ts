@@ -70,6 +70,9 @@ export function mergeDebtLensConfig(base: DebtLensConfig, override: DebtLensConf
   return stripUndefined({
     ...base,
     ...override,
+    include: mergeStringArrays(base.include, override.include),
+    exclude: mergeStringArrays(base.exclude, override.exclude),
+    rules: mergeStringArrays(base.rules, override.rules),
     thresholds: mergeRecord(base.thresholds, override.thresholds),
     vocabulary: mergeRecord(base.vocabulary, override.vocabulary),
     propDrilling: mergeRecord(base.propDrilling, override.propDrilling),
@@ -78,6 +81,15 @@ export function mergeDebtLensConfig(base: DebtLensConfig, override: DebtLensConf
     ruleSeverities: mergeRecord(base.ruleSeverities, override.ruleSeverities),
     ruleConfidenceFloors: mergeRecord(base.ruleConfidenceFloors, override.ruleConfidenceFloors),
   });
+}
+
+function mergeStringArrays(base?: string[], override?: string[]): string[] | undefined {
+  if (!base?.length && !override?.length) return undefined;
+  return unique([...(base ?? []), ...(override ?? [])]);
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 export function loadConfigAtPath(configPath: string): DebtLensConfig {

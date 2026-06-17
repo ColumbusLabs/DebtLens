@@ -7,8 +7,25 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Changed
 
+- **Package config merge** now union-merges `include`, `exclude`, and `rules` arrays when
+  `--package` overlays a workspace package config on the repo root.
+- **Scan cache writes** use a temp file plus atomic rename so interrupted writes cannot
+  truncate `.debtlens/cache.json`.
+- **`config-drift` filesystem discovery** is capped by the `config-drift.maxConfigFiles`
+  threshold (default 200) when globbing JSON configs from the scan target.
+- **pnpm workspace discovery** parses `pnpm-workspace.yaml` with the `yaml` package instead
+  of a hand-rolled line parser.
 - Consolidated shared Next.js surface helpers and string utilities used by multiple
   detectors (no user-facing behavior change).
+
+### Fixed
+
+- **`--blame-age` with `--staged`** now warns that blame metadata is unavailable for staged
+  blob scans instead of failing silently.
+- **`--blame-age` outside git repos** uses `break` instead of `return` when blame lookup fails
+  so enrichment does not exit the surrounding scan handler early.
+- **`debtlens init --from-eslint`** rejects non-`.json` ESLint config paths with a clear
+  migration error.
 
 ### Added
 

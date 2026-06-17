@@ -18,8 +18,9 @@ export const configDriftDetector: Detector = {
   tags: ["config", "maintainability", "monorepo"],
   detect(context: DetectorContext): DebtIssue[] {
     const values = new Map<string, DriftValue[]>();
+    const maxConfigFiles = context.getThreshold("config-drift.maxConfigFiles", 200);
 
-    for (const file of collectConfigFiles(context)) {
+    for (const file of collectConfigFiles(context, maxConfigFiles)) {
       const parsed = parseJsonConfig(file.relativePath, file.content);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
       collectPackageScripts(values, file.relativePath, parsed);
@@ -58,7 +59,10 @@ function isJsonConfig(path: string): boolean {
     || name === "eslint.config.json";
 }
 
-function collectConfigFiles(context: DetectorContext): Array<Pick<SourceFileInfo, "relativePath" | "content">> {
+function collectConfigFiles(
+  context: DetectorContext,
+  maxConfigFiles: number,
+): Array<Pick<SourceFileInfo, "relativePath" | "content">> {
   const existing = context.files
     .filter((file) => isJsonConfig(file.relativePath))
     .map((file) => ({ relativePath: file.relativePath, content: file.content }));
@@ -75,7 +79,7 @@ function collectConfigFiles(context: DetectorContext): Array<Pick<SourceFileInfo
         ignore: context.options.exclude,
         dot: true,
         unique: true,
-      });
+      }).slice(0, maxConfigFiles);
 
   for (const absolutePath of absolutePaths) {
     const relativePath = stats.isFile()

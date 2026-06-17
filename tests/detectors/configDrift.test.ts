@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { configDriftDetector } from "../../src/detectors/configDrift.js";
 import { runDetector } from "../helpers/runDetector.js";
@@ -44,5 +47,29 @@ describe("config-drift detector", () => {
 
     assert.equal(issues.length, 1);
     assert.match(issues[0]?.message ?? "", /compilerOptions\.strict/);
+  });
+
+  it("scopes filesystem config discovery to config-drift.maxConfigFiles", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-config-drift-scope-"));
+    try {
+      for (let index = 0; index < 4; index += 1) {
+        const packageDir = join(dir, `packages/pkg-${index}`);
+        mkdirSync(packageDir, { recursive: true });
+        writeFileSync(join(packageDir, "package.json"), JSON.stringify({
+          scripts: { build: index % 2 === 0 ? "vite build" : "next build" },
+        }), "utf8");
+      }
+
+      const issues = await runDetector(configDriftDetector, {}, {
+        target: dir,
+        thresholds: { "config-drift.maxConfigFiles": 2 },
+      });
+
+      assert.equal(issues.length, 1);
+      assert.match(issues[0]?.message ?? "", /scripts\.build/);
+      assert.equal(issues[0]?.evidence?.length, 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

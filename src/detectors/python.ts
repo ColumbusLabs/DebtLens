@@ -3,6 +3,7 @@ import { buildDuplicateLogicCandidatePairs } from "./duplicateLogic.js";
 import { resolveTodoCommentPatterns } from "./todoComment.js";
 import { createIssue } from "../utils/createIssue.js";
 import { jaccard, shingle } from "../utils/similarity.js";
+import { containsTrackerLink } from "../utils/strings.js";
 
 interface PythonFunction {
   name: string;
@@ -271,13 +272,6 @@ function fingerprintPython(normalized: string): Map<string, number> {
 
 function indentation(line: string): number {
   return line.match(/^\s*/)?.[0].length ?? 0;
-}
-
-function containsTrackerLink(line: string): boolean {
-  return /\b[A-Z][A-Z0-9]+-\d+\b/.test(line)
-    || /\b(?:issue|ticket|bug|gh|github)\s*#?\d+\b/i.test(line)
-    || /(?:^|[\s([#])#\d+\b/.test(line)
-    || /https?:\/\/\S+\b(?:issues|browse|tickets?)\/\d+\b/i.test(line);
 }
 
 const pythonKeywords = new Set([

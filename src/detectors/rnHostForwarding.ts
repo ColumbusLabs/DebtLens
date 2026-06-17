@@ -3,32 +3,9 @@ import type { Node as MorphNode, SourceFile } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
 import { collectFunctionLikes, getFunctionBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
+import { HOST_COMPONENTS } from "../utils/hostComponents.js";
 import { nodeLineSpan } from "../utils/lines.js";
-
-const RN_HOST_COMPONENTS = new Set([
-  "View",
-  "Text",
-  "Pressable",
-  "FlatList",
-  "SectionList",
-  "VirtualizedList",
-  "TextInput",
-  "Image",
-  "ImageBackground",
-  "ScrollView",
-  "SafeAreaView",
-  "KeyboardAvoidingView",
-  "TouchableOpacity",
-  "TouchableHighlight",
-  "TouchableWithoutFeedback",
-  "TouchableNativeFeedback",
-  "Switch",
-  "Modal",
-  "ActivityIndicator",
-  "Button",
-  "RefreshControl",
-  "StatusBar",
-]);
+import { escapeRegExp } from "../utils/strings.js";
 
 const RN_MODULES = new Set([
   "react-native",
@@ -144,7 +121,7 @@ function collectReactNativeImports(sourceFile: SourceFile): ReactNativeImports {
 
     for (const specifier of declaration.getNamedImports()) {
       const importedName = specifier.getName();
-      if (!RN_HOST_COMPONENTS.has(importedName)) continue;
+      if (!HOST_COMPONENTS.has(importedName)) continue;
       hostLocals.add(specifier.getAliasNode()?.getText() ?? importedName);
     }
   }
@@ -162,7 +139,7 @@ function isReactNativeHostTag(tagName: string, imports: ReactNativeImports): boo
   const base = parts.at(-1);
   return Boolean(
     base
-    && RN_HOST_COMPONENTS.has(base)
+    && HOST_COMPONENTS.has(base)
     && (imports.namespaces.has(root) || imports.hostLocals.has(root)),
   );
 }
@@ -260,8 +237,4 @@ function hasPropSources(propSources: PropSources): boolean {
   return propSources.directNames.size > 0
     || propSources.propObjectNames.size > 0
     || propSources.restNames.size > 0;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

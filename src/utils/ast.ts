@@ -183,6 +183,24 @@ export function getSourceFileLine(sourceFile: SourceFile, lineNumber: number): s
  * that ignores identifier and literal values. Two functions that share control-flow
  * and call shape produce similar fingerprints even when every name differs.
  */
+export function computeMaxControlDepth(
+  node: MorphNode,
+  isNestingNode: (current: MorphNode) => boolean,
+): number {
+  let maxDepth = 0;
+
+  const visit = (current: MorphNode, depth: number) => {
+    const nextDepth = isNestingNode(current) ? depth + 1 : depth;
+    maxDepth = Math.max(maxDepth, nextDepth);
+    for (const child of current.getChildren()) {
+      visit(child, nextDepth);
+    }
+  };
+
+  visit(node, 0);
+  return maxDepth;
+}
+
 export function structuralFingerprint(node: MorphNode): Map<string, number> {
   const counts = new Map<string, number>();
   const bump = (token: string) => counts.set(token, (counts.get(token) ?? 0) + 1);

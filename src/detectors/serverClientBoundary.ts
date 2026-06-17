@@ -2,6 +2,7 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { CallExpression } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
+import { hasUseClientDirective, isLikelyNextServerComponentFile, normalizePath } from "../utils/nextSurface.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
 const CLIENT_ONLY_HOOKS = new Set([
@@ -101,18 +102,6 @@ export const serverClientBoundaryDetector: Detector = {
   },
 };
 
-function hasUseClientDirective(file: SourceFileInfo): boolean {
-  for (const statement of file.sourceFile.getStatements()) {
-    if (!Node.isExpressionStatement(statement)) return false;
-    const expression = statement.getExpression();
-    if (!Node.isStringLiteral(expression)) return false;
-    if (expression.getLiteralText() === "use client") return true;
-    if (expression.getLiteralText() !== "use strict") return false;
-  }
-
-  return false;
-}
-
 function collectServerOnlyImports(file: SourceFileInfo): Array<{ moduleName: string; location: { startLine: number; endLine: number } }> {
   const imports: Array<{ moduleName: string; location: { startLine: number; endLine: number } }> = [];
 
@@ -133,19 +122,6 @@ function isServerOnlyModule(moduleName: string): boolean {
   if (SERVER_ONLY_IMPORTS.has(moduleName)) return true;
   if (moduleName.startsWith("node:")) return SERVER_ONLY_IMPORTS.has(moduleName.slice("node:".length));
   return false;
-}
-
-function isLikelyNextServerComponentFile(file: SourceFileInfo): boolean {
-  const path = normalizePath(file.relativePath);
-  if (!/\.[jt]sx$/.test(path)) return false;
-  if (!/(^|\/)app\//.test(path)) return false;
-  if (/(^|\/)app\/.*\/route\.[jt]sx?$/.test(path)) return false;
-
-  return file.sourceFile.getDescendants().some((node) =>
-    node.getKind() === SyntaxKind.JsxElement
-    || node.getKind() === SyntaxKind.JsxSelfClosingElement
-    || node.getKind() === SyntaxKind.JsxFragment,
-  );
 }
 
 function collectClientHookCalls(file: SourceFileInfo): Array<{ hookName: string; location: { startLine: number; endLine: number } }> {
@@ -173,8 +149,4 @@ function getClientHookName(call: CallExpression): string | undefined {
       : undefined;
 
   return name && CLIENT_ONLY_HOOKS.has(name) ? name : undefined;
-}
-
-function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/");
 }

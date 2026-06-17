@@ -5,6 +5,11 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Consolidated shared Next.js surface helpers and string utilities used by multiple
+  detectors (no user-facing behavior change).
+
 ### Added
 
 - **`debtlens explain <rule>`** command printing rule docs, default thresholds, and

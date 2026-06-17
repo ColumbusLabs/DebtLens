@@ -1,7 +1,7 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { Node as MorphNode } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
-import { collectFunctionLikes, getFunctionBody } from "../utils/ast.js";
+import { collectFunctionLikes, computeMaxControlDepth, getFunctionBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
@@ -21,7 +21,7 @@ export const complexControlFlowDetector: Detector = {
         const body = getFunctionBody(fn.node);
         if (!body) continue;
         const complexity = computeCyclomaticComplexity(body);
-        const depth = computeMaxControlDepth(body);
+        const depth = computeMaxControlDepth(body, isControlNode);
         if (complexity < maxComplexity && depth < maxDepth) continue;
         const span = nodeLineSpan(body);
         const overage = Math.max(complexity / maxComplexity, depth / maxDepth);
@@ -70,19 +70,6 @@ function computeCyclomaticComplexity(node: MorphNode): number {
     }
   }
   return score;
-}
-
-function computeMaxControlDepth(node: MorphNode): number {
-  let maxDepth = 0;
-  const visit = (current: MorphNode, depth: number) => {
-    const nextDepth = isControlNode(current) ? depth + 1 : depth;
-    maxDepth = Math.max(maxDepth, nextDepth);
-    for (const child of current.getChildren()) {
-      visit(child, nextDepth);
-    }
-  };
-  visit(node, 0);
-  return maxDepth;
 }
 
 function isControlNode(node: MorphNode): boolean {

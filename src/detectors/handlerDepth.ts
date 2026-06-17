@@ -1,7 +1,9 @@
 import { Node, SyntaxKind } from "ts-morph";
 import type { CallExpression, Node as MorphNode } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
+import { computeMaxControlDepth } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
+import { isRoutePathArgument } from "../utils/nextSurface.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
 const ROUTE_METHODS = new Set(["get", "post", "put", "patch", "delete", "del", "head", "options", "all", "use"]);
@@ -25,7 +27,7 @@ export const handlerDepthDetector: Detector = {
 
     for (const file of context.files) {
       for (const candidate of collectHandlerCandidates(file.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression))) {
-        const depth = maxControlDepth(candidate.body);
+        const depth = computeMaxControlDepth(candidate.body, isNestingNode);
         const nestedCallbacks = nestedCallbackCount(candidate.body);
         const middlewareCount = candidate.method === "use" ? countMiddlewareArguments(candidate.body) : 0;
         const overDepth = depth >= maxDepth;
@@ -84,21 +86,6 @@ function collectHandlerCandidates(calls: CallExpression[]): HandlerCandidate[] {
   return candidates;
 }
 
-function maxControlDepth(node: MorphNode): number {
-  let maxDepth = 0;
-
-  const visit = (current: MorphNode, depth: number) => {
-    const nextDepth = isNestingNode(current) ? depth + 1 : depth;
-    maxDepth = Math.max(maxDepth, nextDepth);
-    for (const child of current.getChildren()) {
-      visit(child, nextDepth);
-    }
-  };
-
-  visit(node, 0);
-  return maxDepth;
-}
-
 function nestedCallbackCount(node: MorphNode): number {
   let maxDepth = 0;
 
@@ -131,10 +118,4 @@ function isNestingNode(node: MorphNode): boolean {
     || kind === SyntaxKind.SwitchStatement
     || kind === SyntaxKind.TryStatement
     || kind === SyntaxKind.CatchClause;
-}
-
-function isRoutePathArgument(node: MorphNode): boolean {
-  return Node.isStringLiteral(node)
-    || Node.isNoSubstitutionTemplateLiteral(node)
-    || Node.isRegularExpressionLiteral(node);
 }

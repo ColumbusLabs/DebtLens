@@ -112,7 +112,7 @@ DEBTLENS_BENCHMARK_BUDGET_SMALL_MS=7500 npm run benchmark:ci
 npm run benchmark -- --budget small=7500 --budget medium=45000
 ```
 
-Per-rule timing is available via `--profile` in [PR #62](https://github.com/ColumbusLabs/DebtLens/pull/62) once merged.
+Per-rule timing is available with `--profile`; CI can keep the raw timings in the canonical JSON report artifact.
 
 ## Install
 
@@ -436,7 +436,7 @@ debtlens scan --group-by rule
 
 ## GitHub Action
 
-Run DebtLens on pull requests and surface findings as code-scanning annotations. Version tags such as `@v0` and `@v0.3.0` are intended to contain the built `dist/` Action runtime; source checkouts build as a fallback when `dist/cli/index.js` is missing.
+Run DebtLens on pull requests and surface findings as code-scanning annotations. Pin version tags such as `@v0.3.0` when you want repeatable CI; moving tags such as `@v0` track the latest compatible v0 release. Versioned releases attach a self-contained Action runtime asset so tagged Action runs can skip the source build path; source checkouts build as a fallback when the release asset or `dist/cli/index.js` is missing.
 
 ```yaml
 name: DebtLens
@@ -453,7 +453,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # needed for --changed to diff against the base branch
-      - uses: ColumbusLabs/debtlens@v0
+      - uses: ColumbusLabs/debtlens@v0.3.0
         with:
           changed: origin/${{ github.base_ref }}
           format: sarif

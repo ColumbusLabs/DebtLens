@@ -34,7 +34,7 @@ inputs:
     description: Compare against a git ref and report only introduced findings.
     default: ""
   pack:
-    description: Built-in rule pack preset (core, react, react-native, next).
+    description: Built-in rule pack preset (core, react, react-native, next, expo, node, ai-assisted-maintainer, oss-maintainer).
     default: ""
   package:
     description: Workspace package name to scan.
@@ -112,11 +112,10 @@ runs:
     - name: Prepare DebtLens runtime
       shell: bash
       working-directory: ${{ github.action_path }}
-      run: |
-        if [ ! -f dist/cli/index.js ]; then
-          npm ci
-          npm run build
-        fi
+      env:
+        DL_ACTION_REF: ${{ github.action_ref }}
+        DL_ACTION_REPOSITORY: ${{ github.action_repository }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/prepare-action-runtime.sh"
     - name: Run DebtLens scan
       id: scan
       shell: bash

@@ -7,6 +7,8 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Changed
 
+- GitHub Action JSON artifact upload is now opt-in (`upload-json-artifact` defaults to
+  `false`).
 - **CLI layout** splits the monolithic `src/cli/index.ts` into per-command modules under
   `src/cli/commands/`, shared parsers in `src/cli/parse.ts`, and scan pipeline helpers in
   `src/cli/scanPipeline.ts` (no user-facing behavior change).
@@ -41,6 +43,11 @@ All notable changes to DebtLens are documented here. This project adheres to
   packages without changing the server process directory.
 - **`--diff-base` with `--package`** now compares only files inside the selected
   workspace package instead of the entire repository snapshot.
+
+### Security
+
+- Tagged Action runtime downloads verify the published `debtlens-action-dist.tgz.sha256`
+  checksum before extraction and fail closed when the checksum file is missing or mismatched.
 
 ### Added
 

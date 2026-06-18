@@ -21,6 +21,7 @@ describe("Action runtime bootstrap", () => {
     const fakeBin = join(root, "bin");
     const marker = join(root, "npm-called");
     const tarball = join(root, "debtlens-action-dist.tgz");
+    const checksum = join(root, "debtlens-action-dist.tgz.sha256");
 
     mkdirSync(join(actionPath, "scripts"), { recursive: true });
     mkdirSync(runnerTemp, { recursive: true });
@@ -34,6 +35,16 @@ describe("Action runtime bootstrap", () => {
       encoding: "utf8",
     });
     assert.equal(tarResult.status, 0, tarResult.stderr);
+    const checksumResult = spawnSync(
+      "shasum",
+      ["-a", "256", "-b", tarball],
+      { encoding: "utf8" },
+    );
+    assert.equal(checksumResult.status, 0, checksumResult.stderr);
+    writeFileSync(
+      checksum,
+      checksumResult.stdout.replace(tarball, "debtlens-action-dist.tgz"),
+    );
 
     const curlShim = join(fakeBin, "curl");
     writeFileSync(
@@ -41,14 +52,21 @@ describe("Action runtime bootstrap", () => {
       `#!/usr/bin/env bash
 set -euo pipefail
 out=""
+url=""
 while [ "$#" -gt 0 ]; do
   if [ "$1" = "-o" ]; then
     shift
     out="$1"
+  else
+    url="$1"
   fi
   shift || true
 done
-cp "$TEST_RELEASE_TARBALL" "$out"
+if [[ "$url" == *.sha256 ]]; then
+  cp "$TEST_RELEASE_CHECKSUM" "$out"
+else
+  cp "$TEST_RELEASE_TARBALL" "$out"
+fi
 `,
     );
     chmodSync(curlShim, 0o755);
@@ -74,6 +92,7 @@ exit 42
         DL_ACTION_REF: "v0.3.0",
         DL_ACTION_REPOSITORY: "ColumbusLabs/DebtLens",
         TEST_RELEASE_TARBALL: tarball,
+        TEST_RELEASE_CHECKSUM: checksum,
         TEST_NPM_MARKER: marker,
       },
     });

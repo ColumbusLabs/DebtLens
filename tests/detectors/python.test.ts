@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
 import { getRulePack } from "../../src/config/packs.js";
 import { scan } from "../../src/core/scan.js";
+import {
+  pythonDeadAbstractionDetector,
+  pythonDuplicateLogicDetector,
+  pythonTodoCommentDetector,
+} from "../../src/detectors/python/index.js";
 import { renderReport } from "../../src/reporters/index.js";
+import { runDetector } from "../helpers/runDetector.js";
 
 function pythonScan(target: string, rules = getRulePack("python").rules) {
   return scan({
@@ -34,8 +38,26 @@ describe("python language pack", () => {
   });
 
   it("renders valid SARIF for Python findings", async () => {
-    const result = await pythonScan("examples/python/src/service.py", ["python-todo-comment"]);
-    const sarif = JSON.parse(renderReport(result, "sarif")) as {
+    const issues = await runDetector(pythonTodoCommentDetector, {
+      "service.py": `
+def build_invoice_view(invoice):
+    # TODO(PROJ-42): replace sample renderer with the real billing formatter.
+    return f"{invoice['id']}:{invoice['customer']}"
+`,
+    });
+    const sarif = JSON.parse(renderReport({
+      schemaVersion: 1,
+      issues,
+      summary: {
+        totalIssues: issues.length,
+        bySeverity: { info: 0, low: issues.length, medium: 0, high: 0 },
+        byRule: { "python-todo-comment": issues.length },
+        filesScanned: 1,
+        rulesRun: 1,
+        elapsedMs: 1,
+      },
+      options: { target: ".", include: ["**/*.py"], exclude: [], minSeverity: "info", rules: ["python-todo-comment"] },
+    }, "sarif")) as {
       version: string;
       runs: Array<{ results: Array<{ locations: Array<{ physicalLocation: { artifactLocation: { uri: string } } }> }> }>;
     };
@@ -45,10 +67,8 @@ describe("python language pack", () => {
   });
 
   it("does not flag dissimilar Python functions as duplicate logic", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "debtlens-python-"));
-    try {
-      mkdirSync(join(dir, "src"), { recursive: true });
-      writeFileSync(join(dir, "src", "service.py"), `
+    const issues = await runDetector(pythonDuplicateLogicDetector, {
+      "src/service.py": `
 def parse_invoice(invoice):
     total = 0
     for line in invoice["lines"]:
@@ -64,21 +84,15 @@ def format_customer(customer):
     if customer.get("last"):
         parts.append(customer["last"])
     return " ".join(parts)
-`, "utf8");
+`,
+    });
 
-      const result = await pythonScan(dir, ["python-duplicate-logic"]);
-
-      assert.equal(result.summary.totalIssues, 0);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    assert.equal(issues.length, 0);
   });
 
   it("detects async def functions and skips decorator lines when parsing bodies", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "debtlens-python-"));
-    try {
-      mkdirSync(join(dir, "src"), { recursive: true });
-      writeFileSync(join(dir, "src", "service.py"), `
+    const issues = await runDetector(pythonDeadAbstractionDetector, {
+      "src/service.py": `
 @router.get("/items")
 async def list_items(session):
     return await fetch_items(session)
@@ -86,34 +100,24 @@ async def list_items(session):
 
 async def load_items(session):
     return await fetch_items(session)
-`, "utf8");
+`,
+    });
 
-      const result = await pythonScan(dir, ["python-dead-abstraction"]);
-
-      assert.equal(result.summary.totalIssues, 2);
-      assert.ok(result.issues.some((issue) => issue.message.includes("list_items")));
-      assert.ok(result.issues.some((issue) => issue.message.includes("load_items")));
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    assert.equal(issues.length, 2);
+    assert.ok(issues.some((issue) => issue.message.includes("list_items")));
+    assert.ok(issues.some((issue) => issue.message.includes("load_items")));
   });
 
   it("does not flag Python wrappers that add behavior", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "debtlens-python-"));
-    try {
-      mkdirSync(join(dir, "src"), { recursive: true });
-      writeFileSync(join(dir, "src", "service.py"), `
+    const issues = await runDetector(pythonDeadAbstractionDetector, {
+      "src/service.py": `
 def render_invoice(invoice):
     enriched = dict(invoice)
     enriched["rendered"] = True
     return build_invoice_view(enriched)
-`, "utf8");
+`,
+    });
 
-      const result = await pythonScan(dir, ["python-dead-abstraction"]);
-
-      assert.equal(result.summary.totalIssues, 0);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    assert.equal(issues.length, 0);
   });
 });

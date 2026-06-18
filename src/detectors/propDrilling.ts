@@ -4,6 +4,7 @@ import { collectFunctionLikes, getFunctionBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
 import { isHostComponent } from "../utils/hostComponents.js";
 import { nodeLineSpan } from "../utils/lines.js";
+import { escapeRegExp } from "../utils/strings.js";
 
 export const propDrillingDetector: Detector = {
   id: "prop-drilling",
@@ -97,8 +98,4 @@ function inferPropNames(node: { getParameters: () => { getText: () => string; ge
 
   names.add(paramName);
   return names;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

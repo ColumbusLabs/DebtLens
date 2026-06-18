@@ -2,6 +2,7 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { CallExpression } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
+import { isRoutePathArgument } from "../utils/nextSurface.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
 const ROUTE_METHODS = new Set(["get", "post", "put", "patch", "delete", "del", "head", "options", "all"]);
@@ -101,12 +102,6 @@ function describeRouteCall(call: CallExpression, expression: Node): RouteRegistr
   }
 
   return undefined;
-}
-
-function isRoutePathArgument(node: Node): boolean {
-  return Node.isStringLiteral(node)
-    || Node.isNoSubstitutionTemplateLiteral(node)
-    || Node.isRegularExpressionLiteral(node);
 }
 
 function propertyInitializerText(property: Node): string {

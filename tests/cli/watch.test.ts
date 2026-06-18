@@ -3,14 +3,14 @@ import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
-import { buildWatchScanArgs } from "../../src/cli/watch.js";
+import { buildScanArgv } from "../../src/cli/argv.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
 
 describe("debtlens watch", () => {
   it("builds a scan command from watch options", () => {
-    const args = buildWatchScanArgs("examples/react", {
+    const args = buildScanArgv("examples/react", {
       cwd: repoRoot,
       rules: "todo-comment",
       format: "json",

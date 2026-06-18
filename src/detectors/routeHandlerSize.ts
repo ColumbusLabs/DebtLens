@@ -1,6 +1,7 @@
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
 import { countBranches } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
+import { normalizePath } from "../utils/nextSurface.js";
 import { countLines, nodeLineSpan } from "../utils/lines.js";
 import { SyntaxKind } from "ts-morph";
 
@@ -59,8 +60,4 @@ function isNextRouteOrPageModule(file: SourceFileInfo): boolean {
   if (/(^|\/)pages\/(?!api\/|_app\.|_document\.|_error\.).+\.[cm]?[jt]sx?$/.test(path)) return true;
 
   return false;
-}
-
-function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/");
 }

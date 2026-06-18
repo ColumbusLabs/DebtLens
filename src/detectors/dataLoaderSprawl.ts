@@ -3,6 +3,7 @@ import type { Node as MorphNode } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
 import { collectFunctionLikes, countBranches, getFunctionBody } from "../utils/ast.js";
 import { createIssue } from "../utils/createIssue.js";
+import { hasUseClientDirective, normalizePath } from "../utils/nextSurface.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
 interface LoaderCandidate {
@@ -124,20 +125,4 @@ function confidenceForLoader(
   const operationPressure = Math.max(fetchCount / Math.max(1, maxFetches), awaitCount / Math.max(1, maxAwaits));
   const linePressure = lines / Math.max(1, maxLines);
   return Math.min(0.92, 0.64 + Math.min(0.18, operationPressure * 0.08) + Math.min(0.1, linePressure * 0.06));
-}
-
-function hasUseClientDirective(file: SourceFileInfo): boolean {
-  for (const statement of file.sourceFile.getStatements()) {
-    if (!Node.isExpressionStatement(statement)) return false;
-    const expression = statement.getExpression();
-    if (!Node.isStringLiteral(expression)) return false;
-    if (expression.getLiteralText() === "use client") return true;
-    if (expression.getLiteralText() !== "use strict") return false;
-  }
-
-  return false;
-}
-
-function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/");
 }

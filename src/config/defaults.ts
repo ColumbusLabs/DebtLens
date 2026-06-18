@@ -64,7 +64,8 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
     "import-cycle.minCycleSize": 2,
     "import-cycle.allowTypeOnly": 1,
     "complex-control-flow.maxComplexity": 12,
-    "complex-control-flow.maxDepth": 4
+    "complex-control-flow.maxDepth": 4,
+    "config-drift.maxConfigFiles": 200
   },
   maxFiles: 2000,
   respectGitignore: false,

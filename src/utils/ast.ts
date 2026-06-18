@@ -179,6 +179,27 @@ export function getSourceFileLine(sourceFile: SourceFile, lineNumber: number): s
 }
 
 /**
+ * Compute the deepest nested path for nodes that satisfy the supplied predicate.
+ */
+export function computeMaxControlDepth(
+  node: MorphNode,
+  isNestingNode: (current: MorphNode) => boolean,
+): number {
+  let maxDepth = 0;
+
+  const visit = (current: MorphNode, depth: number) => {
+    const nextDepth = isNestingNode(current) ? depth + 1 : depth;
+    maxDepth = Math.max(maxDepth, nextDepth);
+    for (const child of current.getChildren()) {
+      visit(child, nextDepth);
+    }
+  };
+
+  visit(node, 0);
+  return maxDepth;
+}
+
+/**
  * Build a structural fingerprint of a function body: a multiset of node-shape tokens
  * that ignores identifier and literal values. Two functions that share control-flow
  * and call shape produce similar fingerprints even when every name differs.

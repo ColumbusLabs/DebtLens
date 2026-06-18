@@ -1,5 +1,6 @@
 import type { DebtIssue, Detector, DetectorContext, Severity } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
+import { containsTrackerLink } from "../utils/strings.js";
 
 export interface TodoCommentPattern {
   regex: RegExp;
@@ -70,13 +71,6 @@ export const todoCommentDetector: Detector = {
     return issues;
   },
 };
-
-function containsTrackerLink(line: string): boolean {
-  return /\b[A-Z][A-Z0-9]+-\d+\b/.test(line)
-    || /\b(?:issue|ticket|bug|gh|github)\s*#?\d+\b/i.test(line)
-    || /(?:^|[\s([#])#\d+\b/.test(line)
-    || /https?:\/\/\S+\b(?:issues|browse|tickets?)\/\d+\b/i.test(line);
-}
 
 export function compileTodoCommentMarkers(
   markers: Array<{ pattern: string; severity?: Severity; label?: string }>,

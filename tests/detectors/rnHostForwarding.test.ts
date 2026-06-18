@@ -125,6 +125,19 @@ export function Box({ a, b, c, d, e, f }: Props) {
     assert.equal(issues.length, 1);
   });
 
+  it("recognizes Animated.View from React Native named imports", async () => {
+    const src = `
+import { Animated } from "react-native";
+
+export function MotionBox({ a, b, c, d, e, f }: Props) {
+  return <Animated.View a={a} b={b} c={c} d={d} e={e} f={f} />;
+}
+`;
+    const issues = await runDetector(rnHostForwardingDetector, { "MotionBox.tsx": src });
+    assert.equal(issues.length, 1);
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("Animated.View")));
+  });
+
   it("aggregates forwarded props across repeated RN host tags", async () => {
     const src = `
 import { View } from "react-native";

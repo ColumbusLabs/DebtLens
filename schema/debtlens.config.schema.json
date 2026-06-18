@@ -236,6 +236,9 @@
         },
         "complex-control-flow.maxDepth": {
           "type": "number"
+        },
+        "config-drift.maxConfigFiles": {
+          "type": "number"
         }
       },
       "additionalProperties": {

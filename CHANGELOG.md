@@ -7,8 +7,40 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Changed
 
+- **CLI layout** splits the monolithic `src/cli/index.ts` into per-command modules under
+  `src/cli/commands/`, shared parsers in `src/cli/parse.ts`, and scan pipeline helpers in
+  `src/cli/scanPipeline.ts` (no user-facing behavior change).
+- **Python detectors** live under `src/detectors/python/` with `async def` parsing and decorator
+  line skipping in function extraction.
+- **MCP scan and doctor tools** call the scan and doctor pipelines in-process instead of
+  spawning CLI subprocesses; `rules` and `explain` still use subprocesses.
+- **Package config merge** now union-merges `include`, `exclude`, and `rules` arrays when
+  `--package` overlays a workspace package config on the repo root.
+- **Scan cache writes** use a temp file plus atomic rename so interrupted writes cannot
+  truncate `.debtlens/cache.json`.
+- **`config-drift` filesystem discovery** is capped by the `config-drift.maxConfigFiles`
+  threshold (default 200) when globbing JSON configs from the scan target.
+- **pnpm workspace discovery** parses `pnpm-workspace.yaml` with the `yaml` package instead
+  of a hand-rolled line parser.
 - Consolidated shared Next.js surface helpers and string utilities used by multiple
   detectors (no user-facing behavior change).
+- **VS Code extension diagnostics** mapping (`toRange`, `toSeverity`, issue grouping) lives
+  in `extensions/vscode/diagnostics.js` for isolated testing.
+
+### Fixed
+
+- **`--blame-age` with `--staged`** now warns that blame metadata is unavailable for staged
+  blob scans instead of failing silently.
+- **`--blame-age` outside git repos** uses `break` instead of `return` when blame lookup fails
+  so enrichment does not exit the surrounding scan handler early.
+- **`debtlens init --from-eslint`** rejects non-`.json` ESLint config paths with a clear
+  migration error.
+- **Watch mode** now discovers `debtlens.config.json` and `.debtlensrc.json` via
+  `findConfigPath` and rescans through the shared argv/spawn helpers.
+- **MCP `scan` and `doctor` tools** accept `cwd` so agents can target monorepo
+  packages without changing the server process directory.
+- **`--diff-base` with `--package`** now compares only files inside the selected
+  workspace package instead of the entire repository snapshot.
 
 ### Added
 
@@ -56,15 +88,6 @@ All notable changes to DebtLens are documented here. This project adheres to
 - **`debtlens suppress`** helper printing a copy-paste inline suppression directive
   (`--rule`, `--reason`, optional `--file`)
   ([#146](https://github.com/ColumbusLabs/DebtLens/issues/146)).
-
-### Fixed
-
-- **Watch mode** now discovers `debtlens.config.json` and `.debtlensrc.json` via
-  `findConfigPath` and rescans through the shared argv/spawn helpers.
-- **MCP `scan` and `doctor` tools** accept `cwd` so agents can target monorepo
-  packages without changing the server process directory.
-- **`--diff-base` with `--package`** now compares only files inside the selected
-  workspace package instead of the entire repository snapshot.
 
 ## [0.3.0] - 2026-06-09
 

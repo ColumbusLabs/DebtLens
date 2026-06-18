@@ -78,6 +78,14 @@ describe("debtlens init", () => {
     assert.throws(() => runInit(dir, false, "vue"), /Unknown rule pack "vue"/);
   });
 
+  it("rejects non-JSON ESLint config paths", () => {
+    writeFileSync(join(dir, "eslint.config.js"), "export default {};\n");
+    assert.throws(
+      () => suggestConfigFromEslint(dir, "eslint.config.js"),
+      /ESLint migration supports JSON configs only/,
+    );
+  });
+
   it("prints a suggested config from ESLint JSON without writing", () => {
     writeFileSync(join(dir, "eslint.config.json"), JSON.stringify([
       {

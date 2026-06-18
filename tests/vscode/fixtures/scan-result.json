@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "issues": [
+    {
+      "id": "py_todo_1",
+      "fingerprint": "py_todo_1",
+      "ruleId": "python-todo-comment",
+      "ruleName": "Python debt marker comment",
+      "severity": "low",
+      "confidence": 0.55,
+      "message": "Debt marker comment found: TODO(PROJ-42).",
+      "file": "service.py",
+      "location": { "startLine": 3, "startColumn": 5, "endLine": 3, "endColumn": 62 },
+      "evidence": ["# TODO(PROJ-42): replace sample renderer"],
+      "suggestion": "Track the work in an issue tracker or remove the marker once resolved.",
+      "tags": ["python", "comments", "cleanup"]
+    },
+    {
+      "id": "py_dup_1",
+      "fingerprint": "py_dup_1",
+      "ruleId": "python-duplicate-logic",
+      "ruleName": "Python duplicate logic",
+      "severity": "medium",
+      "confidence": 1,
+      "message": "normalize_invoice is structurally similar to normalize_receipt.",
+      "file": "service.py",
+      "location": { "startLine": 1, "endLine": 9 },
+      "evidence": ["service.py:1-9", "service.py:12-20"],
+      "suggestion": "Extract shared logic into one helper.",
+      "tags": ["python", "duplication", "maintainability"]
+    },
+    {
+      "id": "py_dead_1",
+      "fingerprint": "py_dead_1",
+      "ruleId": "python-dead-abstraction",
+      "ruleName": "Python dead abstraction",
+      "severity": "low",
+      "confidence": 0.9,
+      "message": "render_invoice looks like a thin Python wrapper.",
+      "file": "service.py",
+      "location": { "startLine": 23, "endLine": 24 },
+      "evidence": ["def render_invoice(invoice): return build_invoice_view(invoice)"],
+      "suggestion": "Keep the wrapper only if it creates a stable domain boundary.",
+      "tags": ["python", "abstraction", "cleanup"]
+    }
+  ],
+  "summary": {
+    "totalIssues": 3,
+    "bySeverity": { "info": 0, "low": 2, "medium": 1, "high": 0 },
+    "byRule": {
+      "python-todo-comment": 1,
+      "python-duplicate-logic": 1,
+      "python-dead-abstraction": 1
+    },
+    "filesScanned": 1,
+    "rulesRun": 3,
+    "elapsedMs": 18
+  },
+  "options": {
+    "target": "examples/python/src",
+    "include": ["**/*.py"],
+    "exclude": [],
+    "minSeverity": "info",
+    "rules": ["python-todo-comment", "python-duplicate-logic", "python-dead-abstraction"]
+  }
+}

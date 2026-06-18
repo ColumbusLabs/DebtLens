@@ -81,6 +81,7 @@ function tools(): Array<Record<string, unknown>> {
           rules: { type: "string" },
           minSeverity: { type: "string" },
           format: { type: "string" },
+          package: { type: "string" },
         },
       },
     },
@@ -93,6 +94,7 @@ function tools(): Array<Record<string, unknown>> {
           target: { type: "string" },
           cwd: { type: "string" },
           pack: { type: "string" },
+          package: { type: "string" },
         },
       },
     },
@@ -127,12 +129,18 @@ function callTool(name: string, args: Record<string, unknown>, entrypoint: strin
 function toolToCliArgs(name: string, args: Record<string, unknown>): string[] | undefined {
   if (name === "scan") {
     return buildScanArgv(stringArg(args.target, "."), {
-      ...args,
       format: args.format ?? "json",
+      minSeverity: args.minSeverity,
+      pack: args.pack,
+      package: args.package,
+      rules: args.rules,
     });
   }
   if (name === "doctor") {
-    return buildDoctorArgv(stringArg(args.target, "."), args);
+    return buildDoctorArgv(stringArg(args.target, "."), {
+      pack: args.pack,
+      package: args.package,
+    });
   }
   if (name === "rules") {
     const cli = ["rules"];

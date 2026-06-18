@@ -4,7 +4,7 @@ DebtLens rules are heuristics. They should produce review prompts, not absolute 
 
 Rules are grouped into **core**, **react**, and framework packs such as **next**, **react-native**, and **node**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
-> **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens adopt --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
+> **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens init --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
 
 ## Confidence scoring
 

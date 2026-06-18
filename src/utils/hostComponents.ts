@@ -29,10 +29,14 @@ export const REACT_NATIVE_CORE_HOST_COMPONENTS = new Set<string>([
   "KeyboardAvoidingView",
 ]);
 
+export const REACT_NATIVE_HOST_COMPONENT_ROOTS = new Set<string>([
+  "Animated",
+]);
+
 export const HOST_COMPONENTS = new Set<string>([
   // React Native core
   ...REACT_NATIVE_CORE_HOST_COMPONENTS,
-  "Animated",
+  ...REACT_NATIVE_HOST_COMPONENT_ROOTS,
   "LinearGradient",
   "BlurView",
   "MaterialIcons",

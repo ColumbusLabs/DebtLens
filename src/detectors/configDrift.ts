@@ -1,6 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, isAbsolute, relative, resolve } from "node:path";
-import fg from "fast-glob";
 import { ts } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
@@ -75,14 +74,7 @@ function collectConfigFiles(
   const stats = statSync(context.options.target);
   const absolutePaths = stats.isFile()
     ? [context.options.target]
-    : fg.sync(["**/package.json", "**/tsconfig*.json", "**/.eslintrc.json", "**/eslint.config.json"], {
-        cwd: context.options.target,
-        absolute: true,
-        onlyFiles: true,
-        ignore: context.options.exclude,
-        dot: true,
-        unique: true,
-      });
+    : collectConfigPaths(context.options.target, context.options.exclude, maxConfigFiles - existing.length);
 
   for (const absolutePath of absolutePaths) {
     if (existing.length >= maxConfigFiles) break;
@@ -95,6 +87,60 @@ function collectConfigFiles(
   }
 
   return existing;
+}
+
+function collectConfigPaths(root: string, exclude: string[], limit: number): string[] {
+  const paths: string[] = [];
+
+  const visit = (directory: string) => {
+    if (paths.length >= limit) return;
+
+    const entries = readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name));
+    for (const entry of entries) {
+      if (paths.length >= limit) break;
+      const absolutePath = resolve(directory, entry.name);
+      const relativePath = relative(root, absolutePath).replaceAll("\\", "/");
+      if (isExcluded(relativePath, exclude)) continue;
+
+      if (entry.isDirectory()) {
+        visit(absolutePath);
+      } else if (entry.isFile() && isJsonConfig(relativePath)) {
+        paths.push(absolutePath);
+      }
+    }
+  };
+
+  visit(root);
+  return paths;
+}
+
+function isExcluded(path: string, exclude: string[]): boolean {
+  return exclude.some((glob) => {
+    if (glob.endsWith("/**") && path === glob.slice(0, -3)) return true;
+    return globMatches(path, glob);
+  });
+}
+
+function globMatches(path: string, glob: string): boolean {
+  let expression = "";
+  for (let index = 0; index < glob.length; index += 1) {
+    const char = glob[index];
+    const next = glob[index + 1];
+    if (char === "*" && next === "*") {
+      expression += ".*";
+      index += 1;
+    } else if (char === "*") {
+      expression += "[^/]*";
+    } else {
+      expression += escapeRegExp(char ?? "");
+    }
+  }
+  return new RegExp(`^${expression}$`).test(path);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
 }
 
 function parseJsonConfig(file: string, content: string): unknown {

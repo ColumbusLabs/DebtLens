@@ -1,5 +1,5 @@
 import { Project, ScriptTarget, ts } from "ts-morph";
-import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo } from "../../src/core/types.js";
+import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo, SourceLanguage } from "../../src/core/types.js";
 import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
 export interface RunDetectorOptions {
@@ -21,6 +21,13 @@ export interface RunDetectorOptions {
   todoCommentDisableDefaults?: string[];
   /** Todo-comment: custom marker patterns. */
   todoCommentMarkers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
+  /** Override inferred source language for all files. */
+  language?: SourceLanguage;
+}
+
+function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
+  if (override) return override;
+  return relativePath.endsWith(".py") ? "python" : "tsjs";
 }
 
 /**
@@ -52,7 +59,7 @@ export async function runDetector(
       absolutePath: `/${relativePath}`,
       relativePath,
       content,
-      language: "tsjs",
+      language: inferSourceLanguage(relativePath, options.language),
       sourceFile,
     });
   }

@@ -16,6 +16,15 @@ See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **frame
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
 For Python and future Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
+## Migration
+
+The **[Unreleased]** section of [`CHANGELOG.md`](./CHANGELOG.md) tracks breaking and
+behavioral changes landing on `main` before the next semver tag. Notable recent items:
+MCP scan/doctor run in-process (no subprocess spawn), package config arrays union-merge
+with the repo root, atomic scan-cache writes, and stricter ESLint migration validation in
+`debtlens init --from-eslint`. Review that section when upgrading from an earlier dev
+build or pinned Action tag.
+
 ```bash
 npx debtlens scan
 npx debtlens scan src --format markdown
@@ -497,7 +506,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, uploads the JSON artifact by default, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 

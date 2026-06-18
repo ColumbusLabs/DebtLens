@@ -1,8 +1,10 @@
 import { Project, ScriptTarget, ts } from "ts-morph";
-import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo } from "../../src/core/types.js";
+import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo, SourceLanguage } from "../../src/core/types.js";
 import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
 export interface RunDetectorOptions {
+  /** Absolute scan target for detectors that read config from disk. */
+  target?: string;
   /** Threshold overrides, e.g. `{ "state-sprawl.maxStatefulHooks": 6 }`. */
   thresholds?: ScanThresholds;
   /** Minimum severity passed through on the synthetic ScanOptions. */
@@ -19,6 +21,13 @@ export interface RunDetectorOptions {
   todoCommentDisableDefaults?: string[];
   /** Todo-comment: custom marker patterns. */
   todoCommentMarkers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
+  /** Override inferred source language for all files. */
+  language?: SourceLanguage;
+}
+
+function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
+  if (override) return override;
+  return relativePath.endsWith(".py") ? "python" : "tsjs";
 }
 
 /**
@@ -50,7 +59,7 @@ export async function runDetector(
       absolutePath: `/${relativePath}`,
       relativePath,
       content,
-      language: "tsjs",
+      language: inferSourceLanguage(relativePath, options.language),
       sourceFile,
     });
   }
@@ -58,7 +67,7 @@ export async function runDetector(
   const thresholds = options.thresholds ?? {};
   const scanOptions: ScanOptions = {
     cwd: "/",
-    target: ".",
+    target: options.target ?? ".",
     include: [],
     exclude: [],
     minSeverity: options.minSeverity ?? "info",

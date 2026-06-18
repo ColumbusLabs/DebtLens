@@ -262,6 +262,67 @@ export interface ScanPerformance {
   parallel?: boolean;
 }
 
+export interface CacheKeyInput {
+  version: number;
+  packageVersion: string;
+  target: string;
+  include: string[];
+  exclude: string[];
+  minSeverity: Severity;
+  pack?: string;
+  rules?: string[];
+  thresholds: ScanThresholds;
+  maxFiles?: number;
+  respectGitignore?: boolean;
+  profile?: boolean;
+  changedFiles?: string[];
+  detectorIds: string[];
+  ruleSeverities?: Record<string, Severity>;
+  ruleConfidenceFloors?: Record<string, number>;
+  vocabulary?: Record<string, string[]>;
+  namingDriftDisableBuiltInVocabulary?: boolean;
+  propDrillingIgnoreComponents?: string[];
+  todoCommentReplaceDefaults?: boolean;
+  todoCommentDisableDefaults?: string[];
+  todoCommentMarkers?: Array<{ regex: string; severity: Severity; label: string }>;
+}
+
+export function toCacheKeyPayload(
+  cacheVersion: number,
+  packageVersion: string,
+  options: ScanOptions,
+  detectors: Detector[],
+): CacheKeyInput {
+  return {
+    version: cacheVersion,
+    packageVersion,
+    target: options.target,
+    include: options.include,
+    exclude: options.exclude,
+    minSeverity: options.minSeverity,
+    pack: options.pack,
+    rules: options.rules,
+    thresholds: options.thresholds,
+    maxFiles: options.maxFiles,
+    respectGitignore: options.respectGitignore,
+    profile: options.profile,
+    changedFiles: options.changedFiles,
+    detectorIds: detectors.map((detector) => detector.id),
+    ruleSeverities: options.ruleSeverities,
+    ruleConfidenceFloors: options.ruleConfidenceFloors,
+    vocabulary: options.vocabulary,
+    namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
+    propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
+    todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
+    todoCommentDisableDefaults: options.todoCommentDisableDefaults,
+    todoCommentMarkers: options.todoCommentMarkers?.map((marker) => ({
+      regex: String(marker.regex),
+      severity: marker.severity,
+      label: marker.label,
+    })),
+  };
+}
+
 export interface ScanSummary {
   totalIssues: number;
   bySeverity: Record<Severity, number>;

@@ -644,6 +644,41 @@ describe("debtlens scan git modes", () => {
     }
   });
 
+  it("warns when --blame-age is combined with --staged scans", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-blame-staged-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO staged marker\nexport const value = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO staged marker\nexport const value = 2;\n");
+      execFileSync("git", ["add", "src/Widget.ts"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--staged",
+        "--blame-age",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stderr, /--blame-age ignored when scanning staged blob contents/);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].introducedDaysAgo, undefined);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("adds optional git blame age metadata to JSON findings", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-blame-"));
     try {

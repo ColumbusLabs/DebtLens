@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import type { Detector, ScanOptions, ScanResult } from "./types.js";
+import { toCacheKeyPayload } from "./types.js";
 import { packageVersion } from "../utils/packageInfo.js";
 
 const CACHE_VERSION = 1;
@@ -51,38 +52,23 @@ export function writeCachedScan(cachePath: string, key: string, files: FileSnaps
   };
   const entries = [nextEntry, ...store.entries.filter((entry) => entry.key !== key)].slice(0, MAX_ENTRIES);
   mkdirSync(dirname(cachePath), { recursive: true });
-  writeFileSync(cachePath, `${JSON.stringify({ version: CACHE_VERSION, entries }, null, 2)}\n`, "utf8");
+  const payload = `${JSON.stringify({ version: CACHE_VERSION, entries }, null, 2)}\n`;
+  const tempPath = `${cachePath}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync(tempPath, payload, "utf8");
+    renameSync(tempPath, cachePath);
+  } catch (error) {
+    try {
+      unlinkSync(tempPath);
+    } catch {
+      // Best-effort cleanup of the temp file.
+    }
+    throw error;
+  }
 }
 
 export function buildScanCacheKey(options: ScanOptions, detectors: Detector[]): string {
-  return hashJson({
-    version: CACHE_VERSION,
-    packageVersion,
-    target: options.target,
-    include: options.include,
-    exclude: options.exclude,
-    minSeverity: options.minSeverity,
-    pack: options.pack,
-    rules: options.rules,
-    thresholds: options.thresholds,
-    maxFiles: options.maxFiles,
-    respectGitignore: options.respectGitignore,
-    profile: options.profile,
-    changedFiles: options.changedFiles,
-    detectorIds: detectors.map((detector) => detector.id),
-    ruleSeverities: options.ruleSeverities,
-    ruleConfidenceFloors: options.ruleConfidenceFloors,
-    vocabulary: options.vocabulary,
-    namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
-    propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
-    todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
-    todoCommentDisableDefaults: options.todoCommentDisableDefaults,
-    todoCommentMarkers: options.todoCommentMarkers?.map((marker) => ({
-      regex: String(marker.regex),
-      severity: marker.severity,
-      label: marker.label,
-    })),
-  });
+  return hashJson(toCacheKeyPayload(CACHE_VERSION, packageVersion, options, detectors));
 }
 
 export function hashContent(content: string): string {

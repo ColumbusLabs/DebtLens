@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { parse as parseYaml } from "yaml";
 import fg from "fast-glob";
 
 export interface WorkspacePackage {
@@ -102,30 +103,9 @@ function readPnpmWorkspacePatterns(workspaceRoot: string): string[] {
   const workspacePath = resolve(workspaceRoot, "pnpm-workspace.yaml");
   if (!existsSync(workspacePath)) return [];
 
-  const patterns: string[] = [];
-  let inPackages = false;
-  for (const rawLine of readFileSync(workspacePath, "utf8").split("\n")) {
-    const withoutComment = rawLine.replace(/\s+#.*$/, "");
-    const trimmed = withoutComment.trim();
-    if (!trimmed) continue;
-
-    if (trimmed.startsWith("packages:")) {
-      inPackages = true;
-      const inline = trimmed.match(/^packages:\s*\[(.*)\]\s*$/);
-      if (inline) {
-        patterns.push(...inline[1].split(",").map((entry) => unquote(entry.trim())).filter(Boolean));
-      }
-      continue;
-    }
-
-    if (!inPackages) continue;
-    if (!rawLine.startsWith(" ") && !rawLine.startsWith("\t")) break;
-    if (trimmed.startsWith("- ")) {
-      const pattern = unquote(trimmed.slice(2).trim());
-      if (pattern) patterns.push(pattern);
-    }
-  }
-  return patterns;
+  const parsed = parseYaml(readFileSync(workspacePath, "utf8")) as { packages?: unknown } | null;
+  if (!parsed || !Array.isArray(parsed.packages)) return [];
+  return parsed.packages.filter((entry): entry is string => typeof entry === "string");
 }
 
 function readNxWorkspacePatterns(workspaceRoot: string): string[] {
@@ -158,8 +138,4 @@ function dedupePatterns(patterns: string[]): string[] {
       seen.add(pattern);
       return true;
     });
-}
-
-function unquote(value: string): string {
-  return value.replace(/^['"]|['"]$/g, "");
 }

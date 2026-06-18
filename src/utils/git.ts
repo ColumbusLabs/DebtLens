@@ -250,3 +250,8 @@ function canonicalize(path: string): string {
     return path;
   }
 }
+
+/** Canonical absolute path for stable comparisons across symlinks and platforms. */
+export function canonicalizePath(path: string): string {
+  return canonicalize(path);
+}

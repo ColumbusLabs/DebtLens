@@ -179,9 +179,7 @@ export function getSourceFileLine(sourceFile: SourceFile, lineNumber: number): s
 }
 
 /**
- * Build a structural fingerprint of a function body: a multiset of node-shape tokens
- * that ignores identifier and literal values. Two functions that share control-flow
- * and call shape produce similar fingerprints even when every name differs.
+ * Compute the deepest nested path for nodes that satisfy the supplied predicate.
  */
 export function computeMaxControlDepth(
   node: MorphNode,
@@ -201,6 +199,11 @@ export function computeMaxControlDepth(
   return maxDepth;
 }
 
+/**
+ * Build a structural fingerprint of a function body: a multiset of node-shape tokens
+ * that ignores identifier and literal values. Two functions that share control-flow
+ * and call shape produce similar fingerprints even when every name differs.
+ */
 export function structuralFingerprint(node: MorphNode): Map<string, number> {
   const counts = new Map<string, number>();
   const bump = (token: string) => counts.set(token, (counts.get(token) ?? 0) + 1);

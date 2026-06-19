@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildConfigSchema, SCHEMA_ID } from "../../src/config/schema.js";
 import { configTemplate, renderConfigFile } from "../../src/config/template.js";
+import { gatePresets } from "../../src/core/gatePresets.js";
 import { severities } from "../../src/core/severity.js";
 import { detectorIds } from "../../src/detectors/index.js";
 
@@ -12,6 +13,7 @@ type SchemaShape = {
     rules: { items: { anyOf: [{ enum: string[] }, { type: string }] } };
     minSeverity: { enum: string[] };
     respectGitignore: { type: string };
+    gatePreset: { enum: string[] };
   };
 };
 
@@ -75,6 +77,10 @@ describe("config JSON schema", () => {
   it("includes failOn with the canonical severity set", () => {
     const built = buildConfigSchema() as { properties: { failOn?: { enum: string[] } } };
     assert.deepEqual(built.properties.failOn?.enum, [...severities]);
+  });
+
+  it("includes gatePreset with the canonical preset set", () => {
+    assert.deepEqual(schema.properties.gatePreset.enum, [...gatePresets]);
   });
 
   it("includes todoComment config shape", () => {

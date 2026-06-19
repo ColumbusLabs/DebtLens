@@ -21,6 +21,9 @@ inputs:
   fail-on-confidence:
     description: With fail-on, require at least this confidence (0-1) to exit with code 1.
     default: ""
+  gate:
+    description: Named quality-gate preset (advisory, new-code, strict-new-code, legacy-baseline).
+    default: ""
   format:
     description: Output format (terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality).
     default: terminal
@@ -209,6 +212,7 @@ runs:
         DL_RULES: ${{ inputs.rules }}
         DL_FAIL_ON: ${{ inputs.fail-on }}
         DL_FAIL_ON_CONFIDENCE: ${{ inputs.fail-on-confidence }}
+        DL_GATE: ${{ inputs.gate }}
         DL_FORMAT: ${{ inputs.format }}
         DL_OUTPUT: ${{ inputs.output }}
         DL_CHANGED: ${{ inputs.changed }}
@@ -279,6 +283,7 @@ runs:
         [ -n "$DL_PACK" ] && args+=(--pack "$DL_PACK")
         [ -n "$DL_FAIL_ON" ] && args+=(--fail-on "$DL_FAIL_ON")
         [ -n "$DL_FAIL_ON_CONFIDENCE" ] && args+=(--fail-on-confidence "$DL_FAIL_ON_CONFIDENCE")
+        [ -n "$DL_GATE" ] && args+=(--gate "$DL_GATE")
         [ -n "$DL_BASELINE" ] && args+=(--baseline "$DL_BASELINE")
         [ -n "$DL_DIFF_BASE" ] && args+=(--diff-base "$DL_DIFF_BASE")
         [ -n "$DL_CONFIG" ] && args+=(--config "$DL_CONFIG")
@@ -304,6 +309,23 @@ runs:
         [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
         [ "$DL_PROFILE" = "true" ] && args+=(--profile)
         [ "$DL_FAIL_ON_REGRESSION" = "true" ] && args+=(--fail-on-regression)
+        summary_fail_on="$DL_FAIL_ON"
+        summary_fail_on_confidence="$DL_FAIL_ON_CONFIDENCE"
+        summary_fail_on_regression="$DL_FAIL_ON_REGRESSION"
+        case "$DL_GATE" in
+          new-code)
+            [ -z "$summary_fail_on" ] && summary_fail_on="high"
+            ;;
+          strict-new-code)
+            [ -z "$summary_fail_on" ] && summary_fail_on="medium"
+            [ -z "$summary_fail_on_confidence" ] && summary_fail_on_confidence="0.8"
+            summary_fail_on_regression="true"
+            ;;
+          legacy-baseline)
+            [ -z "$summary_fail_on" ] && summary_fail_on="high"
+            summary_fail_on_regression="true"
+            ;;
+        esac
         set +e
         node "$GITHUB_ACTION_PATH/dist/cli/index.js" "${args[@]}"
         scan_status=$?
@@ -347,9 +369,9 @@ runs:
 
         if [ "$DL_STEP_SUMMARY" = "true" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
           DEBTLENS_SCAN_STATUS="$scan_status" \
-            DEBTLENS_FAIL_ON="$DL_FAIL_ON" \
-            DEBTLENS_FAIL_ON_CONFIDENCE="$DL_FAIL_ON_CONFIDENCE" \
-            DEBTLENS_FAIL_ON_REGRESSION="$DL_FAIL_ON_REGRESSION" \
+            DEBTLENS_FAIL_ON="$summary_fail_on" \
+            DEBTLENS_FAIL_ON_CONFIDENCE="$summary_fail_on_confidence" \
+            DEBTLENS_FAIL_ON_REGRESSION="$summary_fail_on_regression" \
             DEBTLENS_JSON_PATH="$internal_json" \
             DEBTLENS_JSON_OUTPUT="$DL_JSON_OUTPUT" \
             DEBTLENS_UPLOAD_JSON_ARTIFACT="$DL_UPLOAD_JSON_ARTIFACT" \

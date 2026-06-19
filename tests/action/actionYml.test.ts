@@ -9,6 +9,7 @@ describe("GitHub Action metadata", () => {
     for (const input of [
       "diff-base",
       "pack",
+      "gate",
       "package",
       "profile",
       "cache",
@@ -106,7 +107,25 @@ describe("GitHub Action metadata", () => {
 
   it("passes fail-on confidence into the step summary gate context", () => {
     assert.match(actionYml, /DL_FAIL_ON_CONFIDENCE: \$\{\{ inputs\.fail-on-confidence \}\}/);
-    assert.match(actionYml, /DEBTLENS_FAIL_ON_CONFIDENCE="\$DL_FAIL_ON_CONFIDENCE"/);
+    assert.match(actionYml, /DEBTLENS_FAIL_ON_CONFIDENCE="\$summary_fail_on_confidence"/);
+  });
+
+  it("passes named quality gate presets to normal scans only", () => {
+    assert.match(actionYml, /gate:\n    description: Named quality-gate preset \(advisory, new-code, strict-new-code, legacy-baseline\)\./);
+    assert.match(actionYml, /DL_GATE: \$\{\{ inputs\.gate \}\}/);
+    assert.match(actionYml, /\[ -n "\$DL_GATE" \] && args\+=\(--gate "\$DL_GATE"\)/);
+    assert.match(actionYml, /case "\$DL_GATE" in/);
+    assert.match(actionYml, /new-code\)[\s\S]*summary_fail_on="high"/);
+    assert.match(actionYml, /strict-new-code\)[\s\S]*summary_fail_on="medium"[\s\S]*summary_fail_on_confidence="0\.8"[\s\S]*summary_fail_on_regression="true"/);
+    assert.match(actionYml, /legacy-baseline\)[\s\S]*summary_fail_on="high"[\s\S]*summary_fail_on_regression="true"/);
+    assert.match(actionYml, /DEBTLENS_FAIL_ON="\$summary_fail_on"/);
+    assert.match(actionYml, /DEBTLENS_FAIL_ON_REGRESSION="\$summary_fail_on_regression"/);
+
+    const baselineWriteBlock = actionYml.slice(
+      actionYml.indexOf('if [ -n "$DL_WRITE_BASELINE" ]; then'),
+      actionYml.indexOf('internal_json="$RUNNER_TEMP/debtlens-report.json"'),
+    );
+    assert.doesNotMatch(baselineWriteBlock, /DL_GATE|--gate/);
   });
 
   it("can emit capped GitHub workflow command annotations", () => {

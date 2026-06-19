@@ -1,4 +1,5 @@
 import { severities } from "../core/severity.js";
+import { gatePresets } from "../core/gatePresets.js";
 import { detectorIds } from "../detectors/index.js";
 import { RULE_PACK_IDS } from "./packs.js";
 import { defaultConfig } from "./defaults.js";
@@ -181,6 +182,10 @@ export function buildConfigSchema(): Record<string, unknown> {
         minimum: 0,
         maximum: 1,
         description: "With fail-on severity policy, require at least this confidence to exit with code 1.",
+      },
+      gatePreset: {
+        enum: [...gatePresets],
+        description: "Named quality-gate rollout preset. Explicit CLI flags override preset defaults.",
       },
     },
   };

@@ -1014,6 +1014,15 @@
       "minimum": 0,
       "maximum": 1,
       "description": "With fail-on severity policy, require at least this confidence to exit with code 1."
+    },
+    "gatePreset": {
+      "enum": [
+        "advisory",
+        "new-code",
+        "strict-new-code",
+        "legacy-baseline"
+      ],
+      "description": "Named quality-gate rollout preset. Explicit CLI flags override preset defaults."
     }
   }
 }

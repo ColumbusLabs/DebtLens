@@ -518,6 +518,59 @@ describe("debtlens scan fail-on regression", () => {
   });
 });
 
+describe("debtlens scan gate presets", () => {
+  function withTempProject(run: (dir: string) => void) {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-gate-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove after launch\nexport const value = 1;\n");
+      run(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("rejects an unknown gate preset", () => {
+    const result = runScan(["examples/react", "--gate", "block-everything"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Invalid gate preset "block-everything"/);
+  });
+
+  it("expands the legacy-baseline preset to the default baseline path", () => {
+    withTempProject((dir) => {
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--gate", "legacy-baseline"]);
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Baseline file not found at .*debtlens-baseline\.json/);
+    });
+  });
+
+  it("does not apply baseline defaults while writing a baseline", () => {
+    withTempProject((dir) => {
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--gate",
+        "legacy-baseline",
+        "--write-baseline",
+      ]);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /Wrote baseline with 1 issues/);
+    });
+  });
+
+  it("expands strict-new-code enough to satisfy regression validation", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--gate", "strict-new-code", "--format", "json"]);
+
+    assert.doesNotMatch(result.stderr, /Use --fail-on-regression with --baseline or --diff-base/);
+  });
+});
+
 describe("debtlens scan failOn from config", () => {
   function withTempProject(run: (dir: string) => void) {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-failon-"));
@@ -580,6 +633,21 @@ describe("debtlens scan failOn from config", () => {
 
       assert.equal(result.status, 1);
       assert.match(result.stderr, /Invalid severity "critical"/);
+    });
+  });
+
+  it("rejects an invalid gate preset in config with a clear error", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        rules: ["todo-comment"],
+        gatePreset: "block-everything",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /Invalid gate preset "block-everything"/);
+      assert.doesNotMatch(result.stderr, /Cannot read properties/);
     });
   });
 });

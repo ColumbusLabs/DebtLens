@@ -113,10 +113,14 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /Total issues: 1/);
     assert.match(result.stdout, /todo-comment: 1/);
     assert.match(result.stdout, /Rollout plan:/);
-    assert.match(result.stdout, /1\. Start with a focused dry run/);
+    assert.match(result.stdout, /Gate preset: \(none\)/);
+    assert.match(result.stdout, /1\. Start with an advisory dry run/);
     assert.match(result.stdout, /Recommended first pack: core/);
+    assert.match(result.stdout, /debtlens adopt .*--gate advisory/);
     assert.match(result.stdout, /debtlens scan .*--write-baseline debtlens-baseline\.json/);
-    assert.match(result.stdout, /debtlens scan .*--baseline debtlens-baseline\.json .*--fail-on high/);
+    assert.match(result.stdout, /debtlens scan .*--gate legacy-baseline/);
+    assert.match(result.stdout, /debtlens scan .*--gate new-code/);
+    assert.match(result.stdout, /debtlens scan .*--gate strict-new-code/);
     assert.match(result.stdout, /debtlens scan .*--changed origin\/main/);
     assert.match(result.stdout, /debtlens scan .*--staged .*--fail-on-confidence 0\.8/);
     assert.match(result.stdout, /Dry run — no files written/);
@@ -132,8 +136,9 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /\| Severity \| Issues \|/);
     assert.match(result.stdout, /\| `todo-comment` \| 1 \|/);
     assert.match(result.stdout, /^## Rollout Plan/m);
-    assert.match(result.stdout, /1\. \*\*Start with a focused dry run\*\*/);
-    assert.match(result.stdout, /Command: `debtlens adopt .*--format markdown`/);
+    assert.match(result.stdout, /Gate preset: \*\*\(none\)\*\*/);
+    assert.match(result.stdout, /1\. \*\*Start with an advisory dry run\*\*/);
+    assert.match(result.stdout, /Command: `debtlens adopt .*--format markdown --gate advisory`/);
     assert.match(result.stdout, /Rationale: .*Recommended first pack: core/);
   });
 
@@ -161,7 +166,7 @@ describe("debtlens adopt", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /Recommended first pack: next/);
-    assert.match(result.stdout, /debtlens scan .*--pack next .*--baseline debtlens-baseline\.json/);
+    assert.match(result.stdout, /debtlens scan .*--pack next .*--gate legacy-baseline/);
     assert.doesNotMatch(result.stdout, /--pack core/);
   });
 
@@ -170,8 +175,31 @@ describe("debtlens adopt", () => {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, /debtlens adopt .*--min-severity medium/);
-    assert.match(result.stdout, /debtlens scan .*--min-severity medium .*--fail-on high/);
+    assert.match(result.stdout, /debtlens scan .*--min-severity medium .*--gate new-code/);
     assert.doesNotMatch(result.stdout, /--min-severity low/);
+  });
+
+  it("shows a selected gate preset without collapsing the rollout sequence", () => {
+    const result = runAdopt([".", "--cwd", dir, "--rules", "todo-comment", "--gate", "new-code"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Gate preset: new-code - Gate high-severity findings introduced since the mainline ref/);
+    assert.match(result.stdout, /debtlens adopt .*--gate advisory/);
+    assert.match(result.stdout, /debtlens scan .*--gate legacy-baseline/);
+    assert.match(result.stdout, /debtlens scan .*--gate new-code/);
+    assert.match(result.stdout, /debtlens scan .*--gate strict-new-code/);
+  });
+
+  it("rejects invalid config-sourced gate presets with a clear error", () => {
+    writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify({
+      gatePreset: "block-everything",
+    }), "utf8");
+
+    const result = runAdopt([".", "--cwd", dir, "--rules", "todo-comment"]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Invalid gate preset "block-everything"/);
+    assert.doesNotMatch(result.stderr, /Cannot read properties/);
   });
 
   it("supports package-scoped adoption reports in workspaces", () => {
@@ -189,7 +217,7 @@ describe("debtlens adopt", () => {
     assert.doesNotMatch(packagePath.stdout, /debtlens adopt packages\/pkg-b .*--package pkg-a/);
     assert.equal(pkgA.status, 0);
     assert.match(pkgA.stdout, /Total issues: 1/);
-    assert.match(pkgA.stdout, /Start with a package-scoped dry run/);
+    assert.match(pkgA.stdout, /Start with a package-scoped advisory dry run/);
     assert.match(pkgA.stdout, /--package pkg-a/);
     assert.equal(pkgB.status, 0);
     assert.match(pkgB.stdout, /Total issues: 0/);

@@ -40,7 +40,18 @@ npx debtlens adopt . --format markdown
 ```
 
 Use the recommendation to decide whether the first CI run should be advisory, baseline
-only, or a high-severity gate.
+only, or a high-severity gate. The named presets are the shortest way to express that
+choice:
+
+```bash
+npx debtlens scan . --gate advisory
+npx debtlens scan . --gate new-code --diff-base origin/main
+npx debtlens scan . --gate strict-new-code --diff-base origin/main
+```
+
+Start with `advisory` while tuning rules. Move to `new-code` when pull requests should
+block high-severity new findings, and tighten to `strict-new-code` after owners agree
+that medium-severity new findings and count regressions should fail CI.
 
 ## 4. Baseline legacy debt before gating
 
@@ -48,11 +59,20 @@ For established repos, create a baseline first:
 
 ```bash
 npx debtlens scan . --write-baseline debtlens-baseline.json
-npx debtlens scan . --baseline debtlens-baseline.json --fail-on high
+npx debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
 ```
 
 This keeps known debt visible while making the gate focus on newly introduced high-severity
 findings.
+
+The legacy migration path is `legacy-baseline` first, then `strict-new-code` for pull
+requests once the baseline is pruned and the team is ready to keep newly touched code
+cleaner than the historical snapshot:
+
+```bash
+npx debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
+npx debtlens scan . --gate strict-new-code --diff-base origin/main
+```
 
 When the team fixes legacy debt, maintain the same file instead of replacing it blindly:
 

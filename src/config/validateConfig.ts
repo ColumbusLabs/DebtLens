@@ -1,4 +1,5 @@
 import { isSeverity, severities } from "../core/severity.js";
+import { gatePresets } from "../core/gatePresets.js";
 import { RULE_PACK_IDS } from "./packs.js";
 import type { DebtLensConfig } from "../core/types.js";
 
@@ -23,6 +24,7 @@ const knownRootKeys = new Set([
   "namingDrift",
   "failOn",
   "failOnConfidence",
+  "gatePreset",
 ]);
 
 export interface ConfigValidationResult {
@@ -58,6 +60,9 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
   }
   if (typed.failOn !== undefined && !isSeverity(String(typed.failOn))) {
     errors.push(`failOn must be one of ${severities.join(", ")}`);
+  }
+  if (typed.gatePreset !== undefined && !gatePresets.includes(String(typed.gatePreset) as typeof gatePresets[number])) {
+    errors.push(`gatePreset must be one of ${gatePresets.join(", ")}`);
   }
   if (typed.pack !== undefined) {
     if (typeof raw.pack !== "string") {

@@ -13,6 +13,7 @@ import { DEFAULT_SOURCE_LANGUAGE, getLanguageDefinition, unique } from "../core/
 import { loadPlugins, pluginsDisabled } from "../plugins/loadPlugins.js";
 import type { CliOptions, DebtLensConfig, Detector, ScanOptions, ScanThresholds } from "../core/types.js";
 import { getChangedFiles, getStagedFiles, isGitRepo } from "../utils/git.js";
+import { formatGatePresetSummary } from "../core/gatePresets.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
 export interface DoctorInput {
@@ -21,6 +22,7 @@ export interface DoctorInput {
   configPath?: string;
   packageName?: string;
   baselinePath?: string;
+  gatePreset?: CliOptions["gatePreset"];
   usedChanged: boolean;
   usedStaged: boolean;
   changedIgnored: boolean;
@@ -45,6 +47,7 @@ export interface DoctorCliSources {
   rules?: boolean;
   thresholds?: boolean;
   maxFiles?: boolean;
+  gatePreset?: boolean;
   respectGitignore?: boolean;
 }
 
@@ -125,6 +128,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     `Rules: ${resolvedRules.join(", ")}`,
     `Thresholds: ${formatThresholds(options.thresholds)}`,
     `Min severity: ${options.minSeverity}`,
+    `Gate preset: ${formatGatePresetSummary(input.gatePreset ?? fileConfig.gatePreset)}`,
     `Max files: ${options.maxFiles ?? "(unlimited)"}`,
     `Include globs: ${options.include.join(", ")}`,
     `Exclude globs: ${options.exclude.join(", ")}`,
@@ -387,6 +391,7 @@ function formatProvenance(input: {
       ...(input.cliSources.exclude ? ["CLI --exclude"] : []),
     ])}`,
     `Min severity: ${formatScalarSource(input.effectiveConfig, input.cliSources.minSeverity, "minSeverity", "CLI --min-severity", "defaults")}`,
+    `Gate preset: ${formatScalarSource(input.effectiveConfig, input.cliSources.gatePreset, "gatePreset", "CLI --gate", "(none)")}`,
     `Max files: ${formatScalarSource(input.effectiveConfig, input.cliSources.maxFiles, "maxFiles", "CLI --max-files", "defaults")}`,
     `Respect gitignore: ${formatScalarSource(input.effectiveConfig, input.cliSources.respectGitignore, "respectGitignore", "CLI --respect-gitignore", "defaults")}`,
     `Plugins: ${formatEffectiveConfigSource(input.effectiveConfig, "plugins", "(none)")}`,

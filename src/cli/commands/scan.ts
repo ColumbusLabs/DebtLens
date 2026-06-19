@@ -12,6 +12,7 @@ import { parseSeverity } from "../../core/severity.js";
 import type { OutputFormat } from "../../core/types.js";
 import { detectorIds } from "../../detectors/index.js";
 import { renderReport } from "../../reporters/index.js";
+import { applyGatePresetDefaults, gatePresets } from "../../core/gatePresets.js";
 import {
   formatProfileReport,
   getGitHubSourceUrlBase,
@@ -58,6 +59,7 @@ export function registerScanCommand(program: Command): void {
     .option("-o, --output <path>", "write the report to a file instead of stdout")
     .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
     .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
+    .option("--gate <preset>", `named quality gate preset (${gatePresets.join(", ")})`)
     .option("--fail-on-regression", "exit with code 1 when counts increase versus --baseline or --diff-base")
     .option("--baseline <path>", "report only issues absent from this baseline file")
     .option("--diff-base <ref>", "report only findings introduced since this git ref")
@@ -128,6 +130,8 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   }
   const effectiveConfig = loadEffectiveConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined, packageDirectory);
   const fileConfig = effectiveConfig.config;
+  const gate = applyGatePresetDefaults(rawOptions, fileConfig);
+  rawOptions = gate.rawOptions;
   const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig, effectiveConfig.pluginConfigDir, writeStderr);
   const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
   const failOn = resolveFailOn(rawOptions, fileConfig);

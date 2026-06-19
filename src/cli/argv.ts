@@ -10,6 +10,7 @@ export const SCAN_ARG_FLAGS = [
   "--output",
   "--fail-on",
   "--fail-on-confidence",
+  "--gate",
   "--fail-on-regression",
   "--baseline",
   "--diff-base",
@@ -48,6 +49,7 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addString(args, "--output", rawOptions.output);
   addString(args, "--fail-on", rawOptions.failOn);
   addValue(args, "--fail-on-confidence", rawOptions.failOnConfidence);
+  addString(args, "--gate", rawOptions.gate);
   addBoolean(args, "--fail-on-regression", rawOptions.failOnRegression);
   addString(args, "--baseline", rawOptions.baseline);
   addString(args, "--diff-base", rawOptions.diffBase);
@@ -82,6 +84,7 @@ export function buildDoctorArgv(target: string, rawOptions: Record<string, unkno
   addString(args, "--pack", rawOptions.pack);
   addString(args, "--rules", rawOptions.rules);
   addValue(args, "--max-files", rawOptions.maxFiles);
+  addString(args, "--gate", rawOptions.gate);
   addString(args, "--baseline", rawOptions.baseline);
   addOptionalValue(args, "--changed", rawOptions.changed);
   addBoolean(args, "--staged", rawOptions.staged);

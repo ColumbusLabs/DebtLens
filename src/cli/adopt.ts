@@ -8,6 +8,12 @@ import { severities } from "../core/severity.js";
 import type { CliOptions, DebtLensConfig, ScanResult, Severity } from "../core/types.js";
 import { isGitRepo } from "../utils/git.js";
 import { buildThresholdSuggestions, type ThresholdSuggestion } from "./adoptionThresholds.js";
+import {
+  formatGatePresetDefaults,
+  formatGatePresetSummary,
+  resolveGatePreset,
+  type GatePreset,
+} from "../core/gatePresets.js";
 import { runInit } from "./init.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
@@ -19,6 +25,7 @@ export interface AdoptInput {
   writeConfig?: boolean;
   force?: boolean;
   pack?: string;
+  gatePreset?: GatePreset;
   packageName?: string;
   writeBaseline?: boolean | string;
   format?: "terminal" | "markdown";
@@ -56,6 +63,7 @@ export function formatAdoptReport(
   recommendedMinSeverity: Severity,
   thresholdSuggestions: ThresholdSuggestion[] = [],
   rolloutPlan: RolloutPlanStep[] = [],
+  gatePreset?: GatePreset,
 ): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
@@ -77,6 +85,7 @@ export function formatAdoptReport(
       : ["  (none)"]),
     "",
     `Recommended minSeverity: ${recommendedMinSeverity}`,
+    `Gate preset: ${formatGatePresetSummary(gatePreset)}`,
   ];
   if (thresholdSuggestions.length > 0) {
     lines.push("", "Suggested threshold tuning:");
@@ -104,6 +113,7 @@ export function formatAdoptMarkdownReport(
   recommendedMinSeverity: Severity,
   thresholdSuggestions: ThresholdSuggestion[] = [],
   rolloutPlan: RolloutPlanStep[] = [],
+  gatePreset?: GatePreset,
 ): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
@@ -130,6 +140,7 @@ export function formatAdoptMarkdownReport(
       : ["| None | 0 |"]),
     "",
     `Recommended minSeverity: **${recommendedMinSeverity}**`,
+    `Gate preset: **${gatePreset ?? "(none)"}**${gatePreset ? ` - ${formatGatePresetDefaults(gatePreset) || "advisory only"}` : ""}`,
   ];
   if (thresholdSuggestions.length > 0) {
     lines.push(
@@ -165,6 +176,7 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
 
   const recommended = recommendMinSeverity(result.summary.bySeverity, result.summary.totalIssues);
   const thresholdSuggestions = buildThresholdSuggestions(result, options);
+  const selectedGatePreset = input.gatePreset ?? resolveGatePreset(undefined, fileConfig);
   const rolloutPlan = buildRolloutPlan(input, result, recommended, fileConfig);
   const lines: string[] = [];
 
@@ -181,8 +193,8 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   }
 
   lines.push((input.format === "markdown"
-    ? formatAdoptMarkdownReport(result, recommended, thresholdSuggestions, rolloutPlan)
-    : formatAdoptReport(result, recommended, thresholdSuggestions, rolloutPlan)).trimEnd());
+    ? formatAdoptMarkdownReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset)
+    : formatAdoptReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset)).trimEnd());
 
   let configWritten: string | undefined;
   let baselineWritten: string | undefined;
@@ -255,9 +267,9 @@ export function buildRolloutPlan(
   ].join(" ");
   const plan: RolloutPlanStep[] = [
     {
-      title: input.packageName ? "Start with a package-scoped dry run" : "Start with a focused dry run",
-      commands: [formatCommand(baseAdoptArgs)],
-      rationale: firstScopeRationale,
+      title: input.packageName ? "Start with a package-scoped advisory dry run" : "Start with an advisory dry run",
+      commands: [formatCommand(withGatePreset(baseAdoptArgs, "advisory"))],
+      rationale: `${firstScopeRationale} The advisory gate preset keeps the first run non-blocking while the team reviews signal quality.`,
     },
   ];
 
@@ -265,10 +277,10 @@ export function buildRolloutPlan(
     const samplePackage = selectWorkspacePilotPackage(input, workspacePackages);
     plan.push({
       title: "Pilot one workspace package before expanding",
-      commands: [formatCommand(buildScopedCommandArgs("adopt", {
+      commands: [formatCommand(withGatePreset(buildScopedCommandArgs("adopt", {
         ...input,
         packageName: samplePackage.name,
-      }, fileConfig))],
+      }, fileConfig), "advisory"))],
       rationale: `Detected workspace packages (${formatPackageList(workspacePackages)}). Use --package to tune one package's noise profile before applying the same gate across the whole workspace.`,
     });
   }
@@ -291,13 +303,19 @@ export function buildRolloutPlan(
     title: hasLegacyDebt ? "Gate new code in CI" : "Keep CI focused on changed code",
     commands: hasLegacyDebt
       ? [
-          formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--baseline", DEFAULT_BASELINE_FILENAME, "--fail-on", "high"]),
-          formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--diff-base", "origin/main", "--fail-on", "high"]),
+          formatCommand(withGatePreset(withMinSeverity(baseScanArgs, planMinSeverity), "legacy-baseline")),
+          formatCommand(withGatePreset(withMinSeverity(baseScanArgs, planMinSeverity), "new-code")),
         ]
-      : [formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--diff-base", "origin/main", "--fail-on", "high"])],
+      : [formatCommand(withGatePreset(withMinSeverity(baseScanArgs, planMinSeverity), "new-code"))],
     rationale: hasLegacyDebt
-      ? "Use the baseline for mature branches and --diff-base in pull-request CI when a target branch ref is available; both patterns focus review on new or changed debt."
-      : "Use --diff-base in pull-request CI when a target branch ref is available so clean repositories stay clean without rescanning every historical finding.",
+      ? "Use legacy-baseline for mature branches and new-code in pull-request CI when a target branch ref is available; both presets focus review on new or changed debt."
+      : "Use the new-code preset in pull-request CI when a target branch ref is available so clean repositories stay clean without rescanning every historical finding.",
+  });
+
+  plan.push({
+    title: "Tighten to a strict new-code gate after signal stabilizes",
+    commands: [formatCommand(withGatePreset(withMinSeverity(baseScanArgs, planMinSeverity), "strict-new-code"))],
+    rationale: "Move from advisory to new-code first, then strict-new-code once baselines, false-positive tuning, and ownership expectations are accepted by the team.",
   });
 
   plan.push({
@@ -359,6 +377,12 @@ function withMinSeverity(args: string[], minSeverity: Severity): string[] {
   return args.includes("--min-severity")
     ? args
     : [...args, "--min-severity", minSeverity];
+}
+
+function withGatePreset(args: string[], gatePreset: GatePreset): string[] {
+  return args.includes("--gate")
+    ? args
+    : [...args, "--gate", gatePreset];
 }
 
 function listAdoptionWorkspacePackages(cwd: string): WorkspacePackage[] {

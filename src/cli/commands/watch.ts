@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { resolve } from "node:path";
 import { RULE_PACK_IDS } from "../../config/packs.js";
 import { detectorIds } from "../../detectors/index.js";
+import { gatePresets } from "../../core/gatePresets.js";
 import { parseConfidence, parseInteger, parseOptionalInteger } from "../parse.js";
 import { runWatch } from "../watch.js";
 
@@ -20,6 +21,7 @@ export function registerWatchCommand(program: Command): void {
     .option("-o, --output <path>", "write the report to a file instead of stdout")
     .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
     .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
+    .option("--gate <preset>", `named quality gate preset (${gatePresets.join(", ")})`)
     .option("--fail-on-regression", "exit with code 1 when counts increase versus --baseline or --diff-base")
     .option("--baseline <path>", "report only issues absent from this baseline file")
     .option("--diff-base <ref>", "report only findings introduced since this git ref")

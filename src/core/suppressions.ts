@@ -1,5 +1,5 @@
 import { suggestClosest } from "../utils/didYouMean.js";
-import type { DebtIssue, InlineSuppressionAudit, SourceFileInfo } from "./types.js";
+import type { DebtIssue, InlineSuppressionAudit, SourceFileInfo, SuppressionDirectiveAudit } from "./types.js";
 
 const disableNextLinePattern = /debtlens-disable-next-line\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
 const disableFilePattern = /debtlens-disable-file\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
@@ -7,9 +7,12 @@ const disableFilePattern = /debtlens-disable-file\s+([a-z0-9-]+)(?:\s+--\s+(.+))
 interface FileSuppressionRules {
   fileRules: Map<string, SuppressionDirective>;
   nextLineRules: Map<number, Map<string, SuppressionDirective>>;
+  directives: SuppressionDirective[];
 }
 
 interface SuppressionDirective {
+  id: string;
+  file: string;
   ruleId: string;
   kind: "next-line" | "file";
   reason: string;
@@ -20,6 +23,7 @@ interface SuppressionDirective {
 export interface SuppressionResult {
   issues: DebtIssue[];
   suppressions: InlineSuppressionAudit[];
+  suppressionDirectives: SuppressionDirectiveAudit[];
   suppressedByInline: number;
   warnings: string[];
 }
@@ -28,6 +32,7 @@ export function applyInlineSuppressions(
   issues: DebtIssue[],
   files: SourceFileInfo[],
   validRuleIds: ReadonlySet<string>,
+  evaluatedRuleIds: ReadonlySet<string> = validRuleIds,
 ): SuppressionResult {
   const rulesByFile = new Map<string, FileSuppressionRules>();
   const warnings: string[] = [];
@@ -39,6 +44,18 @@ export function applyInlineSuppressions(
   let suppressedByInline = 0;
   const kept: DebtIssue[] = [];
   const suppressions: InlineSuppressionAudit[] = [];
+  const directiveAudits = new Map<string, SuppressionDirectiveAudit>();
+
+  for (const rules of rulesByFile.values()) {
+    for (const directive of rules.directives) {
+      directiveAudits.set(
+        directive.id,
+        evaluatedRuleIds.has(directive.ruleId)
+          ? buildUnusedDirectiveAudit(directive)
+          : buildNotEvaluatedDirectiveAudit(directive),
+      );
+    }
+  }
 
   for (const issue of issues) {
     const rules = rulesByFile.get(issue.file);
@@ -57,9 +74,21 @@ export function applyInlineSuppressions(
       ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
       issue,
     });
+    const audit = directiveAudits.get(directive.id);
+    if (audit) {
+      audit.status = "used";
+      audit.suppressedIssueCount += 1;
+      audit.recommendedAction = getUsedRecommendation(audit.kind, audit.suppressedIssueCount);
+    }
   }
 
-  return { issues: kept, suppressions, suppressedByInline, warnings };
+  return {
+    issues: kept,
+    suppressions,
+    suppressionDirectives: [...directiveAudits.values()].sort(compareDirectiveAudits),
+    suppressedByInline,
+    warnings,
+  };
 }
 
 function parseFileSuppressions(
@@ -69,6 +98,7 @@ function parseFileSuppressions(
 ): FileSuppressionRules {
   const fileRules = new Map<string, SuppressionDirective>();
   const nextLineRules = new Map<number, Map<string, SuppressionDirective>>();
+  const directives: SuppressionDirective[] = [];
   const lines = file.content.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -76,12 +106,16 @@ function parseFileSuppressions(
     const fileMatch = line.match(disableFilePattern);
     if (fileMatch) {
       registerSuppression(file.relativePath, fileMatch[1], fileMatch[2], validRuleIds, warnings, (ruleId, reason) => {
-        fileRules.set(ruleId, {
+        const directive = {
+          id: buildDirectiveId(file.relativePath, index + 1, "file", ruleId),
+          file: file.relativePath,
           ruleId,
           kind: "file",
           reason,
           directiveLine: index + 1,
-        });
+        } satisfies SuppressionDirective;
+        fileRules.set(ruleId, directive);
+        directives.push(directive);
       });
       continue;
     }
@@ -92,18 +126,22 @@ function parseFileSuppressions(
     registerSuppression(file.relativePath, nextLineMatch[1], nextLineMatch[2], validRuleIds, warnings, (ruleId, reason) => {
       const targetLine = index + 2;
       const rules = nextLineRules.get(targetLine) ?? new Map<string, SuppressionDirective>();
-      rules.set(ruleId, {
+      const directive = {
+        id: buildDirectiveId(file.relativePath, index + 1, "next-line", ruleId),
+        file: file.relativePath,
         ruleId,
         kind: "next-line",
         reason,
         directiveLine: index + 1,
         targetLine,
-      });
+      } satisfies SuppressionDirective;
+      rules.set(ruleId, directive);
       nextLineRules.set(targetLine, rules);
+      directives.push(directive);
     });
   }
 
-  return { fileRules, nextLineRules };
+  return { fileRules, nextLineRules, directives };
 }
 
 function registerSuppression(
@@ -145,4 +183,51 @@ function getSuppressionDirective(issue: DebtIssue, rules: FileSuppressionRules):
 
 function addWarning(warnings: string[], warning: string): void {
   if (!warnings.includes(warning)) warnings.push(warning);
+}
+
+function buildUnusedDirectiveAudit(directive: SuppressionDirective): SuppressionDirectiveAudit {
+  return {
+    ruleId: directive.ruleId,
+    file: directive.file,
+    kind: directive.kind,
+    reason: directive.reason,
+    directiveLine: directive.directiveLine,
+    ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
+    status: "unused",
+    suppressedIssueCount: 0,
+    recommendedAction: "Remove this suppression if the finding no longer exists.",
+  };
+}
+
+function buildNotEvaluatedDirectiveAudit(directive: SuppressionDirective): SuppressionDirectiveAudit {
+  return {
+    ruleId: directive.ruleId,
+    file: directive.file,
+    kind: directive.kind,
+    reason: directive.reason,
+    directiveLine: directive.directiveLine,
+    ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
+    status: "not-evaluated",
+    suppressedIssueCount: 0,
+    recommendedAction: "Run this rule in the audit scan before deciding whether this suppression is stale.",
+  };
+}
+
+function getUsedRecommendation(kind: SuppressionDirectiveAudit["kind"], suppressedIssueCount: number): string {
+  if (kind === "file") {
+    return suppressedIssueCount > 1
+      ? "Review whether this file-wide suppression can be narrowed to specific next-line suppressions."
+      : "Review whether this file-wide suppression can be narrowed to a next-line suppression.";
+  }
+  return "Keep this suppression only while the documented exception remains valid.";
+}
+
+function buildDirectiveId(file: string, directiveLine: number, kind: SuppressionDirective["kind"], ruleId: string): string {
+  return `${file}:${directiveLine}:${kind}:${ruleId}`;
+}
+
+function compareDirectiveAudits(left: SuppressionDirectiveAudit, right: SuppressionDirectiveAudit): number {
+  const byFile = left.file.localeCompare(right.file);
+  if (byFile !== 0) return byFile;
+  return left.directiveLine - right.directiveLine;
 }

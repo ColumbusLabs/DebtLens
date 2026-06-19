@@ -1,8 +1,14 @@
 import { groupIssuesByFile } from "../core/issueAggregates.js";
 import type { DebtIssue, ScanResult } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
-import { normalizeMarkdownText } from "./markdownEscape.js";
+import { escapeMarkdownTableCell, normalizeMarkdownText } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
+import {
+  formatSuppressionAuditSummary,
+  formatSuppressionDirectiveLine,
+  formatSuppressionKind,
+  summarizeSuppressionDirectives,
+} from "./suppressionAudit.js";
 
 export interface PrCommentOptions {
   sourceUrlBase?: string;
@@ -27,6 +33,8 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
     lines.push("");
     lines.push(`Delta: ${formatSigned(delta.totalDelta)} total, ${delta.new} new, ${delta.resolved} resolved, ${delta.changed} changed, ${delta.severityRegressions} severity regression(s).`);
   }
+
+  renderSuppressionAudit(lines, result);
 
   if (result.issues.length === 0) {
     lines.push("");
@@ -68,6 +76,30 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderSuppressionAudit(lines: string[], result: ScanResult): void {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return;
+
+  lines.push("");
+  lines.push("### Suppression audit");
+  lines.push("");
+  lines.push(formatSuppressionAuditSummary(summarizeSuppressionDirectives(directives)));
+  lines.push("");
+  lines.push("| Status | Kind | Location | Rule | Hidden findings | Reason | Recommended action |");
+  lines.push("| --- | --- | --- | --- | ---: | --- | --- |");
+  for (const directive of directives) {
+    lines.push([
+      directive.status,
+      formatSuppressionKind(directive.kind),
+      `\`${escapeMarkdownTableCell(formatSuppressionDirectiveLine(directive))}\``,
+      `\`${escapeMarkdownTableCell(directive.ruleId)}\``,
+      String(directive.suppressedIssueCount),
+      escapeMarkdownTableCell(normalizeMarkdownText(directive.reason)),
+      escapeMarkdownTableCell(normalizeMarkdownText(directive.recommendedAction)),
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"));
+  }
 }
 
 function renderLocation(issue: DebtIssue, sourceUrlBase: string | undefined): string {

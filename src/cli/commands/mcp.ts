@@ -103,6 +103,7 @@ function tools(): Array<Record<string, unknown>> {
           staged: { type: "boolean" },
           diffBase: { type: "string" },
           baseline: { type: "string" },
+          auditSuppressions: { type: "boolean" },
         },
       },
     },
@@ -152,6 +153,7 @@ async function callTool(
       package: args.package,
       rules: args.rules,
       staged: args.staged,
+      auditSuppressions: args.auditSuppressions,
     }, {
       format,
     });

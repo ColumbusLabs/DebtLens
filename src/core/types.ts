@@ -115,6 +115,8 @@ export interface ScanOptions {
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
   /** When true, collect per-rule timing in `summary.profile`. */
   profile?: boolean;
+  /** When true, emit valid inline suppression directives, including unused entries, for stale-suppression audits. */
+  auditSuppressions?: boolean;
   /** When true, reuse unchanged scan results from a content-hash cache. */
   cache?: boolean;
   /** Optional path to the scan cache file. Defaults to `.debtlens/cache.json` in cwd. */
@@ -150,6 +152,7 @@ export interface CliOptions {
   changedFiles?: string[];
   fileContents?: Record<string, string>;
   profile?: boolean;
+  auditSuppressions?: boolean;
   cache?: boolean;
   cachePath?: string;
   batchSize?: number;
@@ -248,6 +251,18 @@ export interface InlineSuppressionAudit {
   issue: DebtIssue;
 }
 
+export interface SuppressionDirectiveAudit {
+  ruleId: string;
+  file: string;
+  kind: "next-line" | "file";
+  reason: string;
+  directiveLine: number;
+  targetLine?: number;
+  status: "used" | "unused" | "not-evaluated";
+  suppressedIssueCount: number;
+  recommendedAction: string;
+}
+
 export interface ScanProfile {
   ruleTimingsMs: Record<string, number>;
 }
@@ -275,6 +290,7 @@ export interface CacheKeyInput {
   maxFiles?: number;
   respectGitignore?: boolean;
   profile?: boolean;
+  auditSuppressions?: boolean;
   changedFiles?: string[];
   detectorIds: string[];
   ruleSeverities?: Record<string, Severity>;
@@ -306,6 +322,7 @@ export function toCacheKeyPayload(
     maxFiles: options.maxFiles,
     respectGitignore: options.respectGitignore,
     profile: options.profile,
+    auditSuppressions: options.auditSuppressions,
     changedFiles: options.changedFiles,
     detectorIds: detectors.map((detector) => detector.id),
     ruleSeverities: options.ruleSeverities,
@@ -343,6 +360,7 @@ export interface ScanResult {
   schemaVersion: 1;
   issues: DebtIssue[];
   suppressions?: InlineSuppressionAudit[];
+  suppressionDirectives?: SuppressionDirectiveAudit[];
   summary: ScanSummary;
   options: Pick<ScanOptions, "target" | "include" | "exclude" | "minSeverity" | "rules">;
 }

@@ -60,6 +60,7 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     changedFiles: cliOptions.changedFiles,
     fileContents: cliOptions.fileContents,
     profile: cliOptions.profile,
+    auditSuppressions: cliOptions.auditSuppressions,
     cache: cliOptions.cache,
     cachePath: cliOptions.cachePath,
     batchSize: cliOptions.batchSize,

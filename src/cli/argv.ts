@@ -23,6 +23,7 @@ export const SCAN_ARG_FLAGS = [
   "--no-color",
   "--quiet",
   "--profile",
+  "--audit-suppressions",
   "--cache",
   "--parallel",
   "--batch-size",
@@ -58,6 +59,7 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addBoolean(args, "--no-color", rawOptions.color === false);
   addBoolean(args, "--quiet", rawOptions.quiet);
   addBoolean(args, "--profile", rawOptions.profile);
+  addBoolean(args, "--audit-suppressions", rawOptions.auditSuppressions);
   addOptionalValue(args, "--cache", rawOptions.cache);
   addBoolean(args, "--parallel", rawOptions.parallel);
   addValue(args, "--batch-size", rawOptions.batchSize);

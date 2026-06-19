@@ -37,3 +37,13 @@ export function mapVendorPayload(payload: VendorPayload) {
 
 When reporting a false positive upstream, include the command, config, version, minimal
 source sample, and a ScanResult JSON excerpt if possible.
+
+## Audit stale suppressions
+
+Run an audit after refactors or rule tuning to catch suppressions that no longer hide findings:
+
+```bash
+debtlens scan . --audit-suppressions --format markdown
+```
+
+Unused directives should usually be removed. File-wide directives with multiple hidden findings should be reviewed and narrowed to next-line suppressions when the exception is not truly file-wide. Directives marked `not-evaluated` belong to rules outside the current scan scope; rerun the audit with that rule enabled before deciding whether they are stale.

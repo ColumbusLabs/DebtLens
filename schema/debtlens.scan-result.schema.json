@@ -247,6 +247,64 @@
         }
       }
     },
+    "suppressionDirectives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleId",
+          "file",
+          "kind",
+          "reason",
+          "directiveLine",
+          "status",
+          "suppressedIssueCount",
+          "recommendedAction"
+        ],
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "next-line",
+              "file"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "directiveLine": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "targetLine": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "enum": [
+              "used",
+              "unused",
+              "not-evaluated"
+            ]
+          },
+          "suppressedIssueCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "recommendedAction": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "summary": {
       "type": "object",
       "additionalProperties": false,

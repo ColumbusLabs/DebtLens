@@ -107,7 +107,8 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   });
 
   const validRuleIds = new Set(registry.map((detector) => detector.id));
-  const suppression = applyInlineSuppressions(issues, files, validRuleIds);
+  const evaluatedRuleIds = new Set(detectors.map((detector) => detector.id));
+  const suppression = applyInlineSuppressions(issues, files, validRuleIds, evaluatedRuleIds);
   issues = suppression.issues;
   for (const warning of suppression.warnings) {
     if (!warnings.includes(warning)) warnings.push(warning);
@@ -126,6 +127,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     schemaVersion: 1,
     issues,
     ...(suppression.suppressions.length > 0 ? { suppressions: suppression.suppressions } : {}),
+    ...(options.auditSuppressions && suppression.suppressionDirectives.length > 0
+      ? { suppressionDirectives: suppression.suppressionDirectives }
+      : {}),
     summary: {
       totalIssues: issueSummary.totalIssues,
       bySeverity: issueSummary.bySeverity,

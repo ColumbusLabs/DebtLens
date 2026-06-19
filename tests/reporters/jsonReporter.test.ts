@@ -101,6 +101,17 @@ describe("json reporter", () => {
         targetLine: 13,
         issue,
       }],
+      suppressionDirectives: [{
+        ruleId: "prop-drilling",
+        file: "src/Parent.tsx",
+        kind: "next-line",
+        reason: "tracked in PROJ-1",
+        directiveLine: 12,
+        targetLine: 13,
+        status: "used",
+        suppressedIssueCount: 1,
+        recommendedAction: "Keep this suppression only while the documented exception remains valid.",
+      }],
       summary: {
         ...result.summary,
         deltaFromBaseline: {
@@ -127,6 +138,8 @@ describe("json reporter", () => {
 
     assert.equal(parsed.suppressions[0].reason, "tracked in PROJ-1");
     assert.equal(parsed.suppressions[0].issue.fingerprint, "dl_json_contract");
+    assert.equal(parsed.suppressionDirectives[0].status, "used");
+    assert.equal(parsed.suppressionDirectives[0].suppressedIssueCount, 1);
     assert.equal(parsed.summary.deltaFromBaseline.totalDelta, 1);
     assert.equal(parsed.summary.deltaFromBaseline.byRule["prop-drilling"].delta, 1);
   });

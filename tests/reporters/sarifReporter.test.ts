@@ -128,4 +128,24 @@ describe("sarif reporter", () => {
     assert.equal(suppressed.properties.suppressedBy, "next-line");
     assert.equal(suppressed.properties.suppressionDirectiveLine, 12);
   });
+
+  it("does not emit unused suppression directive audits as SARIF results", () => {
+    const sarif = JSON.parse(renderSarif({
+      ...makeResult([]),
+      suppressionDirectives: [{
+        ruleId: "prop-drilling",
+        file: "src/Parent.tsx",
+        kind: "next-line",
+        reason: "stale exception",
+        directiveLine: 12,
+        targetLine: 13,
+        status: "not-evaluated",
+        suppressedIssueCount: 0,
+        recommendedAction: "Run this rule in the audit scan before deciding whether this suppression is stale.",
+      }],
+    }, { compact: true }));
+
+    assert.deepEqual(sarif.runs[0].results, []);
+    assert.deepEqual(sarif.runs[0].tool.driver.rules.map((rule: { id: string }) => rule.id), []);
+  });
 });

@@ -2,6 +2,12 @@ import { groupIssuesByFile, groupIssuesByRule } from "../core/issueAggregates.js
 import type { DebtIssue, ScanResult, Severity, TerminalGroupBy } from "../core/types.js";
 import { createColorizer } from "../utils/color.js";
 import { formatFilterStats } from "./filterStats.js";
+import {
+  formatSuppressionAuditSummary,
+  formatSuppressionDirectiveLine,
+  formatSuppressionKind,
+  summarizeSuppressionDirectives,
+} from "./suppressionAudit.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -19,10 +25,13 @@ export function renderTerminal(
   if (filterStats) {
     lines.push(`Filtered: ${filterStats}`);
   }
+  renderSuppressionAuditSummary(lines, result);
 
   if (options.quiet) {
     return `${lines.join("\n")}\n`;
   }
+
+  renderSuppressionAuditDetails(lines, result);
 
   if (result.issues.length === 0) {
     lines.push("");
@@ -48,6 +57,28 @@ export function renderTerminal(
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderSuppressionAuditSummary(lines: string[], result: ScanResult): void {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return;
+  lines.push(`Suppression audit: ${formatSuppressionAuditSummary(summarizeSuppressionDirectives(directives))}`);
+}
+
+function renderSuppressionAuditDetails(lines: string[], result: ScanResult): void {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return;
+
+  lines.push("");
+  lines.push("Suppression audit");
+  for (const directive of directives) {
+    const target = directive.targetLine ? ` -> target line ${directive.targetLine}` : "";
+    lines.push(`  ${directive.status} ${formatSuppressionKind(directive.kind)} ${formatSuppressionDirectiveLine(directive)} [${directive.ruleId}]${target}`);
+    lines.push(`  hidden findings: ${directive.suppressedIssueCount}`);
+    lines.push(`  reason: ${directive.reason}`);
+    lines.push(`  action: ${directive.recommendedAction}`);
+    lines.push("");
+  }
 }
 
 function renderGroups(

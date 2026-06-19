@@ -58,6 +58,28 @@ describe("markdown reporter", () => {
     assert.doesNotMatch(md, /## High severity/);
   });
 
+  it("renders suppression audits before the empty state", () => {
+    const result = makeResult([]);
+    result.suppressionDirectives = [{
+      ruleId: "todo-comment",
+      file: "src/Widget.ts",
+      kind: "next-line",
+      reason: "stale exception",
+      directiveLine: 4,
+      targetLine: 5,
+      status: "unused",
+      suppressedIssueCount: 0,
+      recommendedAction: "Remove this suppression if the finding no longer exists.",
+    }];
+
+    const md = renderMarkdown(result);
+
+    assert.match(md, /## Suppression audit/);
+    assert.match(md, /1 directive \| 1 unused \| 0 not evaluated \| 0 file-wide \| 1 next-line \| 0 hidden findings/);
+    assert.match(md, /\| unused \| next-line \| `src\/Widget\.ts:4` \| `todo-comment` \| 0 \| stale exception \| Remove this suppression/);
+    assert.match(md, /No maintainability debt found/);
+  });
+
   it("renders correlations and an opt-in debt heatmap", () => {
     const result = makeResult([
       issue,

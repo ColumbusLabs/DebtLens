@@ -70,6 +70,7 @@ export function registerScanCommand(program: Command): void {
     .option("--no-color", "disable ANSI color in terminal output")
     .option("-q, --quiet", "print only the summary line, suppress individual findings")
     .option("--profile", "print per-rule timing without changing findings")
+    .option("--audit-suppressions", "include used and unused inline suppression directives in scan output")
     .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
     .option("--parallel", "run detectors concurrently after source loading")
     .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
@@ -166,6 +167,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     changedFiles,
     fileContents,
     profile: rawOptions.profile === true,
+    auditSuppressions: rawOptions.auditSuppressions === true,
     pluginDetectors: pluginContribution?.detectors,
     pluginThresholds: pluginContribution?.thresholds,
     pluginVocabulary: pluginContribution?.vocabulary,

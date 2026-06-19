@@ -27,6 +27,7 @@ export interface AdoptInput {
 export interface AdoptResult {
   text: string;
   scan: ScanResult;
+  recommendedMinSeverity: Severity;
   thresholdSuggestions: ThresholdSuggestion[];
   rolloutPlan: RolloutPlanStep[];
   configWritten?: string;
@@ -218,6 +219,7 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   return {
     text: `${lines.join("\n")}\n`,
     scan: result,
+    recommendedMinSeverity: recommended,
     thresholdSuggestions,
     rolloutPlan,
     configWritten,

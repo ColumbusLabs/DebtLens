@@ -25,6 +25,7 @@
     "dist",
     "schema",
     "scripts/emit-azure-log-issues.mjs",
+    "scripts/post-bitbucket-code-insights.mjs",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import type { SourceFileInfo } from "../../core/types.js";
 
 export interface PythonDecoratorInfo {
@@ -111,7 +112,9 @@ function runPythonAstSidecar(
   const failedCommands: string[] = [];
 
   for (const command of commands) {
-    const result = spawnSync(command, ["-c", PYTHON_AST_SIDECAR_SCRIPT], {
+    const result = spawnSync(command, ["-I", "-S", "-c", PYTHON_AST_SIDECAR_SCRIPT], {
+      cwd: tmpdir(),
+      env: buildIsolatedPythonEnv(process.env),
       input: payload,
       encoding: "utf8",
       maxBuffer: 8 * 1024 * 1024,
@@ -189,6 +192,16 @@ function buildRuntimeWarning(
 
   const missingDetail = missingCommands.length ? ` missing commands: ${missingCommands.join(", ")};` : "";
   return `Python AST sidecar failed for ${relativePath}:${missingDetail} ${failedCommands.join("; ")}; falling back to text parsing.`;
+}
+
+function buildIsolatedPythonEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const isolated = { ...env };
+  delete isolated.PYTHONHOME;
+  delete isolated.PYTHONPATH;
+  delete isolated.PYTHONSTARTUP;
+  delete isolated.PYTHONUSERBASE;
+  isolated.PYTHONNOUSERSITE = "1";
+  return isolated;
 }
 
 function buildCacheKey(file: SourceFileInfo, commandsKey: string): string {

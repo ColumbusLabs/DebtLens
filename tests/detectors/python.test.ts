@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import type { SourceFileInfo } from "../../src/core/types.js";
 import { defaultConfig } from "../../src/config/defaults.js";
@@ -188,6 +190,39 @@ async def load(value):
     assert.equal(moduleInfo.usedAstSidecar, true);
     assert.equal(moduleInfo.functions[0]?.isAsync, true);
     assert.deepEqual(warnings, []);
+  });
+
+  it("isolates the Python sidecar from repo-local stdlib module shadows", () => {
+    const previousCwd = process.cwd();
+    const sandbox = mkdtempSync(join(tmpdir(), "debtlens-python-sidecar-"));
+    const marker = join(sandbox, "local-import-executed");
+    const maliciousModule = `
+from pathlib import Path
+Path(${JSON.stringify(marker)}).write_text("executed")
+raise RuntimeError("repo-local stdlib shadow imported")
+`;
+
+    writeFileSync(join(sandbox, "ast.py"), maliciousModule);
+    writeFileSync(join(sandbox, "tokenize.py"), maliciousModule);
+
+    try {
+      process.chdir(sandbox);
+      const warnings: string[] = [];
+      const moduleInfo = extractPythonModule(pythonFile(`
+def isolated(value):
+    return value
+`, "shadowed.py"), {
+        addWarning: (warning) => warnings.push(warning),
+      });
+
+      assert.equal(moduleInfo.usedAstSidecar, true);
+      assert.equal(moduleInfo.functions[0]?.name, "isolated");
+      assert.deepEqual(warnings, []);
+      assert.equal(existsSync(marker), false);
+    } finally {
+      process.chdir(previousCwd);
+      rmSync(sandbox, { recursive: true, force: true });
+    }
   });
 
   it("warns and falls back to text parsing when AST parsing fails", () => {

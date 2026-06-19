@@ -12,7 +12,7 @@ export function registerAdoptCommand(program: Command): void {
     .argument("[target]", "directory or file to scan", ".")
     .option("-i, --include <patterns>", "comma-separated glob patterns to include")
     .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
-    .option("--min-severity <severity>", "info, low, medium, or high", "low")
+    .option("--min-severity <severity>", "info, low, medium, or high")
     .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
     .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
     .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
@@ -43,7 +43,9 @@ export function registerAdoptCommand(program: Command): void {
             rules: parseRuleList(rawOptions.rules as string | undefined),
             thresholds: parseThresholds(rawOptions.threshold as string | undefined),
             pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
-            minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
+            minSeverity: rawOptions.minSeverity !== undefined
+              ? parseSeverity(String(rawOptions.minSeverity), "low")
+              : undefined,
           },
         });
 

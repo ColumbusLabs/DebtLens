@@ -112,6 +112,13 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /DebtLens Adoption Report/);
     assert.match(result.stdout, /Total issues: 1/);
     assert.match(result.stdout, /todo-comment: 1/);
+    assert.match(result.stdout, /Rollout plan:/);
+    assert.match(result.stdout, /1\. Start with a focused dry run/);
+    assert.match(result.stdout, /Recommended first pack: core/);
+    assert.match(result.stdout, /debtlens scan .*--write-baseline debtlens-baseline\.json/);
+    assert.match(result.stdout, /debtlens scan .*--baseline debtlens-baseline\.json .*--fail-on high/);
+    assert.match(result.stdout, /debtlens scan .*--changed origin\/main/);
+    assert.match(result.stdout, /debtlens scan .*--staged .*--fail-on-confidence 0\.8/);
     assert.match(result.stdout, /Dry run — no files written/);
     assert.equal(existsSync(join(dir, CONFIG_FILENAME)), false);
     assert.equal(existsSync(join(dir, DEFAULT_BASELINE_FILENAME)), false);
@@ -124,6 +131,10 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /^# DebtLens Adoption Report/m);
     assert.match(result.stdout, /\| Severity \| Issues \|/);
     assert.match(result.stdout, /\| `todo-comment` \| 1 \|/);
+    assert.match(result.stdout, /^## Rollout Plan/m);
+    assert.match(result.stdout, /1\. \*\*Start with a focused dry run\*\*/);
+    assert.match(result.stdout, /Command: `debtlens adopt .*--format markdown`/);
+    assert.match(result.stdout, /Rationale: .*Recommended first pack: core/);
   });
 
   it("prints threshold suggestions when adoption findings exceed defaults", () => {
@@ -134,14 +145,55 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /large-component\.maxLines/);
   });
 
+  it("does not narrow default rollout commands to a starter pack", () => {
+    const result = runAdopt(["examples/react"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Recommended first pack: core/);
+    assert.match(result.stdout, /debtlens scan examples\/react --write-baseline debtlens-baseline\.json/);
+    assert.doesNotMatch(result.stdout, /--pack core/);
+  });
+
+  it("preserves a config-selected pack in rollout commands", () => {
+    writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify({ pack: "next" }), "utf8");
+
+    const result = runAdopt([".", "--cwd", dir]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Recommended first pack: next/);
+    assert.match(result.stdout, /debtlens scan .*--pack next .*--baseline debtlens-baseline\.json/);
+    assert.doesNotMatch(result.stdout, /--pack core/);
+  });
+
+  it("preserves explicit minSeverity in rollout commands", () => {
+    const result = runAdopt([".", "--cwd", dir, "--rules", "todo-comment", "--min-severity", "medium"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /debtlens adopt .*--min-severity medium/);
+    assert.match(result.stdout, /debtlens scan .*--min-severity medium .*--fail-on high/);
+    assert.doesNotMatch(result.stdout, /--min-severity low/);
+  });
+
   it("supports package-scoped adoption reports in workspaces", () => {
+    const root = runAdopt([".", "--cwd", monorepoFixtureRoot, "--rules", "todo-comment"]);
+    const packagePath = runAdopt(["packages/pkg-b", "--cwd", monorepoFixtureRoot, "--rules", "todo-comment"]);
     const pkgA = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-a", "--rules", "todo-comment"]);
     const pkgB = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-b", "--rules", "todo-comment"]);
 
+    assert.equal(root.status, 0);
+    assert.match(root.stdout, /Pilot one workspace package before expanding/);
+    assert.match(root.stdout, /Detected workspace packages \(pkg-a, pkg-b\)/);
+    assert.match(root.stdout, /debtlens adopt .*--package pkg-a/);
+    assert.equal(packagePath.status, 0);
+    assert.match(packagePath.stdout, /debtlens adopt packages\/pkg-b .*--package pkg-b/);
+    assert.doesNotMatch(packagePath.stdout, /debtlens adopt packages\/pkg-b .*--package pkg-a/);
     assert.equal(pkgA.status, 0);
     assert.match(pkgA.stdout, /Total issues: 1/);
+    assert.match(pkgA.stdout, /Start with a package-scoped dry run/);
+    assert.match(pkgA.stdout, /--package pkg-a/);
     assert.equal(pkgB.status, 0);
     assert.match(pkgB.stdout, /Total issues: 0/);
+    assert.match(pkgB.stdout, /Skip the baseline unless legacy debt appears/);
   });
 
   it("writes config and baseline when requested", () => {

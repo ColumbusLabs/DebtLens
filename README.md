@@ -262,14 +262,14 @@ debtlens scan --quiet
 
 ## Recommended adoption path
 
-Preview findings and get a `minSeverity` recommendation before committing config or baseline files:
+Preview findings and get a numbered rollout plan before committing config or baseline files. The plan includes a recommended first pack, baseline/new-code gate commands, package scope when applicable, and changed/staged local workflows:
 
 ```bash
 debtlens adopt --cwd . --rules todo-comment   # dry-run report (default)
 debtlens adopt --write-config --write-baseline --force
 ```
 
-The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). After adoption, use `debtlens scan --baseline debtlens-baseline.json --fail-on high` in CI to gate only newly introduced debt, or add `--fail-on-regression` to fail whenever total or per-rule issue counts increase.
+The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). For established repositories, follow the generated plan's baseline or `--diff-base` CI commands so pull requests focus on newly introduced debt; add `--fail-on-regression` when you want count increases to fail as well.
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported. The JSON reporter exposes the same line-stable value as both `id` and `fingerprint` in ScanResult schema v1.
 

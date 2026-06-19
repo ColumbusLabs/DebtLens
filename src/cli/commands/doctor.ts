@@ -5,7 +5,7 @@ import { parseSeverity } from "../../core/severity.js";
 import { detectorIds } from "../../detectors/index.js";
 import { getChangedFiles, getStagedFiles } from "../../utils/git.js";
 import { runDoctor } from "../doctor.js";
-import { parseCommaList, parseInteger, parseRuleList } from "../parse.js";
+import { parseCommaList, parseInteger, parseRuleList, parseThresholds } from "../parse.js";
 
 export interface DoctorCommandResult {
   text: string;
@@ -18,9 +18,10 @@ export function registerDoctorCommand(program: Command): void {
     .argument("[target]", "directory or file to inspect", ".")
     .option("-i, --include <patterns>", "comma-separated glob patterns to include")
     .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
-    .option("--min-severity <severity>", "info, low, medium, or high", "low")
+    .option("--min-severity <severity>", "info, low, medium, or high")
     .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
     .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
+    .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
     .option("--max-files <count>", "maximum files to scan", parseInteger)
     .option("--baseline <path>", "baseline path to report (not loaded)")
     .option("--changed [ref]", "include git changed-file diagnostics")
@@ -29,6 +30,7 @@ export function registerDoctorCommand(program: Command): void {
     .option("--config <path>", "path to debtlens.config.json")
     .option("--cwd <path>", "working directory", process.cwd())
     .option("--package <name>", "inspect a single workspace package by name")
+    .option("--provenance", "show which layer supplied resolved config values")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
         const result = await runDoctorCommand(target, rawOptions);
@@ -94,10 +96,22 @@ export async function runDoctorCommand(target: string, rawOptions: Record<string
       rules: parseRuleList(rawOptions.rules as string | undefined),
       pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
       minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
+      thresholds: parseThresholds(rawOptions.threshold as string | undefined),
       maxFiles: rawOptions.maxFiles as number | undefined,
       respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
       changedFiles,
     },
+    cliSources: {
+      include: rawOptions.include !== undefined,
+      exclude: rawOptions.exclude !== undefined,
+      minSeverity: rawOptions.minSeverity !== undefined,
+      pack: rawOptions.pack !== undefined,
+      rules: rawOptions.rules !== undefined,
+      thresholds: rawOptions.threshold !== undefined,
+      maxFiles: rawOptions.maxFiles !== undefined,
+      respectGitignore: rawOptions.respectGitignore === true,
+    },
+    showProvenance: rawOptions.provenance === true,
   });
 
   return {

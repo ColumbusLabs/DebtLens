@@ -34,6 +34,10 @@ export interface EffectiveConfig {
   config: DebtLensConfig;
   paths: string[];
   pluginConfigDir: string;
+  rootConfig?: DebtLensConfig;
+  rootConfigPath?: string;
+  packageConfig?: DebtLensConfig;
+  packageConfigPath?: string;
 }
 
 export function loadEffectiveConfig(
@@ -63,6 +67,8 @@ export function loadEffectiveConfig(
       : rootConfigPath
         ? dirname(rootConfigPath)
         : cwd,
+    ...(rootConfigPath && existsSync(rootConfigPath) ? { rootConfig, rootConfigPath } : {}),
+    ...(shouldLoadPackageConfig && packageConfigPath && packageConfig ? { packageConfig, packageConfigPath } : {}),
   };
 }
 

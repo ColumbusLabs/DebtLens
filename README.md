@@ -247,6 +247,7 @@ debtlens scan --respect-gitignore
 # Debug config and file matching without running detectors
 debtlens doctor --pack core
 debtlens doctor --include "src/**/*.ts,src/**/*.tsx" --changed
+debtlens doctor --provenance --threshold "large-component.maxLines=320"
 
 # Local iteration: run once, then rescan after file changes until Ctrl+C
 debtlens watch examples/react --rules todo-comment --debounce 300

@@ -159,6 +159,31 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /No maintainability debt found at the configured severity level\./);
   });
 
+  it("renders optional git churn hotspots", () => {
+    const result = makeResult([propIssue]);
+    result.summary.hotspots = {
+      source: "git",
+      window: { range: "origin/main..HEAD" },
+      ranking: [{
+        file: "src/Parent.tsx",
+        repositoryPath: "src/Parent.tsx",
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        score: 27.4,
+        churn: { file: "src/Parent.tsx", repositoryPath: "src/Parent.tsx", commits: 3, additions: 20, deletions: 4, changedLines: 24 },
+        reasons: ["1 high-severity finding", "3 recent commits"],
+        topRules: [{ ruleId: "prop-drilling", count: 1 }],
+      }],
+    };
+
+    const markdown = renderPrComment(result);
+
+    assert.match(markdown, /### Git churn hotspots/);
+    assert.match(markdown, /Optional git-derived ranking from git range `origin\/main\.\.HEAD`/);
+    assert.match(markdown, /`src\/Parent\.tsx` - score 27\.4, 3 commits, 24 changed lines/);
+  });
+
   it("caps detailed findings and summarizes omitted findings with a full report link", () => {
     const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
       maxFindings: 1,

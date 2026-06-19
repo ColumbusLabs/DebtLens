@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -76,6 +76,11 @@ describe("debtlens mcp", () => {
       "baseline_diff",
       "baseline_prune_preview",
     ]);
+    const scanTool = response.result.tools.find((tool: { name: string }) => tool.name === "scan");
+    assert.ok(scanTool);
+    assert.ok(scanTool.inputSchema.properties.hotspots);
+    assert.ok(scanTool.inputSchema.properties.churnDays);
+    assert.ok(scanTool.inputSchema.properties.churnRange);
   });
 
   it("calls the rules tool through the CLI", () => {
@@ -115,6 +120,45 @@ describe("debtlens mcp", () => {
     const parsed = JSON.parse(response.result.content[0].text);
     assert.equal(parsed.summary.totalIssues, 1);
     assert.match(parsed.issues[0].file, /^src\/index\.ts$/);
+  });
+
+  it("passes hotspot scan options through MCP scan calls", () => {
+    const root = mkdtempSync(join(tmpdir(), "debtlens-mcp-hotspots-"));
+    try {
+      execFileSync("git", ["init"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: root, stdio: "ignore" });
+      mkdirSync(join(root, "src"));
+      writeFileSync(join(root, "src", "app.ts"), "// TODO mcp hotspot\nexport const value = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: root, stdio: "ignore" });
+      writeFileSync(join(root, "src", "app.ts"), "// TODO mcp hotspot\nexport const value = 2;\n");
+      execFileSync("git", ["add", "src/app.ts"], { cwd: root, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "update app"], { cwd: root, stdio: "ignore" });
+
+      const result = runMcp(request(31, "tools/call", {
+        name: "scan",
+        arguments: {
+          cwd: root,
+          target: ".",
+          rules: "todo-comment",
+          format: "json",
+          hotspots: true,
+          churnDays: 30,
+        },
+      }));
+      const response = JSON.parse(result.stdout.trim());
+      const parsed = JSON.parse(response.result.content[0].text);
+
+      assert.equal(result.status, 0);
+      assert.equal(response.result.isError, false);
+      assert.equal(parsed.summary.hotspots.source, "git");
+      assert.equal(parsed.summary.hotspots.window.days, 30);
+      assert.equal(parsed.summary.hotspots.ranking[0].file, "src/app.ts");
+      assert.ok(parsed.summary.hotspots.ranking[0].churn.commits >= 2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("resolves relative cwd once for scan and doctor calls", () => {

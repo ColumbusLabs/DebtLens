@@ -54,6 +54,42 @@ describe("html reporter", () => {
     assert.match(html, /src\/&lt;Widget&gt;\.ts:4/);
     assert.match(html, /stale &lt;exception&gt;/);
   });
+
+  it("renders optional git churn hotspots", () => {
+    const result = makeResult([{
+      id: "1",
+      fingerprint: "1",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "low",
+      confidence: 0.75,
+      message: "Avoid TODO markers",
+      file: "src/app.ts",
+      location: { startLine: 2 },
+      tags: [],
+    }]);
+    result.summary.hotspots = {
+      source: "git",
+      window: { days: 7 },
+      ranking: [{
+        file: "src/app.ts",
+        repositoryPath: "src/app.ts",
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 1, medium: 0, high: 0 },
+        score: 11.5,
+        churn: { file: "src/app.ts", repositoryPath: "src/app.ts", commits: 2, additions: 10, deletions: 5, changedLines: 15 },
+        reasons: ["1 low-severity finding", "2 recent commits"],
+        topRules: [{ ruleId: "todo-comment", count: 1 }],
+      }],
+    };
+
+    const html = renderHtml(result);
+
+    assert.match(html, /Git Churn Hotspots/);
+    assert.match(html, /Optional git-derived ranking from the last 7 days/);
+    assert.match(html, /2 commits, 15 changed lines/);
+  });
 });
 
 function makeResult(issues: DebtIssue[]): ScanResult {

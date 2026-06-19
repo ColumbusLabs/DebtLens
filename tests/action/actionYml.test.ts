@@ -17,6 +17,9 @@ describe("GitHub Action metadata", () => {
       "parallel",
       "batch-size",
       "blame-age",
+      "hotspots",
+      "churn-days",
+      "churn-range",
       "audit-suppressions",
       "fail-on-regression",
       "json-output",
@@ -60,6 +63,29 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /args\+=\(--blame-age\)/);
     assert.match(actionYml, /DL_AUDIT_SUPPRESSIONS: \$\{\{ inputs\.audit-suppressions \}\}/);
     assert.match(actionYml, /args\+=\(--audit-suppressions\)/);
+  });
+
+  it("passes hotspot prioritization flags to normal scans only", () => {
+    assert.match(actionYml, /hotspots:\n    description: Enable optional git-derived hotspot prioritization\.\n    default: "false"/);
+    assert.match(actionYml, /churn-days:\n    description: Hotspot mode - derive churn from commits in the last count days\.\n    default: ""/);
+    assert.match(actionYml, /churn-range:\n    description: Hotspot mode - derive churn from a git revision range\.\n    default: ""/);
+    assert.match(actionYml, /DL_HOTSPOTS: \$\{\{ inputs\.hotspots \}\}/);
+    assert.match(actionYml, /DL_CHURN_DAYS: \$\{\{ inputs\.churn-days \}\}/);
+    assert.match(actionYml, /DL_CHURN_RANGE: \$\{\{ inputs\.churn-range \}\}/);
+
+    const baselineWriteBlock = actionYml.slice(
+      actionYml.indexOf('if [ -n "$DL_WRITE_BASELINE" ]; then'),
+      actionYml.indexOf('internal_json="$RUNNER_TEMP/debtlens-report.json"'),
+    );
+    const normalScanBlock = actionYml.slice(
+      actionYml.indexOf('internal_json="$RUNNER_TEMP/debtlens-report.json"'),
+      actionYml.indexOf('summary_fail_on="$DL_FAIL_ON"'),
+    );
+
+    assert.match(normalScanBlock, /\[ "\$DL_HOTSPOTS" = "true" \] && args\+=\(--hotspots\)/);
+    assert.match(normalScanBlock, /\[ -n "\$DL_CHURN_DAYS" \] && args\+=\(--churn-days "\$DL_CHURN_DAYS"\)/);
+    assert.match(normalScanBlock, /\[ -n "\$DL_CHURN_RANGE" \] && args\+=\(--churn-range "\$DL_CHURN_RANGE"\)/);
+    assert.doesNotMatch(baselineWriteBlock, /DL_HOTSPOTS|DL_CHURN_DAYS|DL_CHURN_RANGE|--hotspots|--churn-days|--churn-range/);
   });
 
   it("documents supported packs and bootstraps tagged release assets before source fallback", () => {

@@ -147,6 +147,31 @@ describe("markdown reporter", () => {
     assert.match(md, /\| `dup_test` \| 2 \| src\/a\.ts:10-20, src\/b\.ts:30-40 \|/);
   });
 
+  it("renders optional git churn hotspots", () => {
+    const result = makeResult([issue]);
+    result.summary.hotspots = {
+      source: "git",
+      window: { days: 14, since: "2026-06-05T00:00:00.000Z" },
+      ranking: [{
+        file: "src/Parent.tsx",
+        repositoryPath: "src/Parent.tsx",
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        score: 27.4,
+        churn: { file: "src/Parent.tsx", repositoryPath: "src/Parent.tsx", commits: 3, additions: 20, deletions: 4, changedLines: 24 },
+        reasons: ["1 high-severity finding", "3 recent commits"],
+        topRules: [{ ruleId: "prop-drilling", count: 1 }],
+      }],
+    };
+
+    const md = renderMarkdown(result);
+
+    assert.match(md, /## Git churn hotspots/);
+    assert.match(md, /Optional git-derived ranking from the last 14 days/);
+    assert.match(md, /\| `src\/Parent\.tsx` \| 27\.4 \| 3 commits, 24 changed lines \|/);
+  });
+
   it("escapes Markdown table cells in correlations and heatmaps", () => {
     const result = makeResult([{ ...issue, file: "src/a|b.tsx\n" }]);
     result.summary.correlations = [{

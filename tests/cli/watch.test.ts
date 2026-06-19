@@ -17,6 +17,8 @@ describe("debtlens watch", () => {
       gate: "new-code",
       quiet: true,
       blameAge: true,
+      hotspots: 3,
+      churnDays: 30,
       auditSuppressions: true,
       debounce: 10,
     });
@@ -35,6 +37,10 @@ describe("debtlens watch", () => {
       "--quiet",
       "--audit-suppressions",
       "--blame-age",
+      "--hotspots",
+      "3",
+      "--churn-days",
+      "30",
     ]);
   });
 

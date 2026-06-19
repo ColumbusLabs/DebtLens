@@ -981,6 +981,100 @@ describe("debtlens scan git modes", () => {
     }
   });
 
+  it("adds optional git churn hotspots to JSON summaries", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-hotspots-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "hot.ts"), "// TODO hot file\nexport const hot = 1;\n");
+      writeFileSync(join(dir, "src", "stable.ts"), "// TODO stable file\nexport const stable = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+      writeFileSync(join(dir, "src", "hot.ts"), "// TODO hot file\nexport const hot = 2;\nexport const extra = 3;\n");
+      execFileSync("git", ["add", "src/hot.ts"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "update hot"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--hotspots", "--churn-days", "30", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.hotspots.source, "git");
+      assert.equal(parsed.summary.hotspots.window.days, 30);
+      assert.equal(parsed.summary.hotspots.ranking[0].file, "src/hot.ts");
+      assert.ok(parsed.summary.hotspots.ranking[0].churn.commits >= 2);
+      assert.match(parsed.summary.hotspots.ranking[0].reasons.join("; "), /recent commits/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses an explicit git churn range when provided", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-hotspot-range-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO range marker\nexport const value = 1;\n");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+      const base = execFileSync("git", ["rev-parse", "HEAD"], { cwd: dir, encoding: "utf8" }).trim();
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO range marker\nexport const value = 2;\n");
+      execFileSync("git", ["add", "src/Widget.ts"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "update widget"], { cwd: dir, stdio: "ignore" });
+
+      const range = `${base}..HEAD`;
+      const result = runScan(["src", "--cwd", dir, "--rules", "todo-comment", "--churn-range", range, "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.hotspots.window.range, range);
+      assert.equal(parsed.summary.hotspots.ranking[0].file, "Widget.ts");
+      assert.equal(parsed.summary.hotspots.ranking[0].repositoryPath, "src/Widget.ts");
+      assert.equal(parsed.summary.hotspots.ranking[0].churn.commits, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects ambiguous git churn windows", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment",
+      "--hotspots",
+      "--churn-days",
+      "30",
+      "--churn-range",
+      "HEAD",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Use either --churn-days or --churn-range, not both/);
+  });
+
+  it("ignores hotspot enrichment outside git repositories", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-hotspots-plain-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO plain marker\nexport const value = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--hotspots", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stderr, /--hotspots ignored \(not a git repository\)/);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.summary.hotspots, undefined);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("supports opt-in gitignore filtering", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-gitignore-"));
     try {

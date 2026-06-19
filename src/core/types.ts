@@ -266,6 +266,40 @@ export interface FixTarget {
   }>;
 }
 
+export interface FileChurnMetric {
+  file: string;
+  repositoryPath: string;
+  commits: number;
+  additions: number;
+  deletions: number;
+  changedLines: number;
+}
+
+export interface DebtHotspot {
+  file: string;
+  repositoryPath: string;
+  totalIssues: number;
+  distinctRules: number;
+  bySeverity: Record<Severity, number>;
+  score: number;
+  churn: FileChurnMetric;
+  reasons: string[];
+  topRules: Array<{
+    ruleId: string;
+    count: number;
+  }>;
+}
+
+export interface ScanHotspotSummary {
+  source: "git";
+  window: {
+    days?: number;
+    since?: string;
+    range?: string;
+  };
+  ranking: DebtHotspot[];
+}
+
 export interface InlineSuppressionAudit {
   ruleId: string;
   file: string;
@@ -379,6 +413,7 @@ export interface ScanSummary {
   deltaFromBaseline?: ScanBaselineDelta;
   correlations?: RuleCorrelation[];
   duplicateClusters?: DuplicateLogicCluster[];
+  hotspots?: ScanHotspotSummary;
   profile?: ScanProfile;
   performance?: ScanPerformance;
 }

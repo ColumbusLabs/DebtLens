@@ -17,6 +17,7 @@ export function renderHtml(result: ScanResult): string {
     duplicateClusters: result.summary.duplicateClusters,
     limit: 5,
   });
+  const hotspots = result.summary.hotspots?.ranking ?? [];
   const findings = result.issues.map((issue) => {
     const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
     return `<tr><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(issue.ruleName)}</td><td><code>${escapeHtml(location)}</code></td><td>${escapeHtml(issue.message)}</td><td>${Math.round(issue.confidence * 100)}%</td></tr>`;
@@ -57,6 +58,14 @@ export function renderHtml(result: ScanResult): string {
     ${severityOrder.map((severity) => `<div class="metric"><span>${capitalize(severity)}</span><strong>${result.summary.bySeverity[severity]}</strong></div>`).join("\n    ")}
   </section>
   ${suppressionAudit}
+  ${hotspots.length ? `<h2>Git Churn Hotspots</h2>
+  <p>Optional git-derived ranking from ${escapeHtml(formatHotspotWindow(result.summary.hotspots?.window))}. Score combines current findings with recent commits and changed lines.</p>
+  <table>
+    <thead><tr><th>File</th><th>Score</th><th>Churn</th><th>Why</th><th>Top rules</th></tr></thead>
+    <tbody>
+${hotspots.map((hotspot) => `<tr><td><code>${escapeHtml(hotspot.file)}</code></td><td>${hotspot.score}</td><td>${hotspot.churn.commits} commit${hotspot.churn.commits === 1 ? "" : "s"}, ${hotspot.churn.changedLines} changed line${hotspot.churn.changedLines === 1 ? "" : "s"}</td><td>${escapeHtml(hotspot.reasons.join("; "))}</td><td>${escapeHtml(hotspot.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`).join("\n")}
+    </tbody>
+  </table>` : ""}
   ${fixTargets.length ? `<h2>Fix These First</h2>
   <table>
     <thead><tr><th>File</th><th>Issues</th><th>Why</th><th>Top rules</th></tr></thead>
@@ -89,6 +98,13 @@ ${correlations}
 </body>
 </html>
 `;
+}
+
+function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots"]>["window"] | undefined): string {
+  if (!window) return "the configured git window";
+  if (window.range) return `git range ${window.range}`;
+  if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
+  return "the configured git window";
 }
 
 function renderSuppressionAudit(result: ScanResult): string {

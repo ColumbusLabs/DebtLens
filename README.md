@@ -221,6 +221,9 @@ Options:
 --parallel                     run detectors concurrently after source loading
 --batch-size <count>           load source files in bounded batches
 --blame-age                    add introducedDaysAgo metadata to JSON issues via git blame
+--hotspots [limit]             rank files by current findings plus recent git churn
+--churn-days <count>           with --hotspots, look back this many days
+--churn-range <range>          with --hotspots, use this git revision range
 --audit-suppressions           include used and unused inline suppression directives
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
@@ -351,6 +354,12 @@ Use `debtlens compare previous.json current.json --format terminal|markdown|json
 Pass `--blame-age` to enrich JSON issues with optional `introducedDaysAgo` metadata from
 `git blame`. This is best-effort: outside git repositories, uncommitted lines, and staged
 blob scans omit the field without changing detector output or exit codes.
+
+Pass `--hotspots` to add optional `summary.hotspots` data that ranks files by current
+findings plus git-derived churn. By default it looks back 90 days; use `--churn-days`
+or `--churn-range` when you need a specific history window. The lookup is opt-in so
+default scans do not pay for git history traversal. Churn is based on current file
+paths and does not follow pre-rename history.
 
 ## Inline suppressions
 
@@ -605,7 +614,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0     # needed for --changed to diff against the base branch
+          fetch-depth: 0     # needed for --changed and optional hotspot churn
       - uses: ColumbusLabs/debtlens@v0.3.0
         with:
           changed: origin/${{ github.base_ref }}
@@ -623,7 +632,9 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `gate`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `sarif-category`, `junit-fail-on`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action passes `gate` to normal scans, but not to `write-baseline` mode, so baseline creation remains a snapshot operation. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `gate`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `hotspots`, `churn-days`, `churn-range`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `sarif-category`, `junit-fail-on`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action passes `gate` to normal scans, but not to `write-baseline` mode, so baseline creation remains a snapshot operation. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+
+Hotspot prioritization is disabled by default. Set `hotspots: true` to attach optional, git-derived hotspot data to the normal scan and prioritize findings in high-churn files. `churn-days` and `churn-range` map to `--churn-days <count>` and `--churn-range <range>` when you need to bound that git history lookup. Churn requires enough git history; use `actions/checkout` with `fetch-depth: 0` for full history or fetch the relevant range before the scan. Hotspots do not affect default scan speed unless enabled, and the Action does not pass hotspot inputs to `write-baseline` mode.
 
 For GitHub-specific preset recipes, including advisory, new-code, legacy-baseline, and strict-new-code migrations, see [`docs/ci-github.md`](./docs/ci-github.md).
 

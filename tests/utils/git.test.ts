@@ -4,10 +4,30 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { getChangedFiles, getIgnoredFiles, getLineIntroducedDaysAgo, getRefSnapshot, getStagedFiles, isGitRepo } from "../../src/utils/git.js";
+import {
+  getChangedFiles,
+  getFileChurn,
+  getIgnoredFiles,
+  getLineIntroducedDaysAgo,
+  getRefSnapshot,
+  getStagedFiles,
+  isGitRepo,
+} from "../../src/utils/git.js";
 
-function git(cwd: string, args: string[]): void {
-  execFileSync("git", args, { cwd, stdio: "ignore" });
+function git(cwd: string, args: string[], env: NodeJS.ProcessEnv = {}): string {
+  return execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, ...env },
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+}
+
+function commit(cwd: string, message: string, date = "2026-01-01T00:00:00Z"): void {
+  git(cwd, ["commit", "-m", message], {
+    GIT_AUTHOR_DATE: date,
+    GIT_COMMITTER_DATE: date,
+  });
 }
 
 describe("git changed-files", () => {
@@ -21,7 +41,7 @@ describe("git changed-files", () => {
     mkdirSync(join(dir, "src"));
     writeFileSync(join(dir, "src", "committed.ts"), "export const a = 1;\n");
     git(dir, ["add", "-A"]);
-    git(dir, ["commit", "-m", "init"]);
+    commit(dir, "init");
   });
 
   afterEach(() => {
@@ -39,6 +59,7 @@ describe("git changed-files", () => {
     assert.equal(getIgnoredFiles(plain, []), null);
     assert.equal(getStagedFiles(plain), null);
     assert.equal(getLineIntroducedDaysAgo(plain, "src/file.ts", 1), null);
+    assert.equal(getFileChurn(plain, ["src/file.ts"], { days: 7 }), null);
     rmSync(plain, { recursive: true, force: true });
   });
 
@@ -104,6 +125,142 @@ describe("git changed-files", () => {
     assert.ok(snapshot.files.some((file) => file.endsWith("src/committed.ts")));
     const committedPath = snapshot.files.find((file) => file.endsWith("src/committed.ts"));
     assert.equal(snapshot.contents?.[committedPath!], "export const a = 1;\n");
+  });
+
+  it("reports file churn over a day lookback and ignores files outside the repo", () => {
+    const hot = join(dir, "src", "hot.ts");
+    writeFileSync(hot, "export const hot = 1;\n");
+    git(dir, ["add", "src/hot.ts"]);
+    commit(dir, "add hot", "2026-01-02T00:00:00Z");
+
+    writeFileSync(join(dir, "src", "committed.ts"), "export const a = 2;\nexport const b = 3;\n");
+    git(dir, ["add", "src/committed.ts"]);
+    commit(dir, "update committed", "2026-01-08T00:00:00Z");
+
+    writeFileSync(hot, "export const hot = 1;\nexport const extra = 2;\n");
+    git(dir, ["add", "src/hot.ts"]);
+    commit(dir, "update hot", "2026-01-09T00:00:00Z");
+
+    const outside = mkdtempSync(join(tmpdir(), "debtlens-outside-"));
+    try {
+      writeFileSync(join(outside, "outside.ts"), "export const outside = true;\n");
+
+      const churn = getFileChurn(
+        dir,
+        [hot, join(dir, "src", "committed.ts"), join(outside, "outside.ts")],
+        { days: 5, now: new Date("2026-01-10T00:00:00Z") },
+      );
+
+      assert.ok(churn);
+      assert.equal(churn.window.days, 5);
+      assert.equal(churn.window.since, "2026-01-05T00:00:00.000Z");
+      assert.deepEqual(
+        churn.files.map((file) => file.repositoryPath).sort(),
+        ["src/committed.ts", "src/hot.ts"],
+      );
+
+      const committed = churn.files.find((file) => file.repositoryPath === "src/committed.ts");
+      assert.ok(committed);
+      assert.equal(committed.file, "src/committed.ts");
+      assert.equal(committed.commits, 1);
+      assert.equal(committed.additions, 2);
+      assert.equal(committed.deletions, 1);
+      assert.equal(committed.changedLines, 3);
+
+      const hotMetric = churn.files.find((file) => file.repositoryPath === "src/hot.ts");
+      assert.ok(hotMetric);
+      assert.equal(hotMetric.file, "src/hot.ts");
+      assert.equal(hotMetric.commits, 1);
+      assert.equal(hotMetric.additions, 1);
+      assert.equal(hotMetric.deletions, 0);
+      assert.equal(hotMetric.changedLines, 1);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("reports file churn for an explicit git range", () => {
+    const base = git(dir, ["rev-parse", "HEAD"]);
+    const file = join(dir, "src", "committed.ts");
+
+    writeFileSync(file, "export const a = 2;\n");
+    git(dir, ["add", "src/committed.ts"]);
+    commit(dir, "change committed", "2026-01-02T00:00:00Z");
+
+    writeFileSync(file, "export const a = 2;\nexport const b = 3;\n");
+    git(dir, ["add", "src/committed.ts"]);
+    commit(dir, "expand committed", "2026-01-03T00:00:00Z");
+    const head = git(dir, ["rev-parse", "HEAD"]);
+
+    writeFileSync(join(dir, "src", "later.ts"), "export const later = true;\n");
+    git(dir, ["add", "src/later.ts"]);
+    commit(dir, "add later", "2026-01-04T00:00:00Z");
+
+    const churn = getFileChurn(
+      dir,
+      [file, join(dir, "src", "later.ts")],
+      { range: `${base}..${head}` },
+    );
+
+    assert.ok(churn);
+    assert.equal(churn.window.range, `${base}..${head}`);
+
+    const committed = churn.files.find((entry) => entry.repositoryPath === "src/committed.ts");
+    assert.ok(committed);
+    assert.equal(committed.file, "src/committed.ts");
+    assert.equal(committed.commits, 2);
+    assert.equal(committed.additions, 2);
+    assert.equal(committed.deletions, 1);
+    assert.equal(committed.changedLines, 3);
+
+    const later = churn.files.find((entry) => entry.repositoryPath === "src/later.ts");
+    assert.ok(later);
+    assert.equal(later.commits, 0);
+    assert.equal(later.changedLines, 0);
+  });
+
+  it("throws a clear error for an unknown churn range", () => {
+    assert.throws(
+      () => getFileChurn(dir, [join(dir, "src", "committed.ts")], { range: "HEAD..no-such-ref" }),
+      /Could not resolve git churn range "HEAD\.\.no-such-ref"/,
+    );
+  });
+
+  it("returns zero churn for a git repo with no commits", () => {
+    const empty = mkdtempSync(join(tmpdir(), "debtlens-empty-git-"));
+    try {
+      git(empty, ["init"]);
+      mkdirSync(join(empty, "src"));
+      writeFileSync(join(empty, "src", "new.ts"), "export const fresh = true;\n");
+
+      const churn = getFileChurn(empty, [join(empty, "src", "new.ts")], {
+        days: 7,
+        now: new Date("2026-01-10T00:00:00Z"),
+      });
+
+      assert.ok(churn);
+      assert.equal(churn.files.length, 1);
+      assert.deepEqual(churn.files[0], {
+        file: "src/new.ts",
+        repositoryPath: "src/new.ts",
+        commits: 0,
+        additions: 0,
+        deletions: 0,
+        changedLines: 0,
+      });
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects ambiguous churn windows", () => {
+    assert.throws(
+      () => getFileChurn(dir, [join(dir, "src", "committed.ts")], {
+        days: 7,
+        range: "HEAD",
+      }),
+      /either git churn days or git churn range/,
+    );
   });
 
   it("reports whole-day blame age for committed lines", () => {

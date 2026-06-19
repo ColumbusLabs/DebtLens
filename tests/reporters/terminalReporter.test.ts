@@ -103,6 +103,31 @@ describe("renderTerminal", () => {
     assert.match(byFile, /src\/Parent\.tsx \(1\)/);
   });
 
+  it("renders optional git churn hotspots", () => {
+    const result = makeResult([issue]);
+    result.summary.hotspots = {
+      source: "git",
+      window: { days: 30 },
+      ranking: [{
+        file: "src/Parent.tsx",
+        repositoryPath: "src/Parent.tsx",
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        score: 27.4,
+        churn: { file: "src/Parent.tsx", repositoryPath: "src/Parent.tsx", commits: 3, additions: 20, deletions: 4, changedLines: 24 },
+        reasons: ["1 high-severity finding", "3 recent commits"],
+        topRules: [{ ruleId: "prop-drilling", count: 1 }],
+      }],
+    };
+
+    const out = renderTerminal(result, { color: false });
+
+    assert.match(out, /Git churn hotspots/);
+    assert.match(out, /Optional git-derived ranking from the last 30 days/);
+    assert.match(out, /src\/Parent\.tsx \| score 27\.4 \| 3 commits, 24 changed lines/);
+  });
+
   it("rejects unknown formats instead of falling through to terminal output", () => {
     assert.throws(
       () => renderReport(makeResult([issue]), "nope" as never),

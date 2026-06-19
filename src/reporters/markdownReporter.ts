@@ -41,6 +41,7 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
     return `${lines.join("\n")}\n`;
   }
 
+  renderHotspots(lines, result);
   renderFixTargets(lines, result);
 
   for (const severity of severityOrder) {
@@ -117,6 +118,31 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderHotspots(lines: string[], result: ScanResult): void {
+  const hotspots = result.summary.hotspots?.ranking ?? [];
+  if (hotspots.length === 0) return;
+
+  lines.push("");
+  lines.push("## Git churn hotspots");
+  lines.push("");
+  lines.push(`Optional git-derived ranking from ${formatHotspotWindow(result.summary.hotspots?.window)}. Score combines current findings with recent commits and changed lines.`);
+  lines.push("");
+  lines.push("| File | Score | Churn | Why | Top rules |");
+  lines.push("| --- | ---: | --- | --- | --- |");
+  for (const hotspot of hotspots) {
+    const churn = `${hotspot.churn.commits} commit${hotspot.churn.commits === 1 ? "" : "s"}, ${hotspot.churn.changedLines} changed line${hotspot.churn.changedLines === 1 ? "" : "s"}`;
+    const topRules = hotspot.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+    lines.push(`| \`${escapeMarkdownTableCell(hotspot.file)}\` | ${hotspot.score} | ${escapeMarkdownTableCell(churn)} | ${escapeMarkdownTableCell(hotspot.reasons.join("; "))} | ${escapeMarkdownTableCell(topRules)} |`);
+  }
+}
+
+function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots"]>["window"] | undefined): string {
+  if (!window) return "the configured git window";
+  if (window.range) return `git range \`${window.range}\``;
+  if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
+  return "the configured git window";
 }
 
 function renderFixTargets(lines: string[], result: ScanResult): void {

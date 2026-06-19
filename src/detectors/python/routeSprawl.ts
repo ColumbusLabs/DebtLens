@@ -53,6 +53,7 @@ function collectPythonRouteRegistrations(
   const routes: PythonRouteRegistration[] = [];
   const seen = new Set<string>();
   const routeReceivers = collectFlaskRouteReceivers(file.content);
+  const ignoredTextLines = collectPythonMultilineStringLines(file.content);
 
   for (const fn of moduleInfo.functions) {
     for (const decorator of fn.decorators ?? []) {
@@ -62,12 +63,14 @@ function collectPythonRouteRegistrations(
     }
   }
 
-  for (const route of collectTextDecoratorRoutes(file.content, routeReceivers)) {
-    addRoute(routes, seen, route);
+  if (!moduleInfo.usedAstSidecar) {
+    for (const route of collectTextDecoratorRoutes(file.content, routeReceivers, ignoredTextLines)) {
+      addRoute(routes, seen, route);
+    }
   }
 
   if (hasDjangoUrlEvidence(file.content, moduleInfo.imports)) {
-    for (const route of collectDjangoUrlPatterns(file.content)) {
+    for (const route of collectDjangoUrlPatterns(file.content, ignoredTextLines)) {
       addRoute(routes, seen, route);
     }
   }
@@ -89,11 +92,13 @@ function addRoute(
 function collectTextDecoratorRoutes(
   content: string,
   routeReceivers: Set<string>,
+  ignoredLines: Set<number>,
 ): PythonRouteRegistration[] {
   const routes: PythonRouteRegistration[] = [];
   const lines = content.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; index += 1) {
+    if (ignoredLines.has(index + 1)) continue;
     const match = (lines[index] ?? "").match(/^\s*@(.+)$/);
     if (!match) continue;
     const route = describeRouteDecorator(match[1] ?? "", index + 1, routeReceivers);
@@ -157,11 +162,12 @@ function isKnownRouteReceiver(callee: string, routeReceivers: Set<string>): bool
   return parts.slice(0, -1).some((part) => routeReceivers.has(part));
 }
 
-function collectDjangoUrlPatterns(content: string): PythonRouteRegistration[] {
+function collectDjangoUrlPatterns(content: string, ignoredLines: Set<number>): PythonRouteRegistration[] {
   const routes: PythonRouteRegistration[] = [];
   const lines = content.split(/\r?\n/);
 
   for (let index = 0; index < lines.length; index += 1) {
+    if (ignoredLines.has(index + 1)) continue;
     const line = lines[index] ?? "";
     const match = line.match(/^\s*(path|re_path)\s*\(\s*(?:[rubfRUBF]*)?(["'])(.*?)\2/);
     if (!match) continue;
@@ -191,6 +197,82 @@ function extractRoutePath(args: string): string | undefined {
   const match = args.match(/\brule\s*=\s*(?:[rubfRUBF]*)?(["'])(\/[^"']*)\1/)
     ?? args.match(/(?:^|[,(]\s*)(?:[rubfRUBF]*)?(["'])(\/[^"']*)\1/);
   return match ? normalizeDisplayPath(match[2] ?? "") : undefined;
+}
+
+function collectPythonMultilineStringLines(content: string): Set<number> {
+  const lines = new Set<number>();
+  let delimiter: "\"\"\"" | "'''" | undefined;
+  let line = 1;
+  let index = 0;
+
+  while (index < content.length) {
+    const char = content[index] ?? "";
+
+    if (delimiter) {
+      lines.add(line);
+      if (content.startsWith(delimiter, index)) {
+        index += delimiter.length;
+        delimiter = undefined;
+        continue;
+      }
+      if (char === "\n") {
+        line += 1;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === "#") {
+      index = skipPythonComment(content, index);
+      continue;
+    }
+
+    if (content.startsWith('"""', index) || content.startsWith("'''", index)) {
+      delimiter = content.slice(index, index + 3) as "\"\"\"" | "'''";
+      lines.add(line);
+      index += delimiter.length;
+      continue;
+    }
+
+    if (char === "\"" || char === "'") {
+      index = skipPythonShortString(content, index, char);
+      continue;
+    }
+
+    if (char === "\n") {
+      line += 1;
+    }
+    index += 1;
+  }
+
+  return lines;
+}
+
+function skipPythonComment(content: string, startIndex: number): number {
+  let index = startIndex;
+  while (index < content.length && content[index] !== "\n") {
+    index += 1;
+  }
+  return index;
+}
+
+function skipPythonShortString(content: string, startIndex: number, quote: "\"" | "'"): number {
+  let index = startIndex + 1;
+  while (index < content.length) {
+    const char = content[index] ?? "";
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
+    if (char === quote) {
+      return index + 1;
+    }
+    if (char === "\n") {
+      return index;
+    }
+    index += 1;
+  }
+  return index;
 }
 
 function extractConfiguredMethods(args: string): string[] {

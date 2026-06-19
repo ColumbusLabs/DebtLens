@@ -475,6 +475,33 @@ def enqueue_job():
     assert.equal(issues.length, 0);
   });
 
+  it("does not count Flask route examples inside docstrings", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/docs.py": `
+from flask import Blueprint
+
+bp = Blueprint("docs", __name__)
+
+def document_routes():
+    """
+    Examples:
+        @bp.get("/accounts")
+        def list_accounts():
+            return "ok"
+
+        @bp.post("/accounts")
+        def create_account():
+            return "ok"
+    """
+    return "docs"
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 1 },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
   it("keeps small Python web route modules quiet", async () => {
     const issues = await runDetector(pythonRouteSprawlDetector, {
       "src/routes/health.py": `
@@ -516,6 +543,25 @@ urlpatterns = [
     assert.equal(issues[0]?.ruleId, "python-route-sprawl");
     assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_PATH accounts/")));
     assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_RE_PATH ^accounts/")));
+  });
+
+  it("does not count Django URL examples inside multiline strings", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/urls.py": `
+from django.urls import path
+
+urlpatterns = []
+
+ROUTE_DOCS = """
+path("accounts/", views.accounts),
+path("accounts/create/", views.create_account),
+"""
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 1 },
+    });
+
+    assert.equal(issues.length, 0);
   });
 
   it("does not flag Python wrappers that add behavior", async () => {

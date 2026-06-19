@@ -1,0 +1,18 @@
+# Runnable Example Scenarios
+
+The `examples/` directory contains small projects that exercise real report surfaces. Use
+these commands when evaluating output, writing docs, or checking a reporter change.
+
+| Scenario | Command | What it proves |
+| --- | --- | --- |
+| React dashboard | `debtlens scan examples/react --pack react --min-severity info` | Component, prop, state, duplicate, and naming signals. |
+| Next.js App Router | `debtlens scan examples/next --pack next --min-severity info` | Server/client boundary and route/data-loader rules. |
+| React Native screen | `debtlens scan examples/react-native --pack react-native --min-severity info` | RN host-forwarding and React-family rules. |
+| Node API | `debtlens scan examples/node-api --pack node --min-severity info` | Route and handler-depth signals for server code. |
+| Python service | `debtlens scan examples/python --pack python --min-severity info` | Python duplicate, thin-wrapper, and TODO rules. |
+| Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |
+| False-positive playground | `debtlens scan examples/false-positives --pack react --min-severity info` | Calibrated near-misses that should stay quiet. |
+
+For Markdown or artifact output, add `--format markdown --output debtlens-report.md` or
+`--format json --output debtlens-report.json`. For CI-style checks, add `--baseline` or
+`--diff-base` only after the first local scan looks credible.

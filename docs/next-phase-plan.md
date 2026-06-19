@@ -7,10 +7,9 @@ Date: 2026-06-10
 ## Context
 
 v0.3 ("Maintainer workflow integrations") is shipped. Per [`ROADMAP.md`](../ROADMAP.md),
-the headline item for v0.4 is the **plugin API for third-party rules**, which already has
-an accepted design in [`docs/plugin-api-rfc.md`](./plugin-api-rfc.md) but no implementation:
-`plugins` and `pluginApiVersion` do not exist yet in the config schema, and all detectors
-are hardcoded in [`src/detectors/index.ts`](../src/detectors/index.ts).
+the headline item for v0.4 was the **plugin API for third-party rules**. This plan is now
+historical: `plugins`, `pluginApiVersion`, plugin thresholds, plugin vocabulary, the
+disable escape hatch, and the `debtlens/plugin` export have shipped.
 
 This plan selects **eight open issues** in two tracks: the plugin API vertical (five
 issues that together ship the RFC end to end) and three small, independent CLI/config

@@ -18,6 +18,8 @@ body:
         - react-native pack
         - next pack
         - node pack
+        - python pack
+        - local plugin rule
         - other framework pack
     validations:
       required: true
@@ -32,8 +34,8 @@ body:
     id: examples
     attributes:
       label: Code examples
-      description: Include one example that should fire and one near-miss that should not.
-      render: tsx
+      description: Include one example that should fire and one near-miss that should not. Note the language if it is not TSX.
+      render: text
     validations:
       required: true
   - type: textarea
@@ -51,4 +53,8 @@ body:
     attributes:
       label: Acceptance criteria
       description: What tests and docs should exist when this is implemented?
-
+  - type: textarea
+    id: reporter-impact
+    attributes:
+      label: Reporter or artifact impact
+      description: Note whether JSON, SARIF, Markdown, PR comments, HTML, JUnit, or Action summaries need new output.

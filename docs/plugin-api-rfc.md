@@ -44,7 +44,7 @@ export interface Detector {
 
 Issues must include `message`, `severity`, `confidence`, `file`, `location`, `evidence`, and `suggestion` per [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
-## Config shape (proposed)
+## Config shape (shipped)
 
 ```json
 {

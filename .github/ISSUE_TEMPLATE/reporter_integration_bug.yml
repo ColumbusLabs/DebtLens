@@ -1,0 +1,54 @@
+name: Reporter or integration bug
+description: Report broken output in SARIF, JSON, Markdown, HTML, JUnit, PR comments, or CI integrations.
+title: "Integration bug: "
+labels: ["bug", "area: reporter"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Include the smallest command and artifact that shows the integration problem.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - SARIF / GitHub code scanning
+        - GitHub Action step summary
+        - GitHub PR comment
+        - JSON
+        - Markdown
+        - HTML
+        - JUnit
+        - GitLab CI
+        - Azure Pipelines
+        - Bitbucket Pipelines
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: DebtLens version
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or workflow step
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Output artifact
+      description: Paste the relevant output excerpt or attach the generated artifact.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected integration behavior
+    validations:
+      required: true

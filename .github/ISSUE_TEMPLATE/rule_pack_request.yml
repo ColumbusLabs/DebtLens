@@ -18,6 +18,12 @@ body:
         - next
         - expo
         - node
+        - python
+        - vue
+        - svelte
+        - swift
+        - kotlin
+        - ruby-rails
         - monorepo
         - other
     validations:
@@ -47,7 +53,7 @@ body:
     attributes:
       label: Code examples
       description: One or two real patterns that should fire once the pack exists.
-      render: tsx
+      render: text
   - type: textarea
     id: config
     attributes:

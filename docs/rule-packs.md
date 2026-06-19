@@ -1,20 +1,24 @@
 # Rule packs
 
-DebtLens is a **maintainability scanner** for TypeScript and JavaScript codebases. React
-and React Native are the first serious rule targets — not the identity of the tool.
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, and Python
+codebases. React and React Native were the first serious framework targets, but the
+scanner identity is the shared maintainability contract, not a single UI stack.
 
 The product splits into layers:
 
 1. **Core scanner** — file resolution, AST parsing, baselines, `--changed` / `--staged`,
    reporters, config, CI, and GitHub Action integration.
 2. **Core rules** — detectors that apply to most TS/JS projects regardless of UI framework.
-3. **Framework packs** — optional rule groups and tuning for React, React Native, Next.js,
-   Expo, Node APIs, monorepos, and (later) Vue, Svelte, and other ecosystems.
+3. **Framework and language packs** — optional rule groups and tuning for React, React
+   Native, Next.js, Expo, Node APIs, Python, monorepos, and future Vue, Svelte, Swift,
+   Kotlin, Ruby, and other ecosystems.
 
-Today all built-in rules run together by default. Select a pack in config or use
+Today all TS/JS built-in rules run together by default, while Python discovery is enabled
+by the `python` pack or explicit `python-*` rules. Select a pack in config or use
 `debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config or
 `--rules` on the CLI override the pack. Organization policy packages can layer plugins
 and presets on top of these built-ins; see [`policy-packages.md`](./policy-packages.md).
+For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 
 ## Current built-in rules
 

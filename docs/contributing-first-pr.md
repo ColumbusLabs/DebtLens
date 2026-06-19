@@ -32,9 +32,8 @@ Use a focused test while iterating, then run the full commands before opening a 
 
 ## Pick a contribution
 
-The original good-first issue queue is complete as of v0.3.0. Use
-[`docs/good-first-issues.md`](./good-first-issues.md) as a historical index of shipped
-work, then propose new changes through
+Use [`docs/good-first-issues.md`](./good-first-issues.md) for the active starter board and
+the historical v0.3 index. If none of the active tasks fits, propose new changes through
 [Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), the
 [rule request template](../.github/ISSUE_TEMPLATE/rule_request.md), or the plugin API RFC
 ([`docs/plugin-api-rfc.md`](./plugin-api-rfc.md)).

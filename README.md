@@ -13,6 +13,11 @@ modules, weak boundaries, TODO debt, and naming drift before it becomes permanen
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
 
 See [`docs/rule-packs.md`](./docs/rule-packs.md) for how **core rules**, **framework packs**, and **language-agnostic reporting** fit together.
+Start with the [`five-minute quickstart`](./docs/quickstart.md), then use the
+[`pack chooser`](./docs/pack-chooser.md), [`example scenarios`](./docs/examples.md),
+[`report gallery`](./docs/report-gallery.md), and
+[`false-positive calibration guide`](./docs/false-positives.md) when you move from a
+local scan to CI.
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
 For Python and future Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
@@ -651,15 +656,15 @@ steps:
 Want to help make DebtLens better? Start with the
 [first-PR guide](./docs/contributing-first-pr.md), the
 [rule pack taxonomy](./docs/rule-packs.md), and
-[CONTRIBUTING.md](./CONTRIBUTING.md). The v0.3 contributor roadmap batch is complete;
-see [`docs/good-first-issues.md`](./docs/good-first-issues.md) for a historical index of
-shipped tasks. Propose new work in
+[CONTRIBUTING.md](./CONTRIBUTING.md). Current starter work is tracked in
+[`docs/good-first-issues.md`](./docs/good-first-issues.md), which separates active
+newcomer tasks from the historical v0.3 roadmap batch. Propose new work in
 [Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), via the rule request
-template, or the [plugin API RFC](./docs/plugin-api-rfc.md).
+template, or the [plugin API](./docs/plugin-api-rfc.md).
 
-Contribution paths: **core TS/JS rules**, **React pack rules**, **framework packs**
-(Next.js, RN, Node), **scanner/CI** (baselines, monorepos, inline suppressions), and
-**reporters**. New rule authors should follow the rule checklist in
+Contribution paths: **core TS/JS rules**, **Python rules**, **React pack rules**,
+**framework packs** (Next.js, RN, Node), **scanner/CI** (baselines, monorepos, inline
+suppressions), **plugins**, and **reporters**. New rule authors should follow the rule checklist in
 [CONTRIBUTING.md](./CONTRIBUTING.md#rule-review-bar).
 
 ## Development
@@ -682,8 +687,9 @@ confidence-aware `--fail-on`, monorepo `--package` scanning, GitHub Action step 
 and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
-layer with pluggable rule packs on top. React is the first serious pack; React Native,
-Next.js, and broader TS/JS rules expand from there. See [`ROADMAP.md`](./ROADMAP.md) and
+layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
+React Native, Next.js, Expo, Node, Python, and maintainer workflows; future packs expand
+from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 ## License

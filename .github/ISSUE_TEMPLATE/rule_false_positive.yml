@@ -14,6 +14,21 @@ body:
       placeholder: "large-component"
     validations:
       required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Source language or pack
+      options:
+        - TypeScript / JavaScript
+        - React / TSX
+        - React Native
+        - Next.js
+        - Node
+        - Python
+        - Local plugin
+        - Other
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
@@ -26,14 +41,14 @@ body:
     attributes:
       label: Minimal code sample
       description: Paste the smallest code sample that reproduces the finding.
-      render: tsx
+      render: text
     validations:
       required: true
   - type: textarea
     id: command
     attributes:
       label: Command and config
-      description: Include command, thresholds, min severity, and config settings.
+      description: Include command, thresholds, min severity, pack, plugins, and config settings.
       render: shell
     validations:
       required: true
@@ -45,8 +60,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: scan-artifact
+    attributes:
+      label: ScanResult or reporter artifact
+      description: Paste the relevant JSON issue, SARIF result, PR comment excerpt, or artifact path if available.
+      render: json
+  - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
       description: What fixture or test should pass once this is fixed?
-

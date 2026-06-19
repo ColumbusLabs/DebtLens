@@ -1,5 +1,5 @@
 name: DebtLens
-description: Find maintainability debt in TypeScript, JavaScript, Python, Kotlin, and framework codebases.
+description: Find maintainability debt in TypeScript, JavaScript, Python, Kotlin, Jetpack Compose, and framework codebases.
 author: ColumbusLabs
 branding:
   icon: search
@@ -34,7 +34,7 @@ inputs:
     description: Compare against a git ref and report only introduced findings.
     default: ""
   pack:
-    description: Built-in rule pack preset (core, react, react-native, next, expo, node, python, kotlin, ai-assisted-maintainer, oss-maintainer).
+    description: Built-in rule pack preset (core, react, react-native, next, expo, node, python, kotlin, compose, ai-assisted-maintainer, oss-maintainer).
     default: ""
   package:
     description: Workspace package name to scan.

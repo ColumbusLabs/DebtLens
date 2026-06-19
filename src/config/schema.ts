@@ -15,6 +15,7 @@ export function buildConfigSchema(): Record<string, unknown> {
   const knownThresholds = Object.fromEntries(
     Object.keys(defaultConfig.thresholds).map((key) => [key, { type: "number" }]),
   );
+  const packAlternation = RULE_PACK_IDS.map(escapeRegex).join("|");
   const severityValue = { enum: [...severities] };
   const confidenceFloorValue = { type: "number", minimum: 0, maximum: 1 };
   const knownRuleSeverities = Object.fromEntries(detectorIds.map((id) => [id, severityValue]));
@@ -44,8 +45,11 @@ export function buildConfigSchema(): Record<string, unknown> {
         description: "Lowest severity to report.",
       },
       pack: {
-        enum: [...RULE_PACK_IDS],
-        description: "Built-in rule pack preset. Explicit rules override the pack.",
+        anyOf: [
+          { enum: [...RULE_PACK_IDS] },
+          { type: "string", pattern: `^\\s*(?:${packAlternation})(?:\\s*,\\s*(?:${packAlternation}))*\\s*$` },
+        ],
+        description: "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack.",
       },
       rules: {
         type: "array",
@@ -168,4 +172,8 @@ export function buildConfigSchema(): Record<string, unknown> {
       },
     },
   };
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

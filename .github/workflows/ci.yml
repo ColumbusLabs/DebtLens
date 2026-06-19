@@ -30,6 +30,7 @@ jobs:
           diff -u /tmp/debtlens-source-packs.json /tmp/debtlens-dist-packs.json
           node dist/cli/index.js scan examples/python --pack python --format json --output debtlens-python-report.json
           node dist/cli/index.js scan examples/kotlin --pack kotlin --format json --output debtlens-kotlin-report.json
+          node dist/cli/index.js scan examples/compose --pack compose --format json --output debtlens-compose-report.json
       - name: Benchmark regression gate
         run: npm run benchmark:ci
         env:
@@ -39,3 +40,4 @@ jobs:
       - run: node dist/cli/index.js scan examples/next --min-severity info --format markdown --output debtlens-next-report.md
       - run: node dist/cli/index.js scan examples/python --pack python --min-severity info --format markdown --output debtlens-python-report.md
       - run: node dist/cli/index.js scan examples/kotlin --pack kotlin --min-severity info --format markdown --output debtlens-kotlin-report.md
+      - run: node dist/cli/index.js scan examples/compose --pack compose --min-severity info --format markdown --output debtlens-compose-report.md

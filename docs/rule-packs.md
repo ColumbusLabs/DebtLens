@@ -1,6 +1,6 @@
 # Rule packs
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, and Kotlin
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose
 codebases. React and React Native were the first serious framework targets, but the
 scanner identity is the shared maintainability contract, not a single UI stack.
 
@@ -10,7 +10,7 @@ The product splits into layers:
    reporters, config, CI, and GitHub Action integration.
 2. **Core rules** — detectors that apply to most TS/JS projects regardless of UI framework.
 3. **Framework and language packs** — optional rule groups and tuning for React, React
-   Native, Next.js, Expo, Node APIs, Python, Kotlin, and monorepos. Additional ecosystems
+   Native, Next.js, Expo, Node APIs, Python, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
    such as Vue, Svelte, Swift, and Ruby follow the same model.
 
 Today all TS/JS built-in rules run together by default, while Python and Kotlin discovery
@@ -57,6 +57,8 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
 | `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
 | `kotlin-todo-comment` | **kotlin** | TODO/FIXME/HACK/temporary implementation comments in Kotlin files | Low |
+| `compose-large-composable` | **compose** | Oversized or branch-heavy Jetpack Compose functions | Medium |
+| `compose-state-hoisting` | **compose** | Composables that own many local state holders instead of hoisting state | Medium |
 
 ### Core rules
 
@@ -129,7 +131,18 @@ The `kotlin` pack widens discovery to `.kt` and `.kts` files and emits the same
 - **`kotlin-todo-comment`**
 
 Use `--pack core,python,kotlin` when one scan should cover mixed TS/JS, Python, and
-Kotlin paths. Jetpack Compose-specific UI debt is intentionally separate pack work.
+Kotlin paths. Jetpack Compose-specific UI debt lives in the separate `compose` pack.
+
+### Jetpack Compose pack (shipped today)
+
+The `compose` pack widens discovery to `.kt` and `.kts` files, but selects only
+Compose-specific UI rules rather than generic Kotlin core rules:
+
+- **`compose-large-composable`**
+- **`compose-state-hoisting`**
+
+Use `--pack kotlin,compose` when one scan should cover both core Kotlin maintainability
+and Compose UI debt.
 
 ### Maintainer packs
 
@@ -146,6 +159,7 @@ Kotlin paths. Jetpack Compose-specific UI debt is intentionally separate pack wo
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
 | `python` | Python duplicate functions, thin wrappers, and TODO debt | **Shipped** |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
+| `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
@@ -163,7 +177,7 @@ follow the same shared result contract.
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
 | **Python** | duplicate logic, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
-| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (oversized composables, state-hoisting smells) | **Shipped** for core Kotlin rules |
+| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 
 Each language needs its own parser/AST path. Rules that map well across languages —
@@ -213,6 +227,9 @@ debtlens scan examples/python --pack python
 
 # Mixed TS/JS plus Python scan
 debtlens scan . --pack core,python
+
+# Jetpack Compose UI screens
+debtlens scan examples/compose --pack compose
 
 # Library-maintainer preset
 debtlens scan --pack oss-maintainer

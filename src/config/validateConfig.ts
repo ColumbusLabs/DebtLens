@@ -58,8 +58,15 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
   if (typed.failOn !== undefined && !isSeverity(String(typed.failOn))) {
     errors.push(`failOn must be one of ${severities.join(", ")}`);
   }
-  if (typed.pack !== undefined && !RULE_PACK_IDS.includes(String(typed.pack))) {
-    errors.push(`pack must be one of ${RULE_PACK_IDS.join(", ")}`);
+  if (typed.pack !== undefined) {
+    if (typeof raw.pack !== "string") {
+      errors.push(`pack must be one or more of ${RULE_PACK_IDS.join(", ")}`);
+    } else {
+      const unknownPackIds = parsePackIds(raw.pack).filter((packId) => !RULE_PACK_IDS.includes(packId));
+      if (unknownPackIds.length) {
+        errors.push(`pack must be one or more of ${RULE_PACK_IDS.join(", ")}`);
+      }
+    }
   }
   if (typed.maxFiles !== undefined && (!Number.isInteger(typed.maxFiles) || typed.maxFiles <= 0)) {
     errors.push("maxFiles must be a positive integer");
@@ -93,6 +100,10 @@ function validateUniqueStrings(errors: string[], key: string, value: unknown): v
   if (new Set(value).size !== value.length) {
     errors.push(`${key} must not contain duplicate values`);
   }
+}
+
+function parsePackIds(pack: string): string[] {
+  return [...new Set(pack.split(",").map((packId) => packId.trim()).filter(Boolean))];
 }
 
 function validateStringArray(errors: string[], key: string, value: unknown): void {

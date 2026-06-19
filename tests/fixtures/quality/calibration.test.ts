@@ -97,6 +97,8 @@ const falsePositiveCases = [
   { ruleId: "prop-drilling", target: "examples/false-positives/prop-drilling" },
   { ruleId: "state-sprawl", target: "examples/false-positives/state-sprawl" },
   { ruleId: "todo-comment", target: "examples/false-positives/todo-comment" },
+  { ruleId: "compose-large-composable", target: "examples/false-positives/compose", include: ["**/*.{kt,kts}"] },
+  { ruleId: "compose-state-hoisting", target: "examples/false-positives/compose", include: ["**/*.{kt,kts}"] },
 ] as const;
 
 describe("calibrated quality fixtures", () => {
@@ -142,7 +144,7 @@ describe("calibrated quality fixtures", () => {
       const result = await scan({
         cwd: process.cwd(),
         target: resolve(calibration.target),
-        include: defaultConfig.include,
+        include: "include" in calibration ? [...calibration.include] : defaultConfig.include,
         exclude: defaultConfig.exclude,
         minSeverity: "info",
         rules: [calibration.ruleId],

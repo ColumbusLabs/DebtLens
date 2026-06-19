@@ -96,13 +96,18 @@ interface LanguageDiscovery {
 }
 
 function resolveLanguageDiscovery(packIds: string[], rules: string[] | undefined): LanguageDiscovery {
-  const hasTsjsPack = packIds.some((packId) => packId !== "python" && packId !== "kotlin");
-  const hasTsjsRule = rules?.some((ruleId) => !ruleId.startsWith("python-") && !ruleId.startsWith("kotlin-")) === true;
+  const hasTsjsPack = packIds.some((packId) => packId !== "python" && packId !== "kotlin" && packId !== "compose");
+  const hasTsjsRule = rules?.some((ruleId) => !isLanguageSpecificRule(ruleId)) === true;
   return {
     tsjs: packIds.length > 0 ? hasTsjsPack : rules?.length ? hasTsjsRule : true,
     python: packIds.includes("python") || rules?.some((ruleId) => ruleId.startsWith("python-")) === true,
-    kotlin: packIds.includes("kotlin") || rules?.some((ruleId) => ruleId.startsWith("kotlin-")) === true,
+    kotlin: packIds.some((packId) => packId === "kotlin" || packId === "compose")
+      || rules?.some((ruleId) => ruleId.startsWith("kotlin-") || ruleId.startsWith("compose-")) === true,
   };
+}
+
+function isLanguageSpecificRule(ruleId: string): boolean {
+  return ruleId.startsWith("python-") || ruleId.startsWith("kotlin-") || ruleId.startsWith("compose-");
 }
 
 function resolveBaseIncludeGlobs(

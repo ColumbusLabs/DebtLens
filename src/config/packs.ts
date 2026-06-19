@@ -1,7 +1,10 @@
+import type { SourceLanguage } from "../core/types.js";
+
 export interface RulePack {
   id: string;
   description: string;
   rules: string[];
+  languages: SourceLanguage[];
   thresholds?: Record<string, number>;
   duplicatedLiteral?: {
     ignoreStrings?: string[];
@@ -99,16 +102,19 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "core",
     description: "Core maintainability rules for any TypeScript or JavaScript project.",
     rules: [...CORE_RULES],
+    languages: ["tsjs"],
   },
   react: {
     id: "react",
     description: "Core rules plus React component, hook, and prop maintainability checks.",
     rules: [...REACT_RULES],
+    languages: ["tsjs"],
   },
   "react-native": {
     id: "react-native",
     description: "React rule pack for React Native apps with host-primitive forwarding signals.",
     rules: [...REACT_NATIVE_RULES],
+    languages: ["tsjs"],
     thresholds: {
       "prop-drilling.maxForwardedProps": 5,
       "context-provider-sprawl.maxProviders": 5,
@@ -119,6 +125,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "next",
     description: "React rule pack for Next.js apps with App Router boundary signals.",
     rules: [...NEXT_RULES],
+    languages: ["tsjs"],
     duplicatedLiteral: {
       ignoreStrings: ["use client", "use server"],
     },
@@ -131,6 +138,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "expo",
     description: "React Native pack tuned for Expo Router projects.",
     rules: [...REACT_NATIVE_RULES],
+    languages: ["tsjs"],
     thresholds: {
       "prop-drilling.maxForwardedProps": 5,
       "context-provider-sprawl.maxProviders": 5,
@@ -142,6 +150,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "node",
     description: "Core rules plus Express/Fastify route depth and route-count checks for Node APIs.",
     rules: [...NODE_RULES],
+    languages: ["tsjs"],
     thresholds: {
       "handler-depth.maxDepth": 4,
       "route-sprawl.maxRoutes": 8,
@@ -151,21 +160,25 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "python",
     description: "Core Python maintainability rules for duplicate functions, thin wrappers, and debt comments.",
     rules: [...PYTHON_RULES],
+    languages: ["python"],
   },
   kotlin: {
     id: "kotlin",
     description: "Core Kotlin maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
     rules: [...KOTLIN_RULES],
+    languages: ["kotlin"],
   },
   compose: {
     id: "compose",
     description: "Jetpack Compose UI maintainability rules for oversized composables and local state-hoisting smells.",
     rules: [...COMPOSE_RULES],
+    languages: ["kotlin"],
   },
   "ai-assisted-maintainer": {
     id: "ai-assisted-maintainer",
     description: "High-signal maintainability pack for assistant-heavy codebases; does not claim authorship detection.",
     rules: [...AI_ASSISTED_MAINTAINER_RULES],
+    languages: ["tsjs"],
     thresholds: {
       "duplicate-logic.minSimilarity": 0.88,
       "duplicated-literal.minCount": 4,
@@ -175,6 +188,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "oss-maintainer",
     description: "Library-maintainer pack focused on public API shape, barrels, duplication, tests, and TODO debt.",
     rules: [...OSS_MAINTAINER_RULES],
+    languages: ["tsjs"],
     thresholds: {
       "api-surface-sprawl.maxExports": 10,
       "barrel-file.maxReExports": 5,

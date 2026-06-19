@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
-import { basename, extname, relative } from "node:path";
+import { basename, relative } from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
+import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
 import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
@@ -184,17 +185,17 @@ async function loadSourceFiles(project: Project, snapshots: FileSnapshot[], opti
   for (let index = 0; index < snapshots.length; index += batchSize) {
     const batch = snapshots.slice(index, index + batchSize);
     for (const snapshot of batch) {
-      const sourceFile = project.createSourceFile(snapshot.absolutePath, snapshot.content, { overwrite: true });
       const relativePath = snapshot.absolutePath === options.target
         ? basename(snapshot.absolutePath)
         : relative(options.target, snapshot.absolutePath).replaceAll("\\", "/");
-      files.push({
+      const language = detectSourceLanguage(snapshot.absolutePath);
+      files.push(parseSourceFile({
+        project,
         absolutePath: snapshot.absolutePath,
         relativePath,
         content: snapshot.content,
-        language: detectSourceLanguage(snapshot.absolutePath),
-        sourceFile,
-      });
+        language,
+      }));
     }
     if (index + batchSize < snapshots.length) {
       await new Promise<void>((resolveYield) => setImmediate(resolveYield));
@@ -246,16 +247,9 @@ async function runDetectors(
 }
 
 function filesForDetector(detector: Detector, files: SourceFileInfo[]): SourceFileInfo[] {
-  const languages = detector.languages ?? ["tsjs"];
+  const languages = languagesForDetector(detector);
   const allowed = new Set(languages);
   return files.filter((file) => allowed.has(file.language));
-}
-
-function detectSourceLanguage(path: string): SourceLanguage {
-  const extension = extname(path).toLowerCase();
-  if (extension === ".py") return "python";
-  if (extension === ".kt" || extension === ".kts") return "kotlin";
-  return "tsjs";
 }
 
 function normalizeIssueIdentity(issue: DebtIssue): void {
@@ -295,8 +289,8 @@ function selectDetectors(
 }
 
 function detectorCanRunOnSourceLanguages(detector: Detector, sourceLanguages: SourceLanguage[]): boolean {
-  const languages = detector.languages ?? ["tsjs"];
-  const available = new Set(sourceLanguages.length > 0 ? sourceLanguages : ["tsjs"]);
+  const languages = languagesForDetector(detector);
+  const available = new Set(sourceLanguages.length > 0 ? sourceLanguages : [DEFAULT_SOURCE_LANGUAGE]);
   return languages.some((language) => available.has(language));
 }
 

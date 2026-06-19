@@ -9,6 +9,7 @@ import { allDetectors, detectorIds } from "../detectors/index.js";
 import { resolveFilePaths } from "../core/resolveFiles.js";
 import { defaultConfig } from "../config/defaults.js";
 import { getRulePack } from "../config/packs.js";
+import { DEFAULT_SOURCE_LANGUAGE, getLanguageDefinition, unique } from "../core/languages.js";
 import { loadPlugins, pluginsDisabled } from "../plugins/loadPlugins.js";
 import type { CliOptions, DebtLensConfig, Detector, ScanOptions, ScanThresholds } from "../core/types.js";
 import { getChangedFiles, getStagedFiles, isGitRepo } from "../utils/git.js";
@@ -512,13 +513,16 @@ function formatIncludeSource(
   if (cliSources.include) return "CLI --include";
   const sources = configFieldSources(effectiveConfig, "include");
   const base = formatLayeredSource(sources.length ? sources : ["defaults"]);
-  const hasKotlinGlob = include.includes("**/*.{kt,kts}");
-  const discovery = [
-    ...(packIds.includes("python") && include.includes("**/*.py") ? ["python"] : []),
-    ...(packIds.includes("kotlin") && hasKotlinGlob ? ["kotlin"] : []),
-    ...(packIds.includes("compose") && hasKotlinGlob ? ["compose"] : []),
-  ];
+  const discovery = packDiscoveryLabels(packIds, include);
   return discovery.length ? `${base} + ${discovery.join(" + ")} pack discovery` : base;
+}
+
+function packDiscoveryLabels(packIds: string[], include: string[]): string[] {
+  return packIds.filter((packId) => {
+    const languages = unique(getRulePack(packId).languages).filter((language) => language !== DEFAULT_SOURCE_LANGUAGE);
+    return languages.some((language) =>
+      getLanguageDefinition(language).includeGlobs.some((glob) => include.includes(glob)));
+  });
 }
 
 function formatScalarSource(

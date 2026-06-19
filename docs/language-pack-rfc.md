@@ -34,6 +34,32 @@ export interface LanguageContext {
 }
 ```
 
+Current implementation note: built-in packs now declare language metadata, and the
+scanner uses a shared language registry for extension routing, include-glob discovery,
+detector routing, and the current TS-morph compatibility adapter. `SourceFileInfo`
+still includes a `sourceFile` for existing TS/JS detectors and public plugin consumers;
+future sidecar/parser work should add richer language contexts without breaking that
+contract.
+
+Current built-in registration shape:
+
+```ts
+export interface LanguageDefinition {
+  id: SourceLanguage;
+  label: string;
+  extensions: string[];
+  includeGlobs: string[];
+  parseSourceFile(input: LanguageParseInput): SourceFileInfo;
+  defaultExcludeRewrites?: Record<string, string[]>;
+}
+```
+
+Adding a shipped language now means registering a `LanguageDefinition` plus pack
+`languages` metadata; [`src/core/scan.ts`](../src/core/scan.ts) consumes the registry
+instead of adding new extension-specific branches. Third-party language definitions
+are still a future API surface, while third-party detectors can target registered
+languages through `debtlens/plugin`.
+
 ## Multi-language scan model
 
 ```bash
@@ -42,7 +68,7 @@ debtlens scan . --pack core,python,kotlin
 debtlens scan . --pack kotlin,compose
 ```
 
-The scanner should:
+The scanner should continue to:
 
 1. Resolve files once from include/exclude/git filters.
 2. Partition files by language handler (`ts/js`, `python`, `kotlin`, `vue`, etc.).

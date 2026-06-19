@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
 import { mergeConfig } from "../../src/config/mergeConfig.js";
 import { scan } from "../../src/core/scan.js";
+import type { Detector } from "../../src/core/types.js";
 
 describe("scan language-specific behavior", () => {
   it("lets test-duplication inspect test files without widening default source includes", async () => {
@@ -64,6 +65,62 @@ fun renderBilling(): String {
 
       assert.equal(result.summary.filesScanned, 1);
       assert.equal(result.summary.byRule["kotlin-todo-comment"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("routes files to plugin detectors by declared language", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-plugin-language-"));
+    const seenFiles: string[] = [];
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "export const app = true;\n");
+      writeFileSync(join(dir, "src", "service.py"), "def service():\n    return True\n");
+      writeFileSync(join(dir, "src", "Main.kt"), "fun main() = Unit\n");
+
+      const detector = buildRecorderDetector("policy-python-fixture", seenFiles, ["python"]);
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: ["**/*.{ts,py,kt}"],
+        exclude: [],
+        minSeverity: "low",
+        rules: [detector.id],
+        thresholds: defaultConfig.thresholds,
+        pluginDetectors: [detector],
+      });
+
+      assert.equal(result.summary.rulesRun, 1);
+      assert.deepEqual(seenFiles, ["src/service.py"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("routes detectors without languages to TS/JS files only", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-default-language-"));
+    const seenFiles: string[] = [];
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "export const app = true;\n");
+      writeFileSync(join(dir, "src", "service.py"), "def service():\n    return True\n");
+      writeFileSync(join(dir, "src", "Main.kt"), "fun main() = Unit\n");
+
+      const detector = buildRecorderDetector("policy-tsjs-fixture", seenFiles);
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: ["**/*.{ts,py,kt}"],
+        exclude: [],
+        minSeverity: "low",
+        rules: [detector.id],
+        thresholds: defaultConfig.thresholds,
+        pluginDetectors: [detector],
+      });
+
+      assert.equal(result.summary.rulesRun, 1);
+      assert.deepEqual(seenFiles, ["src/app.ts"]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -186,3 +243,22 @@ fun BillingScreen() {
     }
   });
 });
+
+function buildRecorderDetector(
+  id: string,
+  seenFiles: string[],
+  languages?: Detector["languages"],
+): Detector {
+  return {
+    id,
+    name: id,
+    description: id,
+    defaultSeverity: "low",
+    tags: ["test"],
+    ...(languages ? { languages } : {}),
+    detect(context) {
+      seenFiles.push(...context.files.map((file) => file.relativePath).sort());
+      return [];
+    },
+  };
+}

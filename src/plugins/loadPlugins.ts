@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { isSourceLanguage, SUPPORTED_SOURCE_LANGUAGES } from "../core/languages.js";
 import { isSeverity } from "../core/severity.js";
 import type { DebtLensConfig, Detector, ScanThresholds } from "../core/types.js";
 
@@ -157,9 +158,10 @@ function validateDetector(candidate: unknown, pluginPath: string): Detector {
     throw new Error(`Plugin "${pluginPath}" exports a rule that is not an object.`);
   }
 
-  const detector = candidate as Partial<Detector>;
+  const detector = candidate as Partial<Detector> & { languages?: unknown };
   const describe = (problem: string) =>
     new Error(`Plugin "${pluginPath}" rule ${JSON.stringify(detector.id ?? "<missing id>")}: ${problem}`);
+  const languageList = SUPPORTED_SOURCE_LANGUAGES.join(", ");
 
   if (typeof detector.id !== "string" || !RULE_ID_PATTERN.test(detector.id)) {
     throw describe("\"id\" must be a lowercase kebab-case string.");
@@ -175,6 +177,17 @@ function validateDetector(candidate: unknown, pluginPath: string): Detector {
   }
   if (!Array.isArray(detector.tags) || detector.tags.some((tag) => typeof tag !== "string")) {
     throw describe("\"tags\" must be an array of strings.");
+  }
+  if (detector.languages !== undefined) {
+    if (!Array.isArray(detector.languages) || detector.languages.length === 0) {
+      throw describe(`"languages" must be a non-empty array of registered source languages: ${languageList}.`);
+    }
+    const invalidLanguage = detector.languages.find((language) => !isSourceLanguage(language));
+    if (invalidLanguage !== undefined) {
+      throw describe(
+        `"languages" must contain registered source languages: ${languageList}; received ${JSON.stringify(invalidLanguage)}.`,
+      );
+    }
   }
   if (typeof detector.detect !== "function") {
     throw describe("\"detect\" must be a function.");

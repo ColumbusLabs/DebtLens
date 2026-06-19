@@ -14,5 +14,7 @@ export type {
   ScanOptions,
   Severity,
   SourceFileInfo,
+  SourceLanguage,
 } from "./core/types.js";
+export { SUPPORTED_SOURCE_LANGUAGES } from "./core/languages.js";
 export { DEBTLENS_PLUGIN_API_VERSION } from "./plugins/version.js";

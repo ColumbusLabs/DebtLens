@@ -145,6 +145,15 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /large-component\.maxLines/);
   });
 
+  it("does not narrow default rollout commands to a starter pack", () => {
+    const result = runAdopt(["examples/react"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Recommended first pack: core/);
+    assert.match(result.stdout, /debtlens scan examples\/react --write-baseline debtlens-baseline\.json/);
+    assert.doesNotMatch(result.stdout, /--pack core/);
+  });
+
   it("preserves a config-selected pack in rollout commands", () => {
     writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify({ pack: "next" }), "utf8");
 

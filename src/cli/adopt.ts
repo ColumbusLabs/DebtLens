@@ -238,7 +238,6 @@ export function buildRolloutPlan(
   const packageScope = input.packageName ? `package "${input.packageName}"` : "the current scan target";
   const selectedPack = input.cliOptions.pack ?? input.pack ?? fileConfig.pack;
   const hasExplicitRules = (input.cliOptions.rules?.length ?? fileConfig.rules?.length ?? 0) > 0;
-  const recommendedPack = selectedPack ?? "core";
   const planMinSeverity = input.cliOptions.minSeverity ?? fileConfig.minSeverity ?? recommendedMinSeverity;
   const gitAvailable = isGitRepo(input.cwd);
   const workspacePackages = input.packageName ? [] : listAdoptionWorkspacePackages(input.cwd);
@@ -250,7 +249,7 @@ export function buildRolloutPlan(
       ? `Recommended first pack: ${selectedPack}.`
       : hasExplicitRules
         ? "Recommended first pack: core once the rule-scoped dry run looks credible."
-        : `Recommended first pack: ${recommendedPack}.`,
+        : "Recommended first pack: core if the full dry run is too broad for the first policy gate.",
   ].join(" ");
   const plan: RolloutPlanStep[] = [
     {
@@ -320,11 +319,10 @@ function thresholdSuggestionOverrides(suggestions: ThresholdSuggestion[]): Recor
 function buildScopedCommandArgs(command: "adopt" | "scan", input: AdoptInput, fileConfig: DebtLensConfig): string[] {
   const args = ["debtlens", command, input.target];
   const selectedPack = input.cliOptions.pack ?? input.pack ?? fileConfig.pack;
-  const hasExplicitRules = (input.cliOptions.rules?.length ?? fileConfig.rules?.length ?? 0) > 0;
   addStringArg(args, "--cwd", input.cwd === process.cwd() ? undefined : input.cwd);
   addStringArg(args, "--config", input.configPath);
   addStringArg(args, "--package", input.packageName);
-  addStringArg(args, "--pack", selectedPack ?? (hasExplicitRules ? undefined : "core"));
+  addStringArg(args, "--pack", selectedPack);
   addStringArg(args, "--min-severity", input.cliOptions.minSeverity ?? fileConfig.minSeverity);
   addListArg(args, "--rules", input.cliOptions.rules);
   addListArg(args, "--include", input.cliOptions.include);

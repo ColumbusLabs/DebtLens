@@ -83,7 +83,7 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
   const fileConfig = configValidation.state === "invalid"
     ? {}
     : effectiveConfig.config;
-  const pluginContribution = input.showProvenance && configValidation.state !== "invalid"
+  const pluginContribution = configValidation.state !== "invalid"
     ? await loadPluginContributionForDoctor(effectiveConfig, fileConfig)
     : { warnings: [] };
   const options = mergeConfig(target, fileConfig, {
@@ -283,7 +283,7 @@ function formatProvenance(input: {
     `Min severity: ${formatScalarSource(input.effectiveConfig, input.cliSources.minSeverity, "minSeverity", "CLI --min-severity", "defaults")}`,
     `Max files: ${formatScalarSource(input.effectiveConfig, input.cliSources.maxFiles, "maxFiles", "CLI --max-files", "defaults")}`,
     `Respect gitignore: ${formatScalarSource(input.effectiveConfig, input.cliSources.respectGitignore, "respectGitignore", "CLI --respect-gitignore", "defaults")}`,
-    `Plugins: ${formatLayeredSource(configFieldSources(input.effectiveConfig, "plugins"), "(none)")}`,
+    `Plugins: ${formatEffectiveConfigSource(input.effectiveConfig, "plugins", "(none)")}`,
     "Thresholds:",
     ...Object.keys(input.options.thresholds).sort((left, right) => left.localeCompare(right)).map((key) =>
       `  ${key}: ${thresholdSources.get(key) ?? "unknown"}`),
@@ -348,7 +348,7 @@ function setRecordSources(
 
 function formatPackSource(effectiveConfig: EffectiveConfig, cliSources: DoctorCliSources): string {
   if (cliSources.pack) return "CLI --pack";
-  return formatLayeredSource(configFieldSources(effectiveConfig, "pack"), "(none)");
+  return formatEffectiveConfigSource(effectiveConfig, "pack", "(none)");
 }
 
 function formatRulesSource(
@@ -385,18 +385,38 @@ function formatScalarSource(
   defaultLabel: string,
 ): string {
   if (fromCli) return cliLabel;
-  return formatLayeredSource(configFieldSources(effectiveConfig, field), defaultLabel);
+  return formatEffectiveConfigSource(effectiveConfig, field, defaultLabel);
+}
+
+function formatEffectiveConfigSource(
+  effectiveConfig: EffectiveConfig,
+  field: keyof DebtLensConfig,
+  fallback: string,
+): string {
+  if (hasConfigField(effectiveConfig.packageConfig, field)) {
+    return sourceLabel("package config", effectiveConfig.packageConfigPath);
+  }
+  if (hasConfigField(effectiveConfig.rootConfig, field)) {
+    return sourceLabel("root config", effectiveConfig.rootConfigPath);
+  }
+  return fallback;
 }
 
 function configFieldSources(effectiveConfig: EffectiveConfig, field: keyof DebtLensConfig): string[] {
   return [
-    effectiveConfig.rootConfig && effectiveConfig.rootConfig[field] !== undefined
+    hasConfigField(effectiveConfig.rootConfig, field)
       ? sourceLabel("root config", effectiveConfig.rootConfigPath)
       : undefined,
-    effectiveConfig.packageConfig && effectiveConfig.packageConfig[field] !== undefined
+    hasConfigField(effectiveConfig.packageConfig, field)
       ? sourceLabel("package config", effectiveConfig.packageConfigPath)
       : undefined,
   ].filter((entry): entry is string => entry !== undefined);
+}
+
+function hasConfigField(config: DebtLensConfig | undefined, field: keyof DebtLensConfig): boolean {
+  return config !== undefined
+    && Object.prototype.hasOwnProperty.call(config, field)
+    && config[field] !== undefined;
 }
 
 function sourceLabel(label: string, path: string | undefined): string {

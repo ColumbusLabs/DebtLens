@@ -95,7 +95,9 @@ export async function runDoctorCommand(target: string, rawOptions: Record<string
       exclude: parseCommaList(rawOptions.exclude as string | undefined),
       rules: parseRuleList(rawOptions.rules as string | undefined),
       pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
-      minSeverity: parseSeverity(String(rawOptions.minSeverity ?? "low"), "low"),
+      minSeverity: rawOptions.minSeverity !== undefined
+        ? parseSeverity(String(rawOptions.minSeverity), "low")
+        : undefined,
       thresholds: parseThresholds(rawOptions.threshold as string | undefined),
       maxFiles: rawOptions.maxFiles as number | undefined,
       respectGitignore: rawOptions.respectGitignore === true ? true : undefined,

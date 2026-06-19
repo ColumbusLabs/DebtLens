@@ -182,6 +182,19 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /Min severity: defaults/);
   });
 
+  it("uses config minSeverity when the CLI flag is omitted", () => {
+    const configPath = join(dir, "debtlens.config.json");
+    writeFileSync(configPath, JSON.stringify({
+      minSeverity: "high",
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir, "--provenance"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Min severity: high/);
+    assert.match(result.stdout, new RegExp(`Min severity: root config \\(${escapeRegex(configPath)}\\)`));
+  });
+
   it("shows package-level config provenance for workspace doctor runs", () => {
     mkdirSync(join(dir, "packages", "pkg-a", "src"), { recursive: true });
     writeFileSync(join(dir, "package.json"), JSON.stringify({
@@ -235,11 +248,59 @@ export default {
       plugins: ["./plugin.mjs"],
     }), "utf8");
 
+    const plainResult = runDoctor([".", "--cwd", dir]);
     const result = runDoctor([".", "--cwd", dir, "--provenance"]);
 
+    assert.equal(plainResult.status, 0);
+    assert.match(plainResult.stdout, /plugin\.max=7/);
+    assert.doesNotMatch(plainResult.stdout, /Provenance/);
     assert.equal(result.status, 0);
     assert.match(result.stdout, new RegExp(`Plugins: root config \\(${escapeRegex(configPath)}\\)`));
     assert.match(result.stdout, /plugin\.max: plugin defaults/);
     assert.match(result.stdout, /plugin-domain: plugin defaults/);
+  });
+
+  it("shows package plugin provenance when package config overrides root plugins", () => {
+    mkdirSync(join(dir, "packages", "pkg-a", "src"), { recursive: true });
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      name: "fixture-root",
+      private: true,
+      workspaces: ["packages/*"],
+    }), "utf8");
+    writeFileSync(join(dir, "packages", "pkg-a", "package.json"), JSON.stringify({
+      name: "pkg-a",
+      private: true,
+    }), "utf8");
+    writeFileSync(join(dir, "root-plugin.mjs"), `
+export default {
+  rules: [],
+  thresholds: { "root.plugin": 1 }
+};
+`, "utf8");
+    writeFileSync(join(dir, "packages", "pkg-a", "package-plugin.mjs"), `
+export default {
+  rules: [],
+  thresholds: { "package.plugin": 2 }
+};
+`, "utf8");
+    writeFileSync(join(dir, "packages", "pkg-a", "src", "keep.ts"), "export const ok = 1;\n");
+    const rootConfigPath = join(dir, "debtlens.config.json");
+    const packageConfigPath = join(dir, "packages", "pkg-a", "debtlens.config.json");
+    writeFileSync(rootConfigPath, JSON.stringify({
+      pluginApiVersion: 1,
+      plugins: ["./root-plugin.mjs"],
+    }), "utf8");
+    writeFileSync(packageConfigPath, JSON.stringify({
+      pluginApiVersion: 1,
+      plugins: ["./package-plugin.mjs"],
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir, "--package", "pkg-a", "--provenance"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, new RegExp(`Plugins: package config \\(${escapeRegex(packageConfigPath)}\\)`));
+    assert.match(result.stdout, /package\.plugin: plugin defaults/);
+    assert.doesNotMatch(result.stdout, /root\.plugin/);
+    assert.doesNotMatch(result.stdout, new RegExp(`Plugins: root config \\(${escapeRegex(rootConfigPath)}\\) \\+ package config`));
   });
 });

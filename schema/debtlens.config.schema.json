@@ -44,6 +44,8 @@
             "node",
             "python",
             "python-web",
+            "vue",
+            "svelte",
             "kotlin",
             "compose",
             "ai-assisted-maintainer",
@@ -52,7 +54,7 @@
         },
         {
           "type": "string",
-          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|kotlin|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|kotlin|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
         }
       ],
       "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
@@ -96,6 +98,12 @@
               "python-duplicate-logic",
               "python-dead-abstraction",
               "python-route-sprawl",
+              "vue-todo-comment",
+              "vue-large-script",
+              "vue-duplicate-logic",
+              "svelte-todo-comment",
+              "svelte-large-script",
+              "svelte-duplicate-logic",
               "kotlin-todo-comment",
               "kotlin-large-function",
               "kotlin-duplicate-logic",
@@ -201,6 +209,24 @@
           "type": "number"
         },
         "python-route-sprawl.maxRoutes": {
+          "type": "number"
+        },
+        "vue-large-script.maxLines": {
+          "type": "number"
+        },
+        "vue-large-script.maxFunctionLines": {
+          "type": "number"
+        },
+        "vue-large-script.maxBranches": {
+          "type": "number"
+        },
+        "svelte-large-script.maxLines": {
+          "type": "number"
+        },
+        "svelte-large-script.maxFunctionLines": {
+          "type": "number"
+        },
+        "svelte-large-script.maxBranches": {
           "type": "number"
         },
         "duplicate-logic.minSimilarity": {
@@ -550,6 +576,54 @@
             "high"
           ]
         },
+        "vue-todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "vue-large-script": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "vue-duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "svelte-todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "svelte-large-script": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "svelte-duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "kotlin-todo-comment": {
           "enum": [
             "info",
@@ -768,6 +842,36 @@
           "maximum": 1
         },
         "python-route-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "vue-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "vue-large-script": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "vue-duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "svelte-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "svelte-large-script": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "svelte-duplicate-logic": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

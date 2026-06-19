@@ -19,7 +19,7 @@ const program = new Command();
 
 program
   .name("debtlens")
-  .description("Find maintainability debt in TypeScript, JavaScript, Python, Kotlin, Jetpack Compose, and framework codebases.")
+  .description("Find maintainability debt in TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, Jetpack Compose, and framework codebases.")
   .version(packageVersion);
 
 registerScanCommand(program);

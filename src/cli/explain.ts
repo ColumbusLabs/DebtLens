@@ -43,7 +43,7 @@ export function runExplain(ruleId: string): string {
 }
 
 /**
- * Extract the `## \`<rule-id>\`` section from docs/rules.md. The docs directory
+ * Extract the `## \`<rule-id>\`` or nested `### \`<rule-id>\`` section from docs/rules.md. The docs directory
  * is published with the npm package, two levels above this module in both the
  * src and dist layouts. Returns undefined when the docs are unavailable.
  */
@@ -56,16 +56,26 @@ function readRuleDocsSection(ruleId: string): string | undefined {
   }
 
   const lines = content.split(/\r?\n/);
-  const headingIndex = lines.findIndex((line) => line.trim() === `## \`${ruleId}\``);
+  const headingIndex = lines.findIndex((line) => isRuleDocsHeading(line, ruleId));
   if (headingIndex === -1) return undefined;
 
+  const headingLevel = headingDepth(lines[headingIndex] ?? "");
   let end = lines.length;
   for (let index = headingIndex + 1; index < lines.length; index += 1) {
-    if (lines[index]!.startsWith("## ")) {
+    const nextHeadingLevel = headingDepth(lines[index] ?? "");
+    if (nextHeadingLevel > 0 && nextHeadingLevel <= headingLevel) {
       end = index;
       break;
     }
   }
 
   return lines.slice(headingIndex + 1, end).join("\n").trim();
+}
+
+function isRuleDocsHeading(line: string, ruleId: string): boolean {
+  return /^#{2,3}\s+`[^`]+`\s*$/.test(line.trim()) && line.trim().endsWith(`\`${ruleId}\``);
+}
+
+function headingDepth(line: string): number {
+  return /^(#+)\s+/.exec(line)?.[1]?.length ?? 0;
 }

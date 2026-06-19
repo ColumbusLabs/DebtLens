@@ -32,6 +32,22 @@ describe("debtlens explain", () => {
     assert.match(result.stdout, /large-component\.maxLines: 250/);
   });
 
+  it("includes nested Vue and Svelte rule guidance from docs/rules.md", () => {
+    const vue = runCli(["explain", "vue-large-script"]);
+    const svelte = runCli(["explain", "svelte-large-script"]);
+
+    assert.equal(vue.status, 0);
+    assert.match(vue.stdout, /When this is a false positive/);
+    assert.match(vue.stdout, /vue-large-script\.maxFunctionLines: 80/);
+    assert.match(vue.stdout, /script-specific size or/);
+    assert.doesNotMatch(vue.stdout, /svelte-todo-comment/);
+
+    assert.equal(svelte.status, 0);
+    assert.match(svelte.stdout, /For SvelteKit/);
+    assert.match(svelte.stdout, /svelte-large-script\.maxFunctionLines: 80/);
+    assert.doesNotMatch(svelte.stdout, /svelte-duplicate-logic/);
+  });
+
   it("exits with a did-you-mean error for unknown rule ids", () => {
     const result = runCli(["explain", "todo-comments"]);
 

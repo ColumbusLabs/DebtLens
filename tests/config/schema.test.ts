@@ -100,11 +100,14 @@ describe("config JSON schema", () => {
       "node",
       "python",
       "python-web",
+      "vue",
+      "svelte",
       "kotlin",
       "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",
     ]);
     assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /compose/);
+    assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /svelte/);
   });
 });

@@ -12,6 +12,7 @@ interface CalibrationCase {
   minIssuesByRule: Record<string, number>;
   maxIssuesByRule: Record<string, number>;
   mustNotIncludeRules?: string[];
+  thresholds?: Record<string, number>;
 }
 
 const cases: CalibrationCase[] = [
@@ -103,6 +104,44 @@ const cases: CalibrationCase[] = [
       "python-dead-abstraction": 9,
     },
   },
+  {
+    id: "examples-vue",
+    target: "examples/vue",
+    minSeverity: "info",
+    minIssuesByRule: {
+      "vue-todo-comment": 1,
+      "vue-duplicate-logic": 1,
+      "vue-large-script": 1,
+    },
+    maxIssuesByRule: {
+      "vue-todo-comment": 1,
+      "vue-duplicate-logic": 1,
+      "vue-large-script": 2,
+    },
+    mustNotIncludeRules: ["large-component", "state-sprawl", "todo-comment"],
+    thresholds: {
+      "vue-large-script.maxFunctionLines": 8,
+    },
+  },
+  {
+    id: "examples-svelte",
+    target: "examples/svelte",
+    minSeverity: "info",
+    minIssuesByRule: {
+      "svelte-todo-comment": 1,
+      "svelte-duplicate-logic": 1,
+      "svelte-large-script": 1,
+    },
+    maxIssuesByRule: {
+      "svelte-todo-comment": 1,
+      "svelte-duplicate-logic": 1,
+      "svelte-large-script": 2,
+    },
+    mustNotIncludeRules: ["large-component", "state-sprawl", "todo-comment"],
+    thresholds: {
+      "svelte-large-script.maxFunctionLines": 8,
+    },
+  },
 ];
 
 const falsePositiveCases = [
@@ -124,17 +163,11 @@ describe("calibrated quality fixtures", () => {
       const result = await scan({
         cwd: process.cwd(),
         target: resolve(calibration.target),
-        include: calibration.id.startsWith("examples-python") ? ["**/*.py"] : defaultConfig.include,
+        include: includeForCalibration(calibration.id),
         exclude: defaultConfig.exclude,
         minSeverity: calibration.minSeverity,
-        rules: calibration.id === "examples-node-api-core"
-          ? getRulePack("core").rules
-          : calibration.id === "examples-python"
-            ? getRulePack("python").rules
-            : calibration.id === "examples-python-web"
-              ? getRulePack("python-web").rules
-            : undefined,
-        thresholds: defaultConfig.thresholds,
+        rules: rulesForCalibration(calibration.id),
+        thresholds: { ...defaultConfig.thresholds, ...(calibration.thresholds ?? {}) },
         maxFiles: defaultConfig.maxFiles,
         respectGitignore: defaultConfig.respectGitignore,
       });
@@ -176,3 +209,19 @@ describe("calibrated quality fixtures", () => {
     });
   }
 });
+
+function includeForCalibration(id: string): string[] {
+  if (id.startsWith("examples-python")) return ["**/*.py"];
+  if (id === "examples-vue") return ["**/*.vue"];
+  if (id === "examples-svelte") return ["**/*.svelte"];
+  return defaultConfig.include;
+}
+
+function rulesForCalibration(id: string): string[] | undefined {
+  if (id === "examples-node-api-core") return getRulePack("core").rules;
+  if (id === "examples-python") return getRulePack("python").rules;
+  if (id === "examples-python-web") return getRulePack("python-web").rules;
+  if (id === "examples-vue") return getRulePack("vue").rules;
+  if (id === "examples-svelte") return getRulePack("svelte").rules;
+  return undefined;
+}

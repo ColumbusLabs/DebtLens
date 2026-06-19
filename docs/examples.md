@@ -11,6 +11,8 @@ these commands when evaluating output, writing docs, or checking a reporter chan
 | Node API | `debtlens scan examples/node-api --pack node --min-severity info` | Route and handler-depth signals for server code. |
 | Python service | `debtlens scan examples/python --pack python --min-severity info` | Python duplicate, large-function, control-flow, thin-wrapper, and TODO rules. |
 | Python web routes | `debtlens scan examples/python-web --pack python-web --min-severity info` | Flask/Blueprint route-sprawl signals plus core Python rules. |
+| Vue SFC scripts | `debtlens scan examples/vue --pack vue --min-severity info` | Vue script TODO and duplicate-logic signals with `.vue` line mapping. |
+| Svelte SFC scripts | `debtlens scan examples/svelte --pack svelte --min-severity info` | Svelte script TODO and duplicate-logic signals without React rules. |
 | Kotlin service | `debtlens scan examples/kotlin --pack kotlin --min-severity info` | Kotlin duplicate, large-function, thin-wrapper, and TODO rules. |
 | Jetpack Compose screen | `debtlens scan examples/compose --pack compose --min-severity info` | Compose large-composable and state-hoisting rules. |
 | Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |

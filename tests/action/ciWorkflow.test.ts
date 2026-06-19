@@ -14,6 +14,10 @@ describe("CI workflow drift guards", () => {
   it("smoke scans shipped language packs through dist", () => {
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/python --pack python --format json/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/python --pack python --min-severity info --format markdown/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/vue --pack vue --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/vue --pack vue --min-severity info --format markdown/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/svelte --pack svelte --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/svelte --pack svelte --min-severity info --format markdown/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --format json/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --min-severity info --format markdown/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/compose --pack compose --format json/);

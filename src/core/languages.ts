@@ -1,5 +1,6 @@
 import type { Project } from "ts-morph";
 import type { Detector, SourceFileInfo, SourceLanguage } from "./types.js";
+import { buildSfcVirtualScriptContent, getSfcVirtualScriptExtension } from "../utils/sfc.js";
 
 export const DEFAULT_SOURCE_LANGUAGE: SourceLanguage = "tsjs";
 
@@ -31,6 +32,21 @@ function parseWithTsMorph(input: LanguageParseInput): SourceFileInfo {
   };
 }
 
+function parseSfcWithTsMorph(input: LanguageParseInput): SourceFileInfo {
+  const virtualExtension = getSfcVirtualScriptExtension(input.content);
+  return {
+    absolutePath: input.absolutePath,
+    relativePath: input.relativePath,
+    content: input.content,
+    language: input.language,
+    sourceFile: input.project.createSourceFile(
+      `${input.absolutePath}.__debtlens.${input.language}${virtualExtension}`,
+      buildSfcVirtualScriptContent(input.content),
+      { overwrite: true },
+    ),
+  };
+}
+
 export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = {
   tsjs: {
     id: "tsjs",
@@ -58,6 +74,22 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
     defaultExcludeRewrites: {
       "android/**": ["android/**/*.{ts,tsx,js,jsx}"],
     },
+  },
+  vue: {
+    id: "vue",
+    label: "Vue",
+    extensions: [".vue"],
+    includeGlobs: ["**/*.vue"],
+    ruleIdPrefixes: ["vue-"],
+    parseSourceFile: parseSfcWithTsMorph,
+  },
+  svelte: {
+    id: "svelte",
+    label: "Svelte",
+    extensions: [".svelte"],
+    includeGlobs: ["**/*.svelte"],
+    ruleIdPrefixes: ["svelte-"],
+    parseSourceFile: parseSfcWithTsMorph,
   },
 };
 

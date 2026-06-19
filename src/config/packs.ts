@@ -92,6 +92,18 @@ const PYTHON_WEB_RULES = [
   "python-route-sprawl",
 ] as const;
 
+const VUE_RULES = [
+  "vue-todo-comment",
+  "vue-large-script",
+  "vue-duplicate-logic",
+] as const;
+
+const SVELTE_RULES = [
+  "svelte-todo-comment",
+  "svelte-large-script",
+  "svelte-duplicate-logic",
+] as const;
+
 const KOTLIN_RULES = [
   "kotlin-duplicate-logic",
   "kotlin-large-function",
@@ -176,6 +188,28 @@ export const RULE_PACKS: Record<string, RulePack> = {
     languages: ["python"],
     thresholds: {
       "python-route-sprawl.maxRoutes": 8,
+    },
+  },
+  vue: {
+    id: "vue",
+    description: "Vue single-file component rules for script debt markers, large scripts, and duplicate script logic.",
+    rules: [...VUE_RULES],
+    languages: ["vue"],
+    thresholds: {
+      "vue-large-script.maxLines": 120,
+      "vue-large-script.maxFunctionLines": 80,
+      "vue-large-script.maxBranches": 12,
+    },
+  },
+  svelte: {
+    id: "svelte",
+    description: "Svelte single-file component rules for script debt markers, large scripts, and duplicate script logic.",
+    rules: [...SVELTE_RULES],
+    languages: ["svelte"],
+    thresholds: {
+      "svelte-large-script.maxLines": 120,
+      "svelte-large-script.maxFunctionLines": 80,
+      "svelte-large-script.maxBranches": 12,
     },
   },
   kotlin: {

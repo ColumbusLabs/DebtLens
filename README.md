@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-**DebtLens is a maintainability scanner for TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose codebases.**
+**DebtLens is a maintainability scanner for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose codebases.**
 The first supported rule packs target React (including React Native, Expo, and Next.js apps)
-plus core Python, Kotlin, and Jetpack Compose modules, but the core idea applies broadly: catch duplicated logic, bloated
+plus core Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose modules, but the core idea applies broadly: catch duplicated logic, bloated
 modules, weak boundaries, TODO debt, and naming drift before it becomes permanent.
 
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
@@ -19,7 +19,7 @@ Start with the [`five-minute quickstart`](./docs/quickstart.md), then use the
 [`false-positive calibration guide`](./docs/false-positives.md) when you move from a
 local scan to CI.
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
-For Python, Kotlin, and Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
+For Python, SFC, Kotlin, and multi-language pack work, see the parser notes in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
 ## Migration
 
@@ -106,6 +106,12 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
 | `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
 | `python-route-sprawl` | python-web | Flask/Blueprint or Django URL modules registering too many routes | Medium |
+| `vue-todo-comment` | vue | TODO/FIXME/HACK comments inside Vue script blocks | Low |
+| `vue-large-script` | vue | Oversized Vue SFC scripts or script functions | Medium |
+| `vue-duplicate-logic` | vue | Near-duplicate Vue script functions | Medium |
+| `svelte-todo-comment` | svelte | TODO/FIXME/HACK comments inside Svelte script blocks | Low |
+| `svelte-large-script` | svelte | Oversized Svelte component scripts or script functions | Medium |
+| `svelte-duplicate-logic` | svelte | Near-duplicate Svelte script functions | Medium |
 | `kotlin-duplicate-logic` | kotlin | Near-duplicate Kotlin functions | Medium |
 | `kotlin-large-function` | kotlin | Oversized or branch-heavy Kotlin functions | Medium |
 | `kotlin-dead-abstraction` | kotlin | Thin Kotlin pass-through functions | Low |
@@ -399,7 +405,7 @@ The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/De
 ### Rule packs
 
 Built-in presets select a rule set without hand-picking every rule id. Language packs
-also declare their discovery metadata, so selecting `python`, `kotlin`, or `compose`
+also declare their discovery metadata, so selecting `python`, `vue`, `svelte`, `kotlin`, or `compose`
 adds the registered source globs without one-off CLI flags. See
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 
@@ -412,6 +418,8 @@ adds the registered source globs without one-off CLI flags. See
 | `node` | core + Express/Fastify handler depth and route sprawl |
 | `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO comments |
 | `python-web` | python + Flask/Blueprint and Django URL route sprawl |
+| `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals |
+| `svelte` | Svelte SFC script TODO, large-script, and duplicate-logic signals |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
 | `compose` | Jetpack Compose oversized composables and local state-hoisting smells |
 | `expo` | React Native tuning for Expo Router projects |
@@ -431,7 +439,7 @@ Explicit `rules` in config override the pack. Use `debtlens packs` to list prese
 Use comma-separated packs for mixed-language scans:
 
 ```bash
-debtlens scan . --pack core,python,kotlin,compose
+debtlens scan . --pack core,python,vue,svelte,kotlin,compose
 ```
 
 ### Per-rule severities and confidence floors
@@ -794,7 +802,7 @@ and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
-React Native, Next.js, Expo, Node, Python, Python web, Kotlin, Jetpack Compose, and maintainer workflows. Additional
+React Native, Next.js, Expo, Node, Python, Python web, Vue/Svelte SFC scripts, Kotlin, Jetpack Compose, and maintainer workflows. Additional
 packs expand from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 

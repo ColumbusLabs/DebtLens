@@ -1,7 +1,7 @@
 {
   "name": "debtlens",
   "version": "0.3.0",
-  "description": "Maintainability scanner for TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose codebases with framework rule packs for adoption-friendly CI.",
+  "description": "Maintainability scanner for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose codebases with framework rule packs for adoption-friendly CI.",
   "type": "module",
   "homepage": "https://github.com/ColumbusLabs/DebtLens#readme",
   "repository": {
@@ -50,6 +50,8 @@
     "typescript",
     "javascript",
     "python",
+    "vue",
+    "svelte",
     "kotlin",
     "jetpack-compose",
     "compose",

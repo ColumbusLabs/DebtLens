@@ -12,14 +12,16 @@ describe("public capability messaging", () => {
     const cliIndex = read("src/cli/index.ts");
     const roadmap = read("ROADMAP.md");
 
-    assert.match(packageJson.description, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose/);
+    assert.match(packageJson.description, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose/);
     assert.ok(packageJson.keywords.includes("python"));
+    assert.ok(packageJson.keywords.includes("vue"));
+    assert.ok(packageJson.keywords.includes("svelte"));
     assert.ok(packageJson.keywords.includes("kotlin"));
     assert.ok(packageJson.keywords.includes("jetpack-compose"));
-    assert.match(readme, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose/);
-    assert.match(actionYml, /TypeScript, JavaScript, Python, Kotlin, Jetpack Compose/);
-    assert.match(cliIndex, /TypeScript, JavaScript, Python, Kotlin, Jetpack Compose/);
-    assert.match(roadmap, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose today/);
+    assert.match(readme, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose/);
+    assert.match(actionYml, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Jetpack Compose/);
+    assert.match(cliIndex, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Jetpack Compose/);
+    assert.match(roadmap, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose today/);
   });
 
   it("guards against stale TS-only or unshipped-plugin claims", () => {
@@ -54,6 +56,10 @@ describe("public capability messaging", () => {
     assert.doesNotMatch(publicDocs, /Jetpack Compose.*future/i);
     assert.doesNotMatch(publicDocs, /future Compose pack/i);
     assert.doesNotMatch(publicDocs, /Compose.*wait until/i);
+    assert.doesNotMatch(publicDocs, /Vue and Svelte are planned/i);
+    assert.doesNotMatch(publicDocs, /Vue\/Svelte detectors where applicable/i);
+    assert.match(publicDocs, /They do not analyze\s+templates, markup, styles, or external `<script src="\.\.\.">` content\./);
+    assert.match(publicDocs, /Script-block MVP only/);
   });
 
   it("links the first-run adoption docs from the README", () => {

@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 12);
+    assert.equal(packs.length, 14);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
@@ -38,6 +38,20 @@ describe("rule packs", () => {
     ]);
     assert.deepEqual(getRulePack("python-web").languages, ["python"]);
     assert.equal(getRulePack("python-web").thresholds?.["python-route-sprawl.maxRoutes"], 8);
+    assert.deepEqual(getRulePack("vue").rules, [
+      "vue-todo-comment",
+      "vue-large-script",
+      "vue-duplicate-logic",
+    ]);
+    assert.deepEqual(getRulePack("vue").languages, ["vue"]);
+    assert.equal(getRulePack("vue").thresholds?.["vue-large-script.maxFunctionLines"], 80);
+    assert.deepEqual(getRulePack("svelte").rules, [
+      "svelte-todo-comment",
+      "svelte-large-script",
+      "svelte-duplicate-logic",
+    ]);
+    assert.deepEqual(getRulePack("svelte").languages, ["svelte"]);
+    assert.equal(getRulePack("svelte").thresholds?.["svelte-large-script.maxFunctionLines"], 80);
     assert.deepEqual(getRulePack("kotlin").rules, [
       "kotlin-duplicate-logic",
       "kotlin-large-function",
@@ -55,7 +69,7 @@ describe("rule packs", () => {
   });
 
   it("throws for unknown pack ids", () => {
-    assert.throws(() => getRulePack("vue"), /Unknown rule pack "vue"/);
+    assert.throws(() => getRulePack("ember"), /Unknown rule pack "ember"/);
   });
 
   it("applies pack rules when no explicit rules are configured", () => {
@@ -99,15 +113,19 @@ describe("rule packs", () => {
   });
 
   it("combines comma-separated packs and widens includes for language packs", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python-web,kotlin,compose" });
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python-web,vue,svelte,kotlin,compose" });
 
-    assert.equal(options.pack, "core,python-web,kotlin,compose");
+    assert.equal(options.pack, "core,python-web,vue,svelte,kotlin,compose");
     assert.ok(options.rules?.includes("todo-comment"));
     assert.ok(options.rules?.includes("python-todo-comment"));
     assert.ok(options.rules?.includes("python-route-sprawl"));
+    assert.ok(options.rules?.includes("vue-todo-comment"));
+    assert.ok(options.rules?.includes("svelte-todo-comment"));
     assert.ok(options.rules?.includes("kotlin-todo-comment"));
     assert.ok(options.rules?.includes("compose-large-composable"));
     assert.ok(options.include.includes("**/*.py"));
+    assert.ok(options.include.includes("**/*.vue"));
+    assert.ok(options.include.includes("**/*.svelte"));
     assert.ok(options.include.includes("**/*.{kt,kts}"));
     assert.equal(options.exclude.includes("android/**"), false);
   });
@@ -118,6 +136,15 @@ describe("rule packs", () => {
     assert.deepEqual(options.rules, ["kotlin-todo-comment"]);
     assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
     assert.ok(options.include.includes("**/*.{kt,kts}"));
+  });
+
+  it("widens includes for explicit SFC rules", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), rules: ["vue-todo-comment", "svelte-large-script"] });
+
+    assert.deepEqual(options.rules, ["vue-todo-comment", "svelte-large-script"]);
+    assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
+    assert.ok(options.include.includes("**/*.vue"));
+    assert.ok(options.include.includes("**/*.svelte"));
   });
 
   it("lets the Compose pack discover Kotlin without selecting generic Kotlin rules", () => {
@@ -137,7 +164,7 @@ describe("rule packs", () => {
   });
 
   it("derives pack includes from language metadata", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "python-web,compose" });
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "python-web,vue,svelte,compose" });
 
     assert.deepEqual(options.rules, [
       "python-duplicate-logic",
@@ -146,9 +173,15 @@ describe("rule packs", () => {
       "python-dead-abstraction",
       "python-todo-comment",
       "python-route-sprawl",
+      "vue-todo-comment",
+      "vue-large-script",
+      "vue-duplicate-logic",
+      "svelte-todo-comment",
+      "svelte-large-script",
+      "svelte-duplicate-logic",
       "compose-large-composable",
       "compose-state-hoisting",
     ]);
-    assert.deepEqual(options.include, ["**/*.py", "**/*.{kt,kts}"]);
+    assert.deepEqual(options.include, ["**/*.py", "**/*.vue", "**/*.svelte", "**/*.{kt,kts}"]);
   });
 });

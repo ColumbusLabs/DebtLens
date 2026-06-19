@@ -1,9 +1,9 @@
 # Language Pack RFC
 
-Status: **Python, Kotlin core, and Jetpack Compose packs shipped**
+Status: **Python, Vue/Svelte SFC script, Kotlin core, and Jetpack Compose packs shipped**
 
 DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
-CI workflows, and GitHub Action are language-neutral, and the Python, Kotlin, and Compose packs now
+CI workflows, and GitHub Action are language-neutral, and the Python, Vue/Svelte SFC script, Kotlin, and Compose packs now
 prove that language-specific detectors can share the same `ScanResult` shape.
 
 ## Shared requirements
@@ -64,6 +64,7 @@ languages through `debtlens/plugin`.
 
 ```bash
 debtlens scan . --pack core,python
+debtlens scan . --pack core,python,vue,svelte
 debtlens scan . --pack core,python,kotlin
 debtlens scan . --pack kotlin,compose
 ```
@@ -165,37 +166,52 @@ Known limitations:
 - Compose checks are lexical UI-shape signals; they do not claim ViewModel ownership, navigation ownership, or type-aware state-flow analysis.
 - Compose remains a separate pack so core Kotlin does not overclaim UI expertise.
 
-## Vue parser recommendation
+## Vue and Svelte SFC script packs
 
-Recommended path: use `vue-eslint-parser` for single-file component parsing, extracting
-`<script>` and `<script setup>` ASTs while leaving template-specific rules for a later
-pack.
+Current implementation: Vue and Svelte use a dependency-free single-file component
+extractor that scans inline `<script>` blocks, preserves original `.vue` or `.svelte`
+line positions in a virtual TS/JS source file, and runs only SFC-specific script rules.
+The source file path in every finding remains the original component file.
+
+Shipped rules:
+
+- `vue-todo-comment`, `vue-large-script`, `vue-duplicate-logic`
+- `svelte-todo-comment`, `svelte-large-script`, `svelte-duplicate-logic`
+
+The extractor supports classic Vue `<script>`, Vue `<script setup>`, Svelte module
+scripts, and Svelte instance scripts. External `<script src="...">` content is not
+loaded; scan the referenced TS/JS file through `--pack core` if it needs coverage.
+
+For SvelteKit projects, `--pack svelte` covers `.svelte` component scripts only. Use
+`--pack core,svelte` when the same scan should also include `+page.ts`, `+layout.ts`,
+`+server.ts`, endpoint helpers, and shared `.ts` modules.
+
+Known limitations:
+
+- Template and markup AST debt signals are out of scope for the shipped MVP.
+- Vue directive complexity, slot ownership, scoped-style debt, and Svelte markup/control
+  flow need framework-specific rules instead of React heuristic reuse.
+- Component compiler semantics, import resolution, and type-aware analysis are not
+  attempted.
+- Line mapping is intentionally conservative: script blocks keep their original
+  component lines, and non-script content is masked out of the virtual source.
+
+Future richer parser path: use `vue-eslint-parser` for Vue single-file component
+template/script parsing and a Svelte compiler or language-server-backed parser when
+template-aware Svelte rules justify the dependency.
 
 Why:
 
 - It is the established parser path used by Vue ESLint tooling.
 - It supports both classic script and script setup, which is the critical compatibility
   requirement for maintainability rules.
-- The first proof should port a narrow component-size or TODO rule rather than attempt a
-  full template analysis.
-
-Initial Vue spike:
-
-1. Add `.vue` file discovery behind an explicit `vue` pack.
-2. Parse script blocks only.
-3. Run one near-equivalent rule, such as large component/script block size.
-4. Document false-positive cases around generated components and heavy template files.
-
-Known limitations:
-
-- Template AST debt signals need Vue-specific guidance and should not reuse React
-  component heuristics blindly.
-- Source locations must map back to the `.vue` file rather than extracted virtual files.
-- Parser dependency should remain optional until the pack is selected.
+- Template-aware work should build on framework parsers once the script-block pack has
+  enough real-world calibration data.
 
 ## Example fixture
 
 [`examples/python/`](../examples/python/), [`examples/kotlin/`](../examples/kotlin/),
-and [`examples/compose/`](../examples/compose/) are calibrated language-pack fixtures.
+[`examples/vue/`](../examples/vue/), [`examples/svelte/`](../examples/svelte/), and
+[`examples/compose/`](../examples/compose/) are calibrated language-pack fixtures.
 They are intentionally scanned only when their language or framework packs or explicit
 language-specific rules are selected, so TS/JS defaults do not change for existing users.

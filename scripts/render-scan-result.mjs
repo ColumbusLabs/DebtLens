@@ -17,6 +17,8 @@ const report = renderReport(result, parsedFormat, {
   sourceUrlBase: getGitHubSourceUrlBase(process.env),
   groupBy: parseGroupBy(process.env.DEBTLENS_GROUP_BY),
   sarifCompact: process.env.DEBTLENS_SARIF_COMPACT === "true",
+  sarifCategory: process.env.DEBTLENS_SARIF_CATEGORY || undefined,
+  junitFailOn: parseOptionalSeverity(process.env.DEBTLENS_JUNIT_FAIL_ON, "JUnit fail-on"),
   markdownHeatmapLimit: parseOptionalInteger(process.env.DEBTLENS_MARKDOWN_HEATMAP),
   prCommentDeltaOnly: process.env.DEBTLENS_PR_COMMENT_DELTA_ONLY === "true",
   prCommentMaxFindings: parseOptionalInteger(process.env.DEBTLENS_PR_COMMENT_MAX_FINDINGS, { allowZero: true, name: "PR comment max findings" }),
@@ -48,6 +50,14 @@ function parseFormat(value) {
   const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit"];
   if (formats.includes(value)) return value;
   throw new Error(`Invalid format "${value}". Expected ${formats.join(", ")}.`);
+}
+
+function parseOptionalSeverity(value, name) {
+  if (!value) return undefined;
+  const severities = ["info", "low", "medium", "high"];
+  const normalized = value.toLowerCase();
+  if (severities.includes(normalized)) return normalized;
+  throw new Error(`Invalid ${name} "${value}". Expected ${severities.join(", ")}.`);
 }
 
 function parseGroupBy(value) {

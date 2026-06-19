@@ -26,7 +26,7 @@ debtlens:
 For a test-style artifact, also emit JUnit:
 
 ```bash
-npx debtlens scan . --format junit --output debtlens.junit.xml --fail-on high
+npx debtlens scan . --format junit --junit-fail-on high --output debtlens.junit.xml --fail-on high
 ```
 
-Then add `debtlens.junit.xml` under `artifacts:reports:junit`.
+Then add `debtlens.junit.xml` under `artifacts:reports:junit`. `--fail-on` controls the CLI exit code; `--junit-fail-on` controls which reported findings become failed testcases.

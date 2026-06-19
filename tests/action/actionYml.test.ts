@@ -30,6 +30,8 @@ describe("GitHub Action metadata", () => {
       "annotations-max-count",
       "group-by",
       "sarif-compact",
+      "sarif-category",
+      "junit-fail-on",
       "markdown-heatmap",
     ]) {
       assert.match(actionYml, new RegExp(`\\n  ${input}:\\n`));
@@ -110,5 +112,17 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /DL_ANNOTATIONS: \$\{\{ inputs\.annotations \}\}/);
     assert.match(actionYml, /DL_ANNOTATIONS_MAX_COUNT: \$\{\{ inputs\.annotations-max-count \}\}/);
     assert.match(actionYml, /scripts\/emit-github-annotations\.mjs/);
+  });
+
+  it("passes SARIF category through to rendered reports", () => {
+    assert.match(actionYml, /sarif-category:\n    description: SARIF only - set runs\[\]\.automationDetails\.id/s);
+    assert.match(actionYml, /DL_SARIF_CATEGORY: \$\{\{ inputs\.sarif-category \}\}/);
+    assert.match(actionYml, /export DEBTLENS_SARIF_CATEGORY="\$DL_SARIF_CATEGORY"/);
+  });
+
+  it("passes JUnit failure threshold through to rendered reports", () => {
+    assert.match(actionYml, /junit-fail-on:\n    description: JUnit only - severity threshold for failed testcases/s);
+    assert.match(actionYml, /DL_JUNIT_FAIL_ON: \$\{\{ inputs\.junit-fail-on \}\}/);
+    assert.match(actionYml, /export DEBTLENS_JUNIT_FAIL_ON="\$DL_JUNIT_FAIL_ON"/);
   });
 });

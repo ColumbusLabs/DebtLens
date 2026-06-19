@@ -7,6 +7,11 @@ const RULE_DOCS_URI = "https://github.com/ColumbusLabs/DebtLens/blob/main/docs/r
 
 type SarifLevel = "error" | "warning" | "note" | "none";
 
+export interface SarifRenderOptions {
+  compact?: boolean;
+  category?: string;
+}
+
 function toSarifLevel(severity: Severity): SarifLevel {
   switch (severity) {
     case "high":
@@ -30,7 +35,7 @@ function ruleHelpUri(ruleId: string): string {
  * The full rule catalog is emitted by default so rule indices stay stable. Compact
  * mode emits only rules referenced by findings or suppression audit entries.
  */
-export function renderSarif(result: ScanResult, options: { compact?: boolean } = {}): string {
+export function renderSarif(result: ScanResult, options: SarifRenderOptions = {}): string {
   const ruleIndex = new Map<string, number>();
   const usedRuleIds = new Set([
     ...result.issues.map((issue) => issue.ruleId),
@@ -72,6 +77,7 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
     ...(result.suppressions ?? []).map((suppression) => toSarifResult(suppression.issue, ruleIndex, suppression)),
   ];
   const toolExecutionNotifications = (result.suppressionDirectives ?? []).map(toSarifSuppressionNotification);
+  const category = normalizeCategory(options.category);
 
   const sarif = {
     $schema: "https://json.schemastore.org/sarif-2.1.0.json",
@@ -86,6 +92,7 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
             rules,
           },
         },
+        ...(category ? { automationDetails: { id: category } } : {}),
         results,
         ...(toolExecutionNotifications.length
           ? { invocations: [{ executionSuccessful: true, toolExecutionNotifications }] }
@@ -95,6 +102,11 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
   };
 
   return `${JSON.stringify(sarif, null, 2)}\n`;
+}
+
+function normalizeCategory(category: string | undefined): string | undefined {
+  const trimmed = category?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function toSarifSuppressionNotification(directive: SuppressionDirectiveAudit) {
@@ -135,6 +147,8 @@ function toSarifResult(
   ruleIndex: Map<string, number>,
   suppression?: InlineSuppressionAudit,
 ) {
+  const fingerprint = issue.fingerprint ?? issue.id;
+
   return {
     ruleId: issue.ruleId,
     ruleIndex: ruleIndex.get(issue.ruleId) ?? -1,
@@ -152,6 +166,9 @@ function toSarifResult(
         },
       },
     ],
+    partialFingerprints: {
+      debtLensFingerprint: fingerprint,
+    },
     ...(suppression
       ? {
           suppressions: [
@@ -172,7 +189,7 @@ function toSarifResult(
     properties: {
       confidence: issue.confidence,
       severity: issue.severity,
-      fingerprint: issue.fingerprint ?? issue.id,
+      fingerprint,
       ...(suppression ? { suppressedBy: suppression.kind, suppressionDirectiveLine: suppression.directiveLine } : {}),
       ...(issue.evidence?.length ? { evidence: issue.evidence } : {}),
       ...(issue.suggestion ? { suggestion: issue.suggestion } : {}),

@@ -46,6 +46,38 @@ describe("junit reporter", () => {
     assert.match(xml, /src\/&lt;Widget&gt;\.ts:4/);
     assert.match(xml, /Reason: stale &lt;exception&gt;/);
   });
+
+  it("marks only findings at or above the configured severity as failures", () => {
+    const xml = renderJunit(makeResult([{
+      id: "high",
+      fingerprint: "high",
+      ruleId: "prop-drilling",
+      ruleName: "Prop drilling",
+      severity: "high",
+      confidence: 0.8,
+      message: "High severity issue",
+      file: "src/high.tsx",
+      location: { startLine: 10 },
+      tags: [],
+    }, {
+      id: "low",
+      fingerprint: "low",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "low",
+      confidence: 0.75,
+      message: "Lower severity issue",
+      file: "src/low.ts",
+      location: { startLine: 20 },
+      tags: [],
+    }]), { failOn: "high" });
+
+    assert.match(xml, /<testsuites name="DebtLens" tests="2" failures="1" skipped="1">/);
+    assert.match(xml, /<testsuite name="DebtLens findings" tests="2" failures="1" skipped="1">/);
+    assert.match(xml, /<failure type="high" message="\[prop-drilling\] High severity issue">/);
+    assert.match(xml, /<skipped message="\[todo-comment\] Lower severity issue">/);
+    assert.doesNotMatch(xml, /<failure type="low"/);
+  });
 });
 
 function makeResult(issues: DebtIssue[]): ScanResult {

@@ -28,6 +28,7 @@ describe("debtlens completions", () => {
     assert.match(result.stdout, /terminal markdown json/);
     assert.match(result.stdout, /--dry-run/);
     assert.match(result.stdout, /--audit-suppressions/);
+    assert.match(result.stdout, /--junit-fail-on/);
     assert.match(result.stdout, /prop-drilling/);
     assert.match(result.stdout, /python-route-sprawl/);
     assert.match(result.stdout, /react-native/);
@@ -51,11 +52,13 @@ describe("debtlens completions", () => {
     assert.match(zsh.stdout, /'--package' \\/);
     assert.match(zsh.stdout, /'--threshold' \\/);
     assert.match(zsh.stdout, /'--audit-suppressions' \\/);
+    assert.match(zsh.stdout, /--junit-fail-on\[JUnit failing severity\]:severity:\(info low medium high\)/);
     assert.equal(fish.status, 0);
     assert.match(fish.stdout, /complete -c debtlens/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline/);
     assert.match(fish.stdout, /-l dry-run/);
     assert.match(fish.stdout, /-l audit-suppressions/);
+    assert.match(fish.stdout, /-l junit-fail-on -a "info low medium high"/);
     assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline compare" -l format -a "terminal json markdown pr-comment sarif html junit"/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from compare" -l format -a "terminal markdown json"/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline" -l format -a "terminal json"/);

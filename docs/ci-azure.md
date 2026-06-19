@@ -34,7 +34,7 @@ steps:
 Azure can also publish JUnit-style reports:
 
 ```yaml
-- script: npx debtlens scan . --format junit --output debtlens.junit.xml --fail-on high
+- script: npx debtlens scan . --format junit --junit-fail-on high --output debtlens.junit.xml --fail-on high
   displayName: Run DebtLens JUnit
 
 - task: PublishTestResults@2
@@ -43,3 +43,5 @@ Azure can also publish JUnit-style reports:
     testResultsFormat: JUnit
     testResultsFiles: debtlens.junit.xml
 ```
+
+`--fail-on` controls the CLI exit code; `--junit-fail-on` controls which reported findings become failed testcases while lower severities remain visible as skipped testcases.

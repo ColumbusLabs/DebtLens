@@ -116,6 +116,41 @@ describe("debtlens scan output formats", () => {
     assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, or junit/);
   });
 
+  it("passes the JUnit failure threshold from CLI flags", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment",
+      "--format",
+      "junit",
+      "--junit-fail-on",
+      "high",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /<testsuites name="DebtLens" tests="1" failures="0" skipped="1">/);
+    assert.match(result.stdout, /<skipped message="\[todo-comment\] Comment contains a todo marker\./);
+    assert.doesNotMatch(result.stdout, /<failure type="low"/);
+  });
+
+  it("emits SARIF partial fingerprints and category from CLI flags", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment",
+      "--format",
+      "sarif",
+      "--sarif-category",
+      "packages/web",
+    ]);
+    const parsed = JSON.parse(result.stdout);
+    const [finding] = parsed.runs[0].results;
+
+    assert.equal(result.status, 0);
+    assert.equal(parsed.runs[0].automationDetails.id, "packages/web");
+    assert.equal(finding.partialFingerprints.debtLensFingerprint, finding.properties.fingerprint);
+  });
+
   it("links locations when GitHub source env is available", () => {
     const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"], {
       env: {

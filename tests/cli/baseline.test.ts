@@ -156,4 +156,17 @@ describe("debtlens baseline", () => {
     assert.match(prune.stderr, /baseline prune refuses scoped scans/);
     assert.equal(readFileSync(baselinePath, "utf8"), before);
   }));
+
+  it("refuses mutating prune when config narrows the scan", () => withFixture((dir, baselinePath) => {
+    writeSource(dir, "a.ts", "// TODO: config-scoped\nexport const a = 1;\n");
+    const write = runScan([".", "--write-baseline", baselinePath], { cwd: dir });
+    assert.equal(write.status, 0, write.stderr);
+    const before = readFileSync(baselinePath, "utf8");
+    writeFileSync(join(dir, "debtlens.config.json"), `${JSON.stringify({ include: ["missing.ts"] }, null, 2)}\n`, "utf8");
+
+    const prune = runBaseline(["prune", ".", "--baseline", baselinePath], { cwd: dir });
+    assert.equal(prune.status, 1);
+    assert.match(prune.stderr, /baseline prune refuses scoped scans/);
+    assert.equal(readFileSync(baselinePath, "utf8"), before);
+  }));
 });

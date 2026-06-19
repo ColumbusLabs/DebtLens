@@ -62,8 +62,9 @@ npx debtlens baseline update . --baseline debtlens-baseline.json
 `update` rewrites the baseline to the current scan result. Legacy baselines are supported.
 Run each maintenance command with the same target and scan options used to create the
 baseline, including pack, rule, threshold, package, include, and exclude choices.
-Mutating `prune` only runs for the default full-scope scan; use `diff` for scoped previews
-and `update` when you intentionally want to rewrite a scoped baseline.
+Mutating `prune` only runs for the default full-scope scan without config-driven scope
+changes; use `diff` for scoped previews and `update` when you intentionally want to
+rewrite a scoped baseline.
 
 ## 5. Clean up trial artifacts
 

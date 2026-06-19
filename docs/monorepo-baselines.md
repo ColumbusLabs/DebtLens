@@ -40,8 +40,8 @@ debtlens baseline update . --package web --baseline debtlens-baseline.web.json
 ```
 
 `diff` does not write files, and `update` rewrites the baseline to the current package
-scan result. Legacy baselines are supported. Mutating `prune` refuses `--package` and other
-explicitly scoped CLI scans because DebtLens cannot prove that a narrower scan covers every
-entry in an older baseline. Baseline issue paths are package-relative when `--package` is
-used, so keep the package flag and other scan options consistent between baseline creation,
-CI enforcement, and maintenance.
+scan result. Legacy baselines are supported. Mutating `prune` refuses `--package`, other
+explicitly scoped CLI scans, and config-driven scope changes because DebtLens cannot prove
+that a narrower scan covers every entry in an older baseline. Baseline issue paths are
+package-relative when `--package` is used, so keep the package flag and other scan options
+consistent between baseline creation, CI enforcement, and maintenance.

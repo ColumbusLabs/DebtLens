@@ -15,7 +15,7 @@ import {
 } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { parseSeverity } from "../core/severity.js";
-import type { DebtIssue, ScanOptions } from "../core/types.js";
+import type { DebtIssue, DebtLensConfig, ScanOptions } from "../core/types.js";
 import {
   loadConfiguredPlugins,
 } from "./scanPipeline.js";
@@ -85,6 +85,12 @@ export async function runBaselineMaintenanceCommand(
     packageDirectory,
   );
   const fileConfig = effectiveConfig.config;
+  if (mode === "prune" && !dryRun && isScopedPrune(target, cwd, rawOptions, fileConfig)) {
+    throw new Error(
+      "baseline prune refuses scoped scans because they can delete unrelated baseline entries. " +
+      "Run `debtlens baseline diff` first, then prune with the original full baseline scope or use `debtlens baseline update` to intentionally rewrite the baseline.",
+    );
+  }
   const pluginContribution = await loadConfiguredPlugins(
     cwd,
     rawOptions as Record<string, unknown>,
@@ -126,12 +132,6 @@ export async function runBaselineMaintenanceCommand(
   const comparison = compareBaselineDetailed(result.issues, baseline);
   let wroteBaseline = false;
   if (mode === "prune" && !dryRun) {
-    if (isScopedPrune(target, cwd, rawOptions)) {
-      throw new Error(
-        "baseline prune refuses scoped scans because they can delete unrelated baseline entries. " +
-        "Run `debtlens baseline diff` first, then prune with the original full baseline scope or use `debtlens baseline update` to intentionally rewrite the baseline.",
-      );
-    }
     writeBaseline(cwd, baselinePath, pruneBaseline(baseline, comparison));
     wroteBaseline = true;
   }
@@ -156,7 +156,12 @@ export async function runBaselineMaintenanceCommand(
   };
 }
 
-function isScopedPrune(target: string, cwd: string, rawOptions: BaselineMaintenanceOptions): boolean {
+function isScopedPrune(
+  target: string,
+  cwd: string,
+  rawOptions: BaselineMaintenanceOptions,
+  fileConfig: DebtLensConfig,
+): boolean {
   const isDefaultTarget = target === "." || resolve(cwd, target) === cwd;
   return !isDefaultTarget ||
     rawOptions.include !== undefined ||
@@ -167,7 +172,26 @@ function isScopedPrune(target: string, cwd: string, rawOptions: BaselineMaintena
     rawOptions.package !== undefined ||
     rawOptions.threshold !== undefined ||
     rawOptions.maxFiles !== undefined ||
-    rawOptions.respectGitignore === true;
+    rawOptions.respectGitignore === true ||
+    hasScopedConfig(fileConfig);
+}
+
+function hasScopedConfig(config: DebtLensConfig): boolean {
+  return config.include !== undefined ||
+    config.exclude !== undefined ||
+    config.rules !== undefined ||
+    (config.minSeverity !== undefined && config.minSeverity !== "low") ||
+    config.pack !== undefined ||
+    config.thresholds !== undefined ||
+    config.maxFiles !== undefined ||
+    config.respectGitignore === true ||
+    config.vocabulary !== undefined ||
+    config.propDrilling !== undefined ||
+    config.namingDrift !== undefined ||
+    config.todoComment !== undefined ||
+    config.plugins !== undefined ||
+    config.ruleSeverities !== undefined ||
+    config.ruleConfidenceFloors !== undefined;
 }
 
 interface BaselineMaintenanceFingerprint {

@@ -285,7 +285,7 @@ Baseline fingerprints are stable across line shifts, so moving existing code up 
 
 Use `debtlens baseline diff` to review new, resolved, and changed findings against an existing baseline. `diff` and `--dry-run` are read-only and do not write files. `debtlens baseline prune` removes entries that no longer appear in the current scan, while `debtlens baseline update` rewrites the baseline to the current scan result. Legacy baselines without newer summary metadata are supported. Run maintenance with the same scan scope and options used to create the original baseline, including target, `--cwd`, `--package`, `--include`, `--exclude`, `--pack`, `--rules`, and `--threshold`, so DebtLens compares the same surface instead of treating scope changes as resolved or new debt.
 
-For safety, mutating `baseline prune` refuses explicitly scoped CLI scans such as `--rules`, `--package`, custom include/exclude globs, non-default targets, or max-file caps. Use `baseline diff` to inspect scoped drift, or `baseline update` when you intentionally want to rewrite a scoped baseline.
+For safety, mutating `baseline prune` refuses explicitly scoped scans such as `--rules`, `--package`, custom include/exclude globs, non-default targets, max-file caps, or config-driven scan shaping. Use `baseline diff` to inspect scoped drift, or `baseline update` when you intentionally want to rewrite a scoped baseline.
 
 When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty git file set from `--changed` / `--staged`. The warning is advisory and does not change the exit code for `--fail-on`.
 

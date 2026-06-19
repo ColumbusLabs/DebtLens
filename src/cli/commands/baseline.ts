@@ -23,6 +23,7 @@ function addBaselineSubcommand(parent: Command, mode: BaselineMaintenanceMode, d
     .argument("[target]", "directory or file to scan", ".")
     .option("--baseline <path>", "baseline file to inspect or update", DEFAULT_BASELINE_FILENAME)
     .option("--format <format>", "terminal or json", "terminal")
+    .option("--dry-run", "preview without writing the baseline file")
     .option("-i, --include <patterns>", "comma-separated glob patterns to include")
     .option("-x, --exclude <patterns>", "comma-separated glob patterns to exclude")
     .option("--min-severity <severity>", "info, low, medium, or high", "low")
@@ -37,10 +38,6 @@ function addBaselineSubcommand(parent: Command, mode: BaselineMaintenanceMode, d
     .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
     .option("--parallel", "run detectors concurrently after source loading")
     .option("--batch-size <count>", "load source files in bounded batches", parseInteger);
-
-  if (mode !== "diff") {
-    command.option("--dry-run", "preview without writing the baseline file");
-  }
 
   command.action(async (target: string, rawOptions: Record<string, unknown>) => {
     try {

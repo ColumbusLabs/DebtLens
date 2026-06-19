@@ -103,6 +103,22 @@ describe("mergeConfig", () => {
     assert.deepEqual(options.include, ["**/*.{ts,tsx,js,jsx}", "**/*.py"]);
   });
 
+  it("adds plugin language discovery when plugin rules run beside default built-ins", () => {
+    const pythonPluginDetector = {
+      ...pluginDetector,
+      id: "policy-python-fixture",
+      languages: ["python"],
+    } satisfies Detector;
+
+    const options = mergeConfig(".", {}, {
+      cwd: process.cwd(),
+      pluginDetectors: [pythonPluginDetector],
+    });
+
+    assert.equal(options.rules, undefined);
+    assert.deepEqual(options.include, ["**/*.{ts,tsx,js,jsx}", "**/*.py"]);
+  });
+
   it("passes through valid ruleSeverities and ruleConfidenceFloors", () => {
     const options = mergeConfig(".", {
       ruleSeverities: { "naming-drift": "info" },

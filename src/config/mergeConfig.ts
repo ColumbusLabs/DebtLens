@@ -111,7 +111,10 @@ function resolveLanguageDiscovery(rules: string[] | undefined, pluginDetectors: 
   }
 
   return {
-    languages: [DEFAULT_SOURCE_LANGUAGE],
+    languages: unique([
+      DEFAULT_SOURCE_LANGUAGE,
+      ...(pluginDetectors?.flatMap((detector) => languagesForDetector(detector)) ?? []),
+    ]),
   };
 }
 

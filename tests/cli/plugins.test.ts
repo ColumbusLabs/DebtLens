@@ -50,6 +50,33 @@ export default {
 };
 `;
 
+const pythonMarkerPluginSource = `
+export default {
+  id: "python-marker",
+  name: "Python marker",
+  description: "Flags a marker in Python files.",
+  defaultSeverity: "low",
+  tags: ["python"],
+  languages: ["python"],
+  detect(context) {
+    return context.files
+      .filter((file) => file.content.includes("PY_MARKER"))
+      .map((file) => ({
+        id: "dl_py_marker_" + file.relativePath,
+        ruleId: "python-marker",
+        ruleName: "Python marker",
+        severity: "low",
+        confidence: 0.9,
+        message: "Python marker found.",
+        file: file.relativePath,
+        location: { startLine: 1 },
+        tags: ["python"],
+        suggestion: "Remove the marker.",
+      }));
+  },
+};
+`;
+
 function withPluginProject(run: (dir: string) => void) {
   const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-plugin-"));
   try {
@@ -107,32 +134,7 @@ describe("debtlens scan with plugins", () => {
 
   it("discovers Python files for language-aware plugin rules beside pack defaults", () => {
     withPluginProject((dir) => {
-      writeFileSync(join(dir, "python-marker.mjs"), `
-export default {
-  id: "python-marker",
-  name: "Python marker",
-  description: "Flags a marker in Python files.",
-  defaultSeverity: "low",
-  tags: ["python"],
-  languages: ["python"],
-  detect(context) {
-    return context.files
-      .filter((file) => file.content.includes("PY_MARKER"))
-      .map((file) => ({
-        id: "dl_py_marker_" + file.relativePath,
-        ruleId: "python-marker",
-        ruleName: "Python marker",
-        severity: "low",
-        confidence: 0.9,
-        message: "Python marker found.",
-        file: file.relativePath,
-        location: { startLine: 1 },
-        tags: ["python"],
-        suggestion: "Remove the marker.",
-      }));
-  },
-};
-`);
+      writeFileSync(join(dir, "python-marker.mjs"), pythonMarkerPluginSource);
       writeFileSync(join(dir, "src", "service.py"), "PY_MARKER = True\n");
       writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
         pluginApiVersion: 1,
@@ -145,6 +147,25 @@ export default {
 
       assert.equal(result.status, 0);
       assert.equal(parsed.summary.rulesRun, 14);
+      assert.ok(parsed.issues.some((issue: { ruleId: string; file: string }) =>
+        issue.ruleId === "python-marker" && issue.file === "src/service.py"));
+    });
+  });
+
+  it("discovers Python files for language-aware plugin rules without an explicit pack", () => {
+    withPluginProject((dir) => {
+      writeFileSync(join(dir, "python-marker.mjs"), pythonMarkerPluginSource);
+      writeFileSync(join(dir, "src", "service.py"), "PY_MARKER = True\n");
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        pluginApiVersion: 1,
+        plugins: ["./python-marker.mjs"],
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.ok(parsed.summary.rulesRun > 13);
       assert.ok(parsed.issues.some((issue: { ruleId: string; file: string }) =>
         issue.ruleId === "python-marker" && issue.file === "src/service.py"));
     });

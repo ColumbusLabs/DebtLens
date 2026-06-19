@@ -26,6 +26,8 @@ describe("GitHub Action metadata", () => {
       "comment-max-bytes",
       "comment-full-report-url",
       "comment-fail-on-error",
+      "annotations",
+      "annotations-max-count",
       "group-by",
       "sarif-compact",
       "markdown-heatmap",
@@ -75,5 +77,38 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /DEBTLENS_PR_COMMENT_MAX_FINDINGS="\$DL_COMMENT_MAX_FINDINGS"/);
     assert.match(actionYml, /DEBTLENS_PR_COMMENT_MAX_BYTES="\$DL_COMMENT_MAX_BYTES"/);
     assert.match(actionYml, /DEBTLENS_COMMENT_FAIL_ON_ERROR="\$DL_COMMENT_FAIL_ON_ERROR"/);
+  });
+
+  it("exposes scan metrics, gate status, and artifact paths as Action outputs", () => {
+    for (const output of [
+      "scan-status",
+      "gate-status",
+      "total-issues",
+      "high-issues",
+      "medium-issues",
+      "low-issues",
+      "info-issues",
+      "top-rule",
+      "top-rule-count",
+      "json-path",
+      "json-artifact-name",
+      "report-path",
+      "report-format",
+    ]) {
+      assert.match(actionYml, new RegExp(`\\n  ${output}:\\n[\\s\\S]*?value: \\$\\{\\{ steps\\.scan\\.outputs\\['${output}'\\] \\}\\}`));
+    }
+    assert.match(actionYml, /scripts\/export-action-outputs\.mjs/);
+    assert.match(actionYml, /DEBTLENS_SCAN_STATUS="\$scan_status"/);
+  });
+
+  it("passes fail-on confidence into the step summary gate context", () => {
+    assert.match(actionYml, /DL_FAIL_ON_CONFIDENCE: \$\{\{ inputs\.fail-on-confidence \}\}/);
+    assert.match(actionYml, /DEBTLENS_FAIL_ON_CONFIDENCE="\$DL_FAIL_ON_CONFIDENCE"/);
+  });
+
+  it("can emit capped GitHub workflow command annotations", () => {
+    assert.match(actionYml, /DL_ANNOTATIONS: \$\{\{ inputs\.annotations \}\}/);
+    assert.match(actionYml, /DL_ANNOTATIONS_MAX_COUNT: \$\{\{ inputs\.annotations-max-count \}\}/);
+    assert.match(actionYml, /scripts\/emit-github-annotations\.mjs/);
   });
 });

@@ -10,6 +10,9 @@ export function formatFilterStats(stats: ScanFilterStats | undefined): string | 
   if (stats.filteredByMinSeverity) {
     parts.push(`${stats.filteredByMinSeverity} below min severity`);
   }
+  if (stats.filteredByConfidenceFloor) {
+    parts.push(`${stats.filteredByConfidenceFloor} below confidence floor`);
+  }
   if (stats.suppressedByInline) {
     parts.push(`${stats.suppressedByInline} inline suppressed`);
   }

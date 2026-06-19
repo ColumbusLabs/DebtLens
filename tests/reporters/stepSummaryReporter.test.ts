@@ -34,6 +34,91 @@ describe("step summary reporter", () => {
     assert.match(output, /No maintainability debt found/);
   });
 
+  it("renders gate decisions, filters, warnings, and report artifacts", () => {
+    const result = makeResult([{
+      id: "1",
+      ruleId: "prop-drilling",
+      ruleName: "Prop drilling",
+      severity: "high",
+      confidence: 0.9,
+      message: "High finding",
+      file: "src/App.tsx",
+      tags: [],
+    }]);
+    result.summary.filterStats = { suppressedByBaseline: 2, filteredByMinSeverity: 3, filteredByConfidenceFloor: 1, suppressedByInline: 1 };
+    result.summary.warnings = ["duplicate-logic inspected 10 of 20 eligible snippets."];
+
+    const output = renderStepSummary(result, {
+      gate: { scanStatus: 1, failOn: "high", failOnRegression: false },
+      reports: {
+        format: "sarif",
+        reportPath: "debtlens.sarif",
+        jsonPath: "reports/debtlens.json",
+        jsonArtifactName: "debtlens-scan-result",
+      },
+    });
+
+    assert.match(output, /### Gate Decision/);
+    assert.match(output, /\*\*Failed\.\*\* 1 finding at or above high severity\./);
+    assert.match(output, /### Warnings/);
+    assert.match(output, /duplicate-logic inspected 10 of 20/);
+    assert.match(output, /### Filters/);
+    assert.match(output, /2 baselined \| 3 below min severity \| 1 below confidence floor \| 1 inline suppressed/);
+    assert.match(output, /### Reports and Artifacts/);
+    assert.match(output, /Report \(sarif\): `debtlens\.sarif`/);
+    assert.match(output, /Canonical JSON: `reports\/debtlens\.json`/);
+    assert.match(output, /JSON artifact: `debtlens-scan-result`/);
+  });
+
+  it("renders regression gate decisions from baseline deltas", () => {
+    const result = makeResult([]);
+    result.summary.deltaFromBaseline = {
+      new: 2,
+      resolved: 0,
+      changed: 0,
+      severityRegressions: 1,
+      totalDelta: 2,
+      baseline: { totalIssues: 1, bySeverity: { info: 0, low: 1, medium: 0, high: 0 }, byRule: { "todo-comment": 1 } },
+      current: { totalIssues: 3, bySeverity: { info: 0, low: 2, medium: 1, high: 0 }, byRule: { "todo-comment": 3 } },
+      hasBaselineSummary: true,
+      byRule: { "todo-comment": { baseline: 1, current: 3, delta: 2 } },
+    };
+
+    const output = renderStepSummary(result, {
+      gate: { scanStatus: 1, failOnRegression: true },
+    });
+
+    assert.match(output, /Regression gate detected \+2 total issues, 1 severity regression, 1 rule count regression\./);
+  });
+
+  it("renders fail-on confidence floors in gate decisions", () => {
+    const result = makeResult([{
+      id: "low-confidence",
+      ruleId: "prop-drilling",
+      ruleName: "Prop drilling",
+      severity: "high",
+      confidence: 0.7,
+      message: "Lower-confidence high finding",
+      file: "src/Lower.tsx",
+      tags: [],
+    }, {
+      id: "high-confidence",
+      ruleId: "prop-drilling",
+      ruleName: "Prop drilling",
+      severity: "high",
+      confidence: 0.85,
+      message: "High-confidence finding",
+      file: "src/Higher.tsx",
+      tags: [],
+    }]);
+
+    const output = renderStepSummary(result, {
+      gate: { scanStatus: 1, failOn: "high", failOnConfidence: 0.8 },
+    });
+
+    assert.match(output, /\*\*Failed\.\*\* 1 finding at or above high severity with confidence >= 0\.8\./);
+  });
+
   it("renders suppression audit counts and unused actions", () => {
     const result = makeResult([]);
     result.suppressionDirectives = [{
@@ -206,5 +291,14 @@ describe("step summary reporter", () => {
 
     assert.match(output, /Trend warnings:/);
     assert.match(output, /scan options differ \(target\)/);
+  });
+
+  it("renders a soft warning when previous report trend input cannot be used", () => {
+    const output = renderStepSummary(makeResult([]), {
+      previousReportWarning: "Previous report ignored: ENOENT",
+    });
+
+    assert.match(output, /### Trend/);
+    assert.match(output, /Previous report ignored: ENOENT/);
   });
 });

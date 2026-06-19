@@ -595,9 +595,21 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
-Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
+Action outputs include `scan-status`, `gate-status`, `total-issues`, `high-issues`, `medium-issues`, `low-issues`, `info-issues`, `top-rule`, `top-rule-count`, `json-path`, `json-artifact-name`, `report-path`, and `report-format`. Give the Action step an `id` to use them in later steps:
+
+```yaml
+- id: debtlens
+  uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    json-output: debtlens-report.json
+    upload-json-artifact: true
+- run: echo "DebtLens found ${{ steps.debtlens.outputs.total-issues }} issue(s); gate ${{ steps.debtlens.outputs.gate-status }}"
+```
+
+Set `step-summary: true` to append a Markdown rollup to the job's GitHub Actions step summary. The summary includes the gate decision, warnings, filter stats, report/artifact paths, optional trend comparison, suppression audit, and top findings:
 
 ```yaml
 - uses: ColumbusLabs/debtlens@v0
@@ -611,6 +623,57 @@ Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub
     fail-on: high
 ```
 
+For pull requests, you can compare the PR scan against the latest successful base-branch artifact. This workflow also runs on `main` so it seeds the artifact PRs compare against; the download step is intentionally soft-fail so first runs and renamed artifacts still produce the current summary:
+
+```yaml
+name: DebtLens PR trend
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  debtlens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download latest base report
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          run_id="$(gh run list --workflow "$GITHUB_WORKFLOW" --branch "${{ github.base_ref }}" --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name debtlens-scan-result --dir previous || true
+          fi
+      - uses: ColumbusLabs/debtlens@v0
+        with:
+          changed: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || '' }}
+          previous-report: ${{ github.event_name == 'pull_request' && 'previous/debtlens-report.json' || '' }}
+          json-output: current/debtlens-report.json
+          step-summary: true
+          upload-json-artifact: true
+          quiet: true
+```
+
+Set `annotations: true` to emit capped GitHub workflow command annotations without SARIF/code scanning. SARIF is best for code-scanning alert history, workflow annotations are useful for lightweight inline check feedback, and PR comments are best for grouped review context.
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    changed: origin/${{ github.base_ref }}
+    annotations: true
+    annotations-max-count: 50
+    fail-on: high
+```
+
 The JSON artifact is named `debtlens-scan-result` by default. To also write it into the workspace for a later workflow step:
 
 ```yaml
@@ -621,7 +684,7 @@ The JSON artifact is named `debtlens-scan-result` by default. To also write it i
     json-artifact-name: debt-metrics
 ```
 
-A scheduled debt trend job can restore the last canonical JSON report, produce a fresh one, and render a Markdown comparison into the job summary:
+A scheduled debt trend job can restore the last canonical JSON report, produce a fresh one, upload the new artifact, and include the trend in the step summary. If the previous artifact does not exist yet, DebtLens adds a soft warning to the summary and continues:
 
 ```yaml
 name: DebtLens trend
@@ -647,15 +710,16 @@ jobs:
           if [ -n "$run_id" ]; then
             gh run download "$run_id" --name debtlens-scan-result --dir previous || true
           fi
-      - uses: ColumbusLabs/debtlens@v0
+      - id: debtlens
+        uses: ColumbusLabs/debtlens@v0
         with:
           json-output: current/debtlens-report.json
+          previous-report: previous/debtlens-report.json
+          step-summary: true
           upload-json-artifact: true
           quiet: true
-      - name: Compare trend
-        if: hashFiles('previous/debtlens-report.json') != ''
-        run: |
-          npx debtlens compare previous/debtlens-report.json current/debtlens-report.json --format markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: Use metric outputs
+        run: echo "DebtLens total=${{ steps.debtlens.outputs.total-issues }} top=${{ steps.debtlens.outputs.top-rule }}"
 ```
 
 A Shields endpoint badge can be generated from the artifact by publishing a tiny JSON file derived from `summary.totalIssues`:

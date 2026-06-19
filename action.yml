@@ -132,6 +132,53 @@ inputs:
   comment-fail-on-error:
     description: Fail the Action when PR comment posting fails. Defaults to warn-only for fork and permission-limited PRs.
     default: "false"
+  annotations:
+    description: Emit capped GitHub workflow command annotations without requiring SARIF/code scanning.
+    default: "false"
+  annotations-max-count:
+    description: Maximum workflow command annotations to emit when annotations are enabled.
+    default: "50"
+
+outputs:
+  scan-status:
+    description: Raw DebtLens scan exit status before the Action replays it.
+    value: ${{ steps.scan.outputs['scan-status'] }}
+  gate-status:
+    description: passed when scan-status is 0, otherwise failed.
+    value: ${{ steps.scan.outputs['gate-status'] }}
+  total-issues:
+    description: Total reported issue count.
+    value: ${{ steps.scan.outputs['total-issues'] }}
+  high-issues:
+    description: High-severity reported issue count.
+    value: ${{ steps.scan.outputs['high-issues'] }}
+  medium-issues:
+    description: Medium-severity reported issue count.
+    value: ${{ steps.scan.outputs['medium-issues'] }}
+  low-issues:
+    description: Low-severity reported issue count.
+    value: ${{ steps.scan.outputs['low-issues'] }}
+  info-issues:
+    description: Info-severity reported issue count.
+    value: ${{ steps.scan.outputs['info-issues'] }}
+  top-rule:
+    description: Rule id with the most findings.
+    value: ${{ steps.scan.outputs['top-rule'] }}
+  top-rule-count:
+    description: Finding count for top-rule.
+    value: ${{ steps.scan.outputs['top-rule-count'] }}
+  json-path:
+    description: Canonical ScanResult JSON path, either json-output or the internal runner temp path.
+    value: ${{ steps.scan.outputs['json-path'] }}
+  json-artifact-name:
+    description: Uploaded JSON artifact name when upload-json-artifact is enabled.
+    value: ${{ steps.scan.outputs['json-artifact-name'] }}
+  report-path:
+    description: Rendered report output path when output is configured.
+    value: ${{ steps.scan.outputs['report-path'] }}
+  report-format:
+    description: Rendered report format requested by the Action.
+    value: ${{ steps.scan.outputs['report-format'] }}
 
 runs:
   using: composite
@@ -189,6 +236,10 @@ runs:
         DL_COMMENT_MAX_BYTES: ${{ inputs.comment-max-bytes }}
         DL_COMMENT_FULL_REPORT_URL: ${{ inputs.comment-full-report-url }}
         DL_COMMENT_FAIL_ON_ERROR: ${{ inputs.comment-fail-on-error }}
+        DL_UPLOAD_JSON_ARTIFACT: ${{ inputs.upload-json-artifact }}
+        DL_JSON_ARTIFACT_NAME: ${{ inputs.json-artifact-name }}
+        DL_ANNOTATIONS: ${{ inputs.annotations }}
+        DL_ANNOTATIONS_MAX_COUNT: ${{ inputs.annotations-max-count }}
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
@@ -250,6 +301,15 @@ runs:
         scan_status=$?
         set -e
 
+        DEBTLENS_SCAN_STATUS="$scan_status" \
+          DEBTLENS_JSON_PATH="$internal_json" \
+          DEBTLENS_JSON_OUTPUT="$DL_JSON_OUTPUT" \
+          DEBTLENS_UPLOAD_JSON_ARTIFACT="$DL_UPLOAD_JSON_ARTIFACT" \
+          DEBTLENS_JSON_ARTIFACT_NAME="$DL_JSON_ARTIFACT_NAME" \
+          DEBTLENS_REPORT_OUTPUT="$DL_OUTPUT" \
+          DEBTLENS_REPORT_FORMAT="$DL_FORMAT" \
+          node "$GITHUB_ACTION_PATH/scripts/export-action-outputs.mjs" "$internal_json"
+
         if [ -n "$DL_JSON_OUTPUT" ]; then
           mkdir -p "$(dirname "$DL_JSON_OUTPUT")"
           cp "$internal_json" "$DL_JSON_OUTPUT"
@@ -276,7 +336,21 @@ runs:
         fi
 
         if [ "$DL_STEP_SUMMARY" = "true" ] && [ -n "$GITHUB_STEP_SUMMARY" ]; then
-          node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$internal_json" "$DL_PREVIOUS_REPORT"
+          DEBTLENS_SCAN_STATUS="$scan_status" \
+            DEBTLENS_FAIL_ON="$DL_FAIL_ON" \
+            DEBTLENS_FAIL_ON_CONFIDENCE="$DL_FAIL_ON_CONFIDENCE" \
+            DEBTLENS_FAIL_ON_REGRESSION="$DL_FAIL_ON_REGRESSION" \
+            DEBTLENS_JSON_PATH="$internal_json" \
+            DEBTLENS_JSON_OUTPUT="$DL_JSON_OUTPUT" \
+            DEBTLENS_UPLOAD_JSON_ARTIFACT="$DL_UPLOAD_JSON_ARTIFACT" \
+            DEBTLENS_JSON_ARTIFACT_NAME="$DL_JSON_ARTIFACT_NAME" \
+            DEBTLENS_REPORT_OUTPUT="$DL_OUTPUT" \
+            DEBTLENS_REPORT_FORMAT="$DL_FORMAT" \
+            node "$GITHUB_ACTION_PATH/scripts/append-step-summary.mjs" "$internal_json" "$DL_PREVIOUS_REPORT"
+        fi
+
+        if [ "$DL_ANNOTATIONS" = "true" ]; then
+          DEBTLENS_ANNOTATIONS_MAX_COUNT="$DL_ANNOTATIONS_MAX_COUNT" node "$GITHUB_ACTION_PATH/scripts/emit-github-annotations.mjs" "$internal_json"
         fi
 
         if [ "$DL_COMMENT" = "true" ]; then
@@ -285,7 +359,6 @@ runs:
           DEBTLENS_COMMENT_FAIL_ON_ERROR="$DL_COMMENT_FAIL_ON_ERROR" node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$comment_output"
         fi
 
-        echo "scan-status=$scan_status" >> "$GITHUB_OUTPUT"
     - uses: actions/upload-artifact@v4
       if: ${{ inputs.upload-json-artifact == 'true' && inputs.write-baseline == '' }}
       with:

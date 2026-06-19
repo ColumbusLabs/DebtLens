@@ -67,6 +67,8 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /^<!-- debtlens-report -->\n## DebtLens findings/);
     assert.match(markdown, /\| Files scanned \| Rules run \| Total issues \| High \| Medium \| Low \| Info \|/);
     assert.match(markdown, /\| 3 \| 8 \| 3 \| 1 \| 1 \| 0 \| 1 \|/);
+    assert.match(markdown, /### Fix these first/);
+    assert.match(markdown, /`src\/Parent\.tsx` - 2 findings, 2 rules:/);
     assert.match(markdown, /<details><summary><code>src\/Parent\.tsx<\/code> - 2 findings<\/summary>/);
     assert.match(markdown, /- \*\*High\*\* Prop drilling \(`prop-drilling`\) at `src\/Parent\.tsx:13`: Parent forwards/);
     assert.match(markdown, /  - Confidence: \*\*73%\*\*/);
@@ -155,5 +157,84 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /1 directive \| 1 unused \| 0 not evaluated \| 0 file-wide \| 1 next-line \| 0 hidden findings/);
     assert.match(markdown, /\| unused \| next-line \| `src\/Widget\.ts:4` \| `todo-comment` \| 0 \| stale exception \| Remove this suppression/);
     assert.match(markdown, /No maintainability debt found at the configured severity level\./);
+  });
+
+  it("caps detailed findings and summarizes omitted findings with a full report link", () => {
+    const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
+      maxFindings: 1,
+      artifactLink: "https://github.com/example/actions/runs/1/artifacts/2",
+    });
+
+    assert.match(markdown, /### Omitted finding summary/);
+    assert.match(markdown, /2 findings omitted from detailed annotations/);
+    assert.match(markdown, /Severity: high 0, medium 1, low 0, info 1\./);
+    assert.match(markdown, /Top rules: naming-drift \(1\), state-sprawl \(1\)\./);
+    assert.match(markdown, /Full details: https:\/\/github\.com\/example\/actions\/runs\/1\/artifacts\/2\./);
+    assert.match(markdown, /Prop drilling/);
+    assert.doesNotMatch(markdown, /State sprawl \(`state-sprawl`\) at/);
+    assert.doesNotMatch(markdown, /Naming drift \(`naming-drift`\) at/);
+  });
+
+  it("attributes omitted findings to the finding cap when a byte cap is also configured", () => {
+    const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
+      maxFindings: 1,
+      maxBytes: 60000,
+    });
+
+    assert.match(markdown, /configured 1-finding detail cap/);
+    assert.doesNotMatch(markdown, /configured 60000-byte comment cap/);
+  });
+
+  it("counts omitted occurrences separately when findings share an id", () => {
+    const repeatedStateIssue = { ...stateIssue, id: propIssue.id, fingerprint: propIssue.id };
+    const markdown = renderPrComment(makeResult([propIssue, repeatedStateIssue, namingIssue]), {
+      maxFindings: 1,
+    });
+
+    assert.match(markdown, /2 findings omitted from detailed annotations/);
+    assert.match(markdown, /Severity: high 0, medium 1, low 0, info 1\./);
+    assert.match(markdown, /Top rules: naming-drift \(1\), state-sprawl \(1\)\./);
+  });
+
+  it("omits grouped annotations cleanly when the finding cap is zero", () => {
+    const markdown = renderPrComment(makeResult([propIssue, stateIssue]), { maxFindings: 0 });
+
+    assert.match(markdown, /Detailed annotations are omitted from this comment/);
+    assert.doesNotMatch(markdown, /### Grouped annotations/);
+  });
+
+  it("reduces detailed findings until the comment fits a byte cap", () => {
+    const issues = Array.from({ length: 8 }, (_, index) => ({
+      ...propIssue,
+      id: `long-${index}`,
+      file: `src/Long${index}.tsx`,
+      message: `Long issue ${index} ${"x".repeat(300)}`,
+    }));
+    const markdown = renderPrComment(makeResult(issues), { maxBytes: 2200 });
+
+    assert.ok(new TextEncoder().encode(markdown).length <= 2200);
+    assert.match(markdown, /### Omitted finding summary/);
+    assert.match(markdown, /configured 2200-byte comment cap/);
+  });
+
+  it("falls back to a minimal truncated comment when fixed sections exceed the byte cap", () => {
+    const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
+      maxBytes: 180,
+      artifactLink: `https://example.test/${"x".repeat(1000)}`,
+    });
+
+    assert.ok(new TextEncoder().encode(markdown).length <= 180);
+    assert.match(markdown, /^<!-- debtlens-report -->/);
+    assert.match(markdown, /Comment truncated|Detailed annotations are omitted/);
+    assert.doesNotMatch(markdown, /### Grouped annotations/);
+  });
+
+  it("keeps truncated fallback comments within byte caps for multibyte text", () => {
+    const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
+      maxBytes: 287,
+      artifactLink: `https://example.test/${"😀".repeat(400)}`,
+    });
+
+    assert.ok(new TextEncoder().encode(markdown).length <= 287);
   });
 });

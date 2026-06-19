@@ -22,6 +22,10 @@ describe("GitHub Action metadata", () => {
       "upload-json-artifact",
       "previous-report",
       "comment-delta-only",
+      "comment-max-findings",
+      "comment-max-bytes",
+      "comment-full-report-url",
+      "comment-fail-on-error",
       "group-by",
       "sarif-compact",
       "markdown-heatmap",
@@ -62,5 +66,14 @@ describe("GitHub Action metadata", () => {
   it("keeps public description aligned with shipped language support", () => {
     assert.match(actionYml, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Jetpack Compose/);
     assert.doesNotMatch(actionYml, /TypeScript and React codebases/);
+  });
+
+  it("passes PR comment caps and fail-soft controls through to scripts", () => {
+    assert.match(actionYml, /comment-max-bytes:\n    description:.*\n    default: "60000"/s);
+    assert.match(actionYml, /DL_COMMENT_MAX_FINDINGS: \$\{\{ inputs\.comment-max-findings \}\}/);
+    assert.match(actionYml, /DL_COMMENT_MAX_BYTES: \$\{\{ inputs\.comment-max-bytes \}\}/);
+    assert.match(actionYml, /DEBTLENS_PR_COMMENT_MAX_FINDINGS="\$DL_COMMENT_MAX_FINDINGS"/);
+    assert.match(actionYml, /DEBTLENS_PR_COMMENT_MAX_BYTES="\$DL_COMMENT_MAX_BYTES"/);
+    assert.match(actionYml, /DEBTLENS_COMMENT_FAIL_ON_ERROR="\$DL_COMMENT_FAIL_ON_ERROR"/);
   });
 });

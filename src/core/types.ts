@@ -248,6 +248,20 @@ export interface DebtHeatmapEntry {
   bySeverity: Record<Severity, number>;
 }
 
+export interface FixTarget {
+  file: string;
+  totalIssues: number;
+  distinctRules: number;
+  duplicateClusters: number;
+  bySeverity: Record<Severity, number>;
+  score: number;
+  reasons: string[];
+  topRules: Array<{
+    ruleId: string;
+    count: number;
+  }>;
+}
+
 export interface InlineSuppressionAudit {
   ruleId: string;
   file: string;

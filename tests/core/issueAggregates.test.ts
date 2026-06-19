@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildDebtHeatmap, buildDuplicateLogicClusters, buildRuleCorrelations, groupIssuesByFile, groupIssuesByRule, summarizeIssues } from "../../src/core/issueAggregates.js";
+import { buildDebtHeatmap, buildDuplicateLogicClusters, buildFixTargets, buildRuleCorrelations, groupIssuesByFile, groupIssuesByRule, summarizeIssues } from "../../src/core/issueAggregates.js";
 import type { DebtIssue } from "../../src/core/types.js";
 
 const issues: DebtIssue[] = [
@@ -60,6 +60,42 @@ describe("issue aggregates", () => {
       "src/c.ts:50",
     ]);
   });
+
+  it("ranks fix targets deterministically with severity, rule diversity, and duplicate clusters", () => {
+    const duplicateClusters = buildDuplicateLogicClusters([
+      makeDuplicateIssue("dup", [
+        "src/cluster.ts:1-12 (12 lines)",
+        "src/peer.ts:4-15 (12 lines)",
+      ]),
+    ]);
+    const targets = buildFixTargets([
+      makeIssue("low", "todo-comment", "Todo comment", "low", "src/many-low.ts"),
+      makeIssue("low-2", "naming-drift", "Naming drift", "info", "src/many-low.ts"),
+      makeIssue("high", "prop-drilling", "Prop drilling", "high", "src/high.ts"),
+      makeIssue("cluster", "duplicate-logic", "Duplicate logic", "medium", "src/cluster.ts"),
+    ], { duplicateClusters, limit: 2 });
+
+    assert.deepEqual(targets.map((target) => target.file), ["src/high.ts", "src/cluster.ts"]);
+    assert.ok(targets[1].reasons.some((reason) => reason.includes("duplicate cluster")));
+    assert.deepEqual(targets[0].topRules, [{ ruleId: "prop-drilling", count: 1 }]);
+  });
+
+  it("builds duplicate clusters for language-specific duplicate rules", () => {
+    const duplicateClusters = buildDuplicateLogicClusters([
+      makeDuplicateIssue("python", [
+        "pkg/a.py:10-20 (11 lines)",
+        "pkg/b.py:30-40 (11 lines)",
+      ], "python-duplicate-logic"),
+    ]);
+    const targets = buildFixTargets([
+      makeIssue("py", "python-duplicate-logic", "Python duplicate logic", "medium", "pkg/a.py"),
+    ], { duplicateClusters });
+
+    assert.equal(duplicateClusters.length, 1);
+    assert.deepEqual(duplicateClusters[0].locations.map((location) => location.file), ["pkg/a.py", "pkg/b.py"]);
+    assert.equal(targets[0].duplicateClusters, 1);
+    assert.ok(targets[0].reasons.some((reason) => reason.includes("duplicate cluster")));
+  });
 });
 
 function makeIssue(id: string, ruleId: string, ruleName: string, severity: DebtIssue["severity"], file: string): DebtIssue {
@@ -76,9 +112,9 @@ function makeIssue(id: string, ruleId: string, ruleName: string, severity: DebtI
   };
 }
 
-function makeDuplicateIssue(id: string, evidence: string[]): DebtIssue {
+function makeDuplicateIssue(id: string, evidence: string[], ruleId = "duplicate-logic"): DebtIssue {
   return {
-    ...makeIssue(id, "duplicate-logic", "Duplicate logic", "medium", "src/a.ts"),
+    ...makeIssue(id, ruleId, "Duplicate logic", "medium", "src/a.ts"),
     evidence,
   };
 }

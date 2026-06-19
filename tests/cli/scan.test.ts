@@ -122,6 +122,7 @@ describe("debtlens scan output formats", () => {
         GITHUB_SERVER_URL: "https://github.com",
         GITHUB_REPOSITORY: "ColumbusLabs/DebtLens",
         GITHUB_SHA: "abc123",
+        GITHUB_EVENT_PATH: "",
       },
     });
 
@@ -130,6 +131,63 @@ describe("debtlens scan output formats", () => {
       result.stdout,
       /\[`src\/Dashboard\.tsx:22`\]\(https:\/\/github\.com\/ColumbusLabs\/DebtLens\/blob\/abc123\/src\/Dashboard\.tsx#L22\)/,
     );
+  });
+
+  it("prefers pull request head repository and SHA for PR comment source links", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-event-"));
+    try {
+      const eventPath = join(dir, "event.json");
+      writeFileSync(eventPath, JSON.stringify({ pull_request: { head: { repo: { full_name: "ForkOwner/DebtLens" }, sha: "head123" } } }), "utf8");
+      const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "pr-comment"], {
+        env: {
+          GITHUB_SERVER_URL: "https://github.com",
+          GITHUB_REPOSITORY: "ColumbusLabs/DebtLens",
+          GITHUB_SHA: "merge456",
+          GITHUB_EVENT_PATH: eventPath,
+        },
+      });
+
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /github\.com\/ForkOwner\/DebtLens\/blob\/head123\/src\/Dashboard\.tsx#L22/);
+      assert.doesNotMatch(result.stdout, /blob\/merge456/);
+      assert.doesNotMatch(result.stdout, /github\.com\/ColumbusLabs\/DebtLens\/blob\/head123/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("caps PR comment details from CLI flags", () => {
+    const result = runScan([
+      "examples/react",
+      "--min-severity",
+      "info",
+      "--format",
+      "pr-comment",
+      "--pr-comment-max-findings",
+      "1",
+      "--pr-comment-full-report-url",
+      "https://example.test/debtlens-report",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /### Omitted finding summary/);
+    assert.match(result.stdout, /Full details: https:\/\/example\.test\/debtlens-report\./);
+  });
+
+  it("allows PR comment detail caps to omit every grouped annotation", () => {
+    const result = runScan([
+      "examples/react",
+      "--min-severity",
+      "info",
+      "--format",
+      "pr-comment",
+      "--pr-comment-max-findings",
+      "0",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /configured 0-finding detail cap/);
+    assert.doesNotMatch(result.stdout, /### Grouped annotations/);
   });
 });
 

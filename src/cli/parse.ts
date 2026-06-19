@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { CompletionShell } from "./completions.js";
 import type { OutputFormat, TerminalGroupBy } from "../core/types.js";
 
@@ -60,6 +61,14 @@ export function parseInteger(value: string): number {
   return parsed;
 }
 
+export function parseNonNegativeInteger(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`Expected a non-negative integer, received "${value}".`);
+  }
+  return parsed;
+}
+
 export function parseOptionalInteger(value: string | boolean): number | true {
   if (value === true) return true;
   return parseInteger(String(value));
@@ -101,10 +110,32 @@ export function parseCompareFormat(value: string): "terminal" | "markdown" | "js
 
 export function getGitHubSourceUrlBase(env: NodeJS.ProcessEnv): string | undefined {
   const serverUrl = env.GITHUB_SERVER_URL;
-  const repository = env.GITHUB_REPOSITORY;
-  const sha = env.GITHUB_SHA;
+  const source = getGitHubSource(env);
+  const repository = source.repository ?? env.GITHUB_REPOSITORY;
+  const sha = source.sha ?? env.GITHUB_SHA;
   if (!serverUrl || !repository || !sha) return undefined;
   return `${serverUrl.replace(/\/+$/, "")}/${repository}/blob/${sha}`;
+}
+
+function getGitHubSource(env: NodeJS.ProcessEnv): { repository?: string; sha?: string } {
+  return readPullRequestHeadSource(env.GITHUB_EVENT_PATH);
+}
+
+function readPullRequestHeadSource(eventPath: string | undefined): { repository?: string; sha?: string } {
+  if (!eventPath) return {};
+  try {
+    const event = JSON.parse(readFileSync(eventPath, "utf8")) as {
+      pull_request?: { head?: { repo?: { full_name?: unknown }; sha?: unknown } };
+    };
+    const repository = event.pull_request?.head?.repo?.full_name;
+    const sha = event.pull_request?.head?.sha;
+    return {
+      repository: typeof repository === "string" && repository.length > 0 ? repository : undefined,
+      sha: typeof sha === "string" && sha.length > 0 ? sha : undefined,
+    };
+  } catch {
+    return {};
+  }
 }
 
 export function parseRulesFormat(value: string): "terminal" | "json" {

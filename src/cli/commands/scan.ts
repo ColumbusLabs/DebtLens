@@ -21,6 +21,7 @@ import {
   parseFormat,
   parseGroupBy,
   parseInteger,
+  parseNonNegativeInteger,
   parseOptionalInteger,
   parseRuleList,
   parseThresholds,
@@ -78,6 +79,9 @@ export function registerScanCommand(program: Command): void {
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
     .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
     .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
+    .option("--pr-comment-max-findings <count>", "with --format pr-comment, cap detailed findings and summarize omitted findings", parseNonNegativeInteger)
+    .option("--pr-comment-max-bytes <count>", "with --format pr-comment, cap the rendered comment body in bytes", parseInteger)
+    .option("--pr-comment-full-report-url <url>", "with --format pr-comment, link omitted findings to a full report artifact")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
         const result = await runScanCommand(target, rawOptions);
@@ -228,6 +232,9 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     groupBy,
     sarifCompact: rawOptions.sarifCompact === true,
     markdownHeatmapLimit: normalizeOptionalLimit(rawOptions.markdownHeatmap, 10),
+    prCommentMaxFindings: rawOptions.prCommentMaxFindings as number | undefined,
+    prCommentMaxBytes: rawOptions.prCommentMaxBytes as number | undefined,
+    prCommentArtifactLink: rawOptions.prCommentFullReportUrl ? String(rawOptions.prCommentFullReportUrl) : undefined,
   });
 
   let exitCode = 0;

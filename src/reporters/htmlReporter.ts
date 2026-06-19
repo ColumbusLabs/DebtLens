@@ -1,4 +1,4 @@
-import { buildDebtHeatmap } from "../core/issueAggregates.js";
+import { buildDebtHeatmap, buildFixTargets } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
 import {
@@ -13,6 +13,10 @@ const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 export function renderHtml(result: ScanResult): string {
   const filterStats = formatFilterStats(result.summary.filterStats);
   const heatmap = buildDebtHeatmap(result.issues, 10);
+  const fixTargets = buildFixTargets(result.issues, {
+    duplicateClusters: result.summary.duplicateClusters,
+    limit: 5,
+  });
   const findings = result.issues.map((issue) => {
     const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
     return `<tr><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(issue.ruleName)}</td><td><code>${escapeHtml(location)}</code></td><td>${escapeHtml(issue.message)}</td><td>${Math.round(issue.confidence * 100)}%</td></tr>`;
@@ -53,6 +57,13 @@ export function renderHtml(result: ScanResult): string {
     ${severityOrder.map((severity) => `<div class="metric"><span>${capitalize(severity)}</span><strong>${result.summary.bySeverity[severity]}</strong></div>`).join("\n    ")}
   </section>
   ${suppressionAudit}
+  ${fixTargets.length ? `<h2>Fix These First</h2>
+  <table>
+    <thead><tr><th>File</th><th>Issues</th><th>Why</th><th>Top rules</th></tr></thead>
+    <tbody>
+${fixTargets.map((target) => `<tr><td><code>${escapeHtml(target.file)}</code></td><td>${target.totalIssues}</td><td>${escapeHtml(target.reasons.join("; "))}</td><td>${escapeHtml(target.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`).join("\n")}
+    </tbody>
+  </table>` : ""}
   <h2>Findings</h2>
   ${result.issues.length === 0 ? `<div class="empty">No maintainability debt found at the configured severity level.</div>` : `<table>
     <thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message</th><th>Confidence</th></tr></thead>

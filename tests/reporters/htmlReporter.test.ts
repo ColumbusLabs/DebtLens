@@ -22,6 +22,8 @@ describe("html reporter", () => {
     assert.match(html, /DebtLens Report/);
     assert.match(html, /Todo &lt;comment&gt;/);
     assert.doesNotMatch(html, /<script>alert/);
+    assert.match(html, /Fix These First/);
+    assert.match(html, /1 low-severity finding/);
     assert.match(html, /Debt Heatmap/);
   });
 

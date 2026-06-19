@@ -17,7 +17,7 @@ const program = new Command();
 
 program
   .name("debtlens")
-  .description("Find maintainability debt common in fast-moving AI-assisted TypeScript and React codebases.")
+  .description("Find maintainability debt in TypeScript, JavaScript, Python, and framework codebases.")
   .version(packageVersion);
 
 registerScanCommand(program);

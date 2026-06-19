@@ -9,12 +9,14 @@ describe("public capability messaging", () => {
     const packageJson = JSON.parse(read("package.json")) as { description: string; keywords: string[] };
     const readme = read("README.md");
     const actionYml = read("action.yml");
+    const cliIndex = read("src/cli/index.ts");
     const roadmap = read("ROADMAP.md");
 
     assert.match(packageJson.description, /TypeScript, JavaScript, and Python/);
     assert.ok(packageJson.keywords.includes("python"));
     assert.match(readme, /TypeScript, JavaScript, and Python/);
     assert.match(actionYml, /TypeScript, JavaScript, Python/);
+    assert.match(cliIndex, /TypeScript, JavaScript, Python/);
     assert.match(roadmap, /TypeScript, JavaScript, and Python today/);
   });
 
@@ -26,6 +28,8 @@ describe("public capability messaging", () => {
       "docs/rule-packs.md",
       "docs/when-not-to-use.md",
       "docs/next-phase-plan.md",
+      "docs/plugin-api-rfc.md",
+      "src/cli/index.ts",
       "package.json",
       "action.yml",
     ].map(read).join("\n");
@@ -36,6 +40,8 @@ describe("public capability messaging", () => {
     assert.doesNotMatch(publicDocs, /React rule pack is the first supported target/);
     assert.doesNotMatch(publicDocs, /Plugin API can come later/);
     assert.doesNotMatch(publicDocs, /RFC . not implemented yet/);
+    assert.doesNotMatch(publicDocs, /Today all detectors are hardcoded/);
+    assert.doesNotMatch(publicDocs, /TypeScript and React codebases/);
   });
 
   it("links the first-run adoption docs from the README", () => {

@@ -4,7 +4,11 @@ Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, the `DEB
 
 ## Problem
 
-Teams want custom DebtLens rules without forking the CLI. Today all detectors are hardcoded in [`src/detectors/index.ts`](../src/detectors/index.ts) and config is JSON-only ([`SECURITY.md`](../SECURITY.md)).
+Teams want custom DebtLens rules without forking the CLI. The original limitation was that
+all detectors were hardcoded in [`src/detectors/index.ts`](../src/detectors/index.ts) and
+configuration was JSON-only ([`SECURITY.md`](../SECURITY.md)). Built-in detectors still
+ship from that registry, while explicit local plugins now extend the runtime through the
+shipped loader.
 
 ## Goals
 

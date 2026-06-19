@@ -1,10 +1,10 @@
 import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
-import { resolveWorkspacePackage } from "../config/workspaces.js";
+import { findWorkspaceRoot, listWorkspacePackages, resolveWorkspacePackage, type WorkspacePackage } from "../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { severities } from "../core/severity.js";
-import type { CliOptions, ScanResult, Severity } from "../core/types.js";
+import type { CliOptions, DebtLensConfig, ScanResult, Severity } from "../core/types.js";
 import { isGitRepo } from "../utils/git.js";
 import { buildThresholdSuggestions, type ThresholdSuggestion } from "./adoptionThresholds.js";
 import { runInit } from "./init.js";
@@ -163,7 +163,7 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
 
   const recommended = recommendMinSeverity(result.summary.bySeverity, result.summary.totalIssues);
   const thresholdSuggestions = buildThresholdSuggestions(result, options);
-  const rolloutPlan = buildRolloutPlan(input, result, recommended);
+  const rolloutPlan = buildRolloutPlan(input, result, recommended, fileConfig);
   const lines: string[] = [];
 
   if (result.summary.filesScanned === 0) {
@@ -229,15 +229,18 @@ export function buildRolloutPlan(
   input: AdoptInput,
   scanResult: ScanResult,
   recommendedMinSeverity: Severity,
+  fileConfig: DebtLensConfig = {},
 ): RolloutPlanStep[] {
-  const baseScanArgs = buildScopedCommandArgs("scan", input);
-  const baseAdoptArgs = buildScopedCommandArgs("adopt", input);
+  const baseScanArgs = buildScopedCommandArgs("scan", input, fileConfig);
+  const baseAdoptArgs = buildScopedCommandArgs("adopt", input, fileConfig);
   const hasLegacyDebt = scanResult.summary.totalIssues > 0;
   const packageScope = input.packageName ? `package "${input.packageName}"` : "the current scan target";
-  const selectedPack = input.cliOptions.pack ?? input.pack;
-  const hasExplicitRules = (input.cliOptions.rules?.length ?? 0) > 0;
+  const selectedPack = input.cliOptions.pack ?? input.pack ?? fileConfig.pack;
+  const hasExplicitRules = (input.cliOptions.rules?.length ?? fileConfig.rules?.length ?? 0) > 0;
   const recommendedPack = selectedPack ?? "core";
+  const planMinSeverity = input.cliOptions.minSeverity ?? fileConfig.minSeverity ?? recommendedMinSeverity;
   const gitAvailable = isGitRepo(input.cwd);
+  const workspacePackages = input.packageName ? [] : listAdoptionWorkspacePackages(input.cwd);
   const firstScopeRationale = [
     input.packageName
       ? `Keep the first rollout scoped to ${packageScope} so one workspace can tune signal before expanding.`
@@ -256,6 +259,18 @@ export function buildRolloutPlan(
     },
   ];
 
+  if (workspacePackages.length > 0) {
+    const samplePackage = workspacePackages[0]!;
+    plan.push({
+      title: "Pilot one workspace package before expanding",
+      commands: [formatCommand(buildScopedCommandArgs("adopt", {
+        ...input,
+        packageName: samplePackage.name,
+      }, fileConfig))],
+      rationale: `Detected workspace packages (${formatPackageList(workspacePackages)}). Use --package to tune one package's noise profile before applying the same gate across the whole workspace.`,
+    });
+  }
+
   if (hasLegacyDebt) {
     plan.push({
       title: "Baseline current debt before enforcing CI",
@@ -265,7 +280,7 @@ export function buildRolloutPlan(
   } else {
     plan.push({
       title: "Skip the baseline unless legacy debt appears",
-      commands: [formatCommand([...baseScanArgs, "--min-severity", recommendedMinSeverity, "--fail-on", "high"])],
+      commands: [formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--fail-on", "high"])],
       rationale: "No issues were found in this scan, so a direct high-severity gate is simpler than committing an empty baseline.",
     });
   }
@@ -274,10 +289,10 @@ export function buildRolloutPlan(
     title: hasLegacyDebt ? "Gate new code in CI" : "Keep CI focused on changed code",
     commands: hasLegacyDebt
       ? [
-          formatCommand([...baseScanArgs, "--baseline", DEFAULT_BASELINE_FILENAME, "--min-severity", recommendedMinSeverity, "--fail-on", "high"]),
-          formatCommand([...baseScanArgs, "--diff-base", "origin/main", "--min-severity", recommendedMinSeverity, "--fail-on", "high"]),
+          formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--baseline", DEFAULT_BASELINE_FILENAME, "--fail-on", "high"]),
+          formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--diff-base", "origin/main", "--fail-on", "high"]),
         ]
-      : [formatCommand([...baseScanArgs, "--diff-base", "origin/main", "--min-severity", recommendedMinSeverity, "--fail-on", "high"])],
+      : [formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--diff-base", "origin/main", "--fail-on", "high"])],
     rationale: hasLegacyDebt
       ? "Use the baseline for mature branches and --diff-base in pull-request CI when a target branch ref is available; both patterns focus review on new or changed debt."
       : "Use --diff-base in pull-request CI when a target branch ref is available so clean repositories stay clean without rescanning every historical finding.",
@@ -286,8 +301,8 @@ export function buildRolloutPlan(
   plan.push({
     title: "Use changed and staged scans while tuning locally",
     commands: [
-      formatCommand([...baseScanArgs, "--changed", "origin/main", "--min-severity", recommendedMinSeverity]),
-      formatCommand([...baseScanArgs, "--staged", "--min-severity", recommendedMinSeverity, "--fail-on", "high", "--fail-on-confidence", "0.8"]),
+      formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--changed", "origin/main"]),
+      formatCommand([...withMinSeverity(baseScanArgs, planMinSeverity), "--staged", "--fail-on", "high", "--fail-on-confidence", "0.8"]),
     ],
     rationale: gitAvailable
       ? "--changed narrows branch review to files changed from the mainline ref; --staged gives developers a pre-commit check before CI."
@@ -301,14 +316,15 @@ function thresholdSuggestionOverrides(suggestions: ThresholdSuggestion[]): Recor
   return Object.fromEntries(suggestions.map((suggestion) => [suggestion.key, suggestion.suggested]));
 }
 
-function buildScopedCommandArgs(command: "adopt" | "scan", input: AdoptInput): string[] {
+function buildScopedCommandArgs(command: "adopt" | "scan", input: AdoptInput, fileConfig: DebtLensConfig): string[] {
   const args = ["debtlens", command, input.target];
-  const selectedPack = input.cliOptions.pack ?? input.pack;
-  const hasExplicitRules = (input.cliOptions.rules?.length ?? 0) > 0;
+  const selectedPack = input.cliOptions.pack ?? input.pack ?? fileConfig.pack;
+  const hasExplicitRules = (input.cliOptions.rules?.length ?? fileConfig.rules?.length ?? 0) > 0;
   addStringArg(args, "--cwd", input.cwd === process.cwd() ? undefined : input.cwd);
   addStringArg(args, "--config", input.configPath);
   addStringArg(args, "--package", input.packageName);
   addStringArg(args, "--pack", selectedPack ?? (hasExplicitRules ? undefined : "core"));
+  addStringArg(args, "--min-severity", input.cliOptions.minSeverity ?? fileConfig.minSeverity);
   addListArg(args, "--rules", input.cliOptions.rules);
   addListArg(args, "--include", input.cliOptions.include);
   addListArg(args, "--exclude", input.cliOptions.exclude);
@@ -336,6 +352,23 @@ function addThresholdArg(args: string[], thresholds: CliOptions["thresholds"]): 
 
 function formatCommand(args: string[]): string {
   return args.map(shellQuote).join(" ");
+}
+
+function withMinSeverity(args: string[], minSeverity: Severity): string[] {
+  return args.includes("--min-severity")
+    ? args
+    : [...args, "--min-severity", minSeverity];
+}
+
+function listAdoptionWorkspacePackages(cwd: string): WorkspacePackage[] {
+  const workspaceRoot = findWorkspaceRoot(cwd);
+  return workspaceRoot ? listWorkspacePackages(workspaceRoot) : [];
+}
+
+function formatPackageList(packages: WorkspacePackage[]): string {
+  const visible = packages.slice(0, 3).map((workspacePackage) => workspacePackage.name);
+  const suffix = packages.length > visible.length ? `, +${packages.length - visible.length} more` : "";
+  return `${visible.join(", ")}${suffix}`;
 }
 
 function shellQuote(value: string): string {

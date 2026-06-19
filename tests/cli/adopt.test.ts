@@ -145,10 +145,35 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /large-component\.maxLines/);
   });
 
+  it("preserves a config-selected pack in rollout commands", () => {
+    writeFileSync(join(dir, CONFIG_FILENAME), JSON.stringify({ pack: "next" }), "utf8");
+
+    const result = runAdopt([".", "--cwd", dir]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Recommended first pack: next/);
+    assert.match(result.stdout, /debtlens scan .*--pack next .*--baseline debtlens-baseline\.json/);
+    assert.doesNotMatch(result.stdout, /--pack core/);
+  });
+
+  it("preserves explicit minSeverity in rollout commands", () => {
+    const result = runAdopt([".", "--cwd", dir, "--rules", "todo-comment", "--min-severity", "medium"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /debtlens adopt .*--min-severity medium/);
+    assert.match(result.stdout, /debtlens scan .*--min-severity medium .*--fail-on high/);
+    assert.doesNotMatch(result.stdout, /--min-severity low/);
+  });
+
   it("supports package-scoped adoption reports in workspaces", () => {
+    const root = runAdopt([".", "--cwd", monorepoFixtureRoot, "--rules", "todo-comment"]);
     const pkgA = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-a", "--rules", "todo-comment"]);
     const pkgB = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-b", "--rules", "todo-comment"]);
 
+    assert.equal(root.status, 0);
+    assert.match(root.stdout, /Pilot one workspace package before expanding/);
+    assert.match(root.stdout, /Detected workspace packages \(pkg-a, pkg-b\)/);
+    assert.match(root.stdout, /debtlens adopt .*--package pkg-a/);
     assert.equal(pkgA.status, 0);
     assert.match(pkgA.stdout, /Total issues: 1/);
     assert.match(pkgA.stdout, /Start with a package-scoped dry run/);

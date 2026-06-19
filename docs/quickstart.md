@@ -49,6 +49,23 @@ npx debtlens scan . --baseline debtlens-baseline.json --fail-on high
 This keeps known debt visible while making the gate focus on newly introduced high-severity
 findings.
 
+When the team fixes legacy debt, maintain the same file instead of replacing it blindly:
+
+```bash
+npx debtlens baseline diff . --baseline debtlens-baseline.json
+npx debtlens baseline prune . --baseline debtlens-baseline.json --dry-run
+npx debtlens baseline prune . --baseline debtlens-baseline.json
+npx debtlens baseline update . --baseline debtlens-baseline.json
+```
+
+`diff` and `--dry-run` do not write files. `prune` removes resolved entries, while
+`update` rewrites the baseline to the current scan result. Legacy baselines are supported.
+Run each maintenance command with the same target and scan options used to create the
+baseline, including pack, rule, threshold, package, include, and exclude choices.
+Mutating `prune` only runs for the default full-scope scan without config-driven scope
+changes; use `diff` for scoped previews and `update` when you intentionally want to
+rewrite a scoped baseline.
+
 ## 5. Clean up trial artifacts
 
 ```bash

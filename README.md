@@ -164,6 +164,9 @@ debtlens doctor           # inspect resolved config and matched files without sc
 debtlens rules            # list built-in rule ids and descriptions
 debtlens explain <rule>   # print rule docs, default thresholds, and false-positive guidance
 debtlens suppress --rule <rule> --reason "<why>"   # print a copy-paste inline suppression comment
+debtlens baseline diff . --baseline debtlens-baseline.json    # preview baseline drift without writing
+debtlens baseline prune . --baseline debtlens-baseline.json   # remove resolved entries from a baseline
+debtlens baseline update . --baseline debtlens-baseline.json  # rewrite a baseline from the current scan
 debtlens scan [target]
 ```
 
@@ -236,6 +239,12 @@ debtlens scan --write-baseline
 debtlens scan --baseline debtlens-baseline.json --fail-on high
 debtlens scan --baseline debtlens-baseline.json --fail-on-regression
 
+# Maintain that baseline as debt is fixed
+debtlens baseline diff . --baseline debtlens-baseline.json
+debtlens baseline prune . --baseline debtlens-baseline.json --dry-run
+debtlens baseline prune . --baseline debtlens-baseline.json
+debtlens baseline update . --baseline debtlens-baseline.json
+
 # Pull-request scan: only the files this branch changed vs main
 debtlens scan --changed origin/main --fail-on high
 
@@ -273,6 +282,10 @@ debtlens adopt --write-config --write-baseline --force
 The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). For established repositories, follow the generated plan's baseline or `--diff-base` CI commands so pull requests focus on newly introduced debt; add `--fail-on-regression` when you want count increases to fail as well.
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported. The JSON reporter exposes the same line-stable value as both `id` and `fingerprint` in ScanResult schema v1.
+
+Use `debtlens baseline diff` to review new, resolved, and changed findings against an existing baseline. `diff` and `--dry-run` are read-only and do not write files. `debtlens baseline prune` removes entries that no longer appear in the current scan, while `debtlens baseline update` rewrites the baseline to the current scan result. Legacy baselines without newer summary metadata are supported. Run maintenance with the same scan scope and options used to create the original baseline, including target, `--cwd`, `--package`, `--include`, `--exclude`, `--pack`, `--rules`, and `--threshold`, so DebtLens compares the same surface instead of treating scope changes as resolved or new debt.
+
+For safety, mutating `baseline prune` refuses explicitly scoped scans such as `--rules`, `--package`, custom include/exclude globs, non-default targets, max-file caps, or config-driven scan shaping. Use `baseline diff` to inspect scoped drift, or `baseline update` when you intentionally want to rewrite a scoped baseline.
 
 When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty git file set from `--changed` / `--staged`. The warning is advisory and does not change the exit code for `--fail-on`.
 

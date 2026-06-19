@@ -1,9 +1,16 @@
 import { resolve } from "node:path";
 import { defaultConfig } from "./defaults.js";
-import { getRulePack } from "./packs.js";
+import { getRulePack, listRulePacks } from "./packs.js";
 import { compileTodoCommentMarkers } from "../detectors/todoComment.js";
+import {
+  DEFAULT_SOURCE_LANGUAGE,
+  includeGlobsForLanguages,
+  languagesForDetector,
+  rewriteDefaultExcludesForLanguages,
+  unique,
+} from "../core/languages.js";
 import { isSeverity, severities } from "../core/severity.js";
-import type { CliOptions, DebtLensConfig, ScanOptions, Severity } from "../core/types.js";
+import type { CliOptions, DebtLensConfig, Detector, ScanOptions, Severity, SourceLanguage } from "../core/types.js";
 
 export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptions: CliOptions): ScanOptions {
   const cwd = resolve(cliOptions.cwd ?? process.cwd());
@@ -17,7 +24,7 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     : packs.length
       ? unique([...packs.flatMap((pack) => pack.rules), ...pluginRuleIds])
       : undefined;
-  const languageDiscovery = resolveLanguageDiscovery(packIds, rules);
+  const languageDiscovery = resolveLanguageDiscovery(rules, cliOptions.pluginDetectors);
 
   return {
     cwd,
@@ -87,32 +94,39 @@ function resolveIncludeGlobs(
 ): string[] {
   if (cliOptions.include?.length) return cliOptions.include;
   const base = resolveBaseIncludeGlobs(fileConfig, languageDiscovery);
+  const discoveryLanguages = languageDiscovery.languages.filter((language) => language !== DEFAULT_SOURCE_LANGUAGE);
   return unique([
     ...base,
-    ...(languageDiscovery.python ? ["**/*.py"] : []),
-    ...(languageDiscovery.kotlin ? ["**/*.{kt,kts}"] : []),
+    ...includeGlobsForLanguages(discoveryLanguages),
   ]);
 }
 
 interface LanguageDiscovery {
-  tsjs: boolean;
-  python: boolean;
-  kotlin: boolean;
+  languages: SourceLanguage[];
 }
 
-function resolveLanguageDiscovery(packIds: string[], rules: string[] | undefined): LanguageDiscovery {
-  const hasTsjsPack = packIds.some((packId) => packId !== "python" && packId !== "kotlin" && packId !== "compose");
-  const hasTsjsRule = rules?.some((ruleId) => !isLanguageSpecificRule(ruleId)) === true;
+function resolveLanguageDiscovery(rules: string[] | undefined, pluginDetectors: Detector[] | undefined): LanguageDiscovery {
+  if (rules?.length) {
+    return { languages: languageIdsForRules(rules, pluginDetectors) };
+  }
+
   return {
-    tsjs: packIds.length > 0 ? hasTsjsPack : rules?.length ? hasTsjsRule : true,
-    python: packIds.includes("python") || rules?.some((ruleId) => ruleId.startsWith("python-")) === true,
-    kotlin: packIds.some((packId) => packId === "kotlin" || packId === "compose")
-      || rules?.some((ruleId) => ruleId.startsWith("kotlin-") || ruleId.startsWith("compose-")) === true,
+    languages: unique([
+      DEFAULT_SOURCE_LANGUAGE,
+      ...(pluginDetectors?.flatMap((detector) => languagesForDetector(detector)) ?? []),
+    ]),
   };
 }
 
-function isLanguageSpecificRule(ruleId: string): boolean {
-  return ruleId.startsWith("python-") || ruleId.startsWith("kotlin-") || ruleId.startsWith("compose-");
+function languageIdsForRules(ruleIds: string[], pluginDetectors: Detector[] | undefined): SourceLanguage[] {
+  const languages = ruleIds.flatMap((ruleId) => {
+    const pluginDetector = pluginDetectors?.find((detector) => detector.id === ruleId);
+    if (pluginDetector) return languagesForDetector(pluginDetector);
+
+    const owningPack = listRulePacks().find((pack) => pack.rules.includes(ruleId));
+    return owningPack?.languages ?? [DEFAULT_SOURCE_LANGUAGE];
+  });
+  return unique(languages);
 }
 
 function resolveBaseIncludeGlobs(
@@ -120,17 +134,11 @@ function resolveBaseIncludeGlobs(
   languageDiscovery: LanguageDiscovery,
 ): string[] {
   if (fileConfig.include) return fileConfig.include;
-  return languageDiscovery.tsjs ? defaultConfig.include : [];
+  return languageDiscovery.languages.includes(DEFAULT_SOURCE_LANGUAGE) ? defaultConfig.include : [];
 }
 
 function resolveDefaultExcludes(languageDiscovery: LanguageDiscovery): string[] {
-  return languageDiscovery.kotlin
-    ? defaultConfig.exclude.flatMap((pattern) => pattern === "android/**" ? ["android/**/*.{ts,tsx,js,jsx}"] : [pattern])
-    : defaultConfig.exclude;
-}
-
-function unique<T>(values: readonly T[]): T[] {
-  return [...new Set(values)];
+  return rewriteDefaultExcludesForLanguages(languageDiscovery.languages, defaultConfig.exclude);
 }
 
 function validateRuleSeverities(ruleSeverities: DebtLensConfig["ruleSeverities"]): Record<string, Severity> | undefined {

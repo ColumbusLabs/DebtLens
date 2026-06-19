@@ -1,6 +1,6 @@
 # Plugin API RFC
 
-Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, the `DEBTLENS_DISABLE_PLUGINS` escape hatch, plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)), and vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)) are implemented.
+Status: **Shipped (v1)** — the loader, `pluginApiVersion` validation, the `DEBTLENS_DISABLE_PLUGINS` escape hatch, plugin threshold defaults ([#73](https://github.com/ColumbusLabs/DebtLens/issues/73)), vocabulary merging ([#74](https://github.com/ColumbusLabs/DebtLens/issues/74)), and language-aware plugin routing are implemented.
 
 ## Problem
 
@@ -34,9 +34,14 @@ export interface Detector {
   description: string;
   defaultSeverity: Severity;
   tags: string[];
+  languages?: SourceLanguage[];
   detect: (context: DetectorContext) => Promise<DebtIssue[]> | DebtIssue[];
 }
 ```
+
+When `languages` is omitted, the detector receives TypeScript/JavaScript files. Plugins
+can declare any registered source language in `SUPPORTED_SOURCE_LANGUAGES`; DebtLens
+validates the ids during plugin load and uses them for file discovery and detector routing.
 
 `DetectorContext` provides:
 
@@ -142,6 +147,55 @@ export default { rules: [noConsoleDetector] };
 
 A runnable version of this plugin lives in [`examples/plugin/`](../examples/plugin/), and types ship from the published `debtlens/plugin` entry point (`import type { Detector } from "debtlens/plugin"`).
 
+## Language-aware plugin example
+
+```js
+// debtlens-rules/python-marker.mjs
+import { SUPPORTED_SOURCE_LANGUAGES } from "debtlens/plugin";
+
+if (!SUPPORTED_SOURCE_LANGUAGES.includes("python")) {
+  throw new Error("This plugin requires Python support from DebtLens.");
+}
+
+/** @type {import("debtlens/plugin").Detector} */
+export const pythonMarkerDetector = {
+  id: "python-marker",
+  name: "Python marker",
+  description: "Flags a local marker in Python files.",
+  defaultSeverity: "low",
+  tags: ["python", "policy"],
+  languages: ["python"],
+  detect(context) {
+    return context.files
+      .filter((file) => file.content.includes("PY_MARKER"))
+      .map((file) => ({
+        id: `dl_py_marker_${file.relativePath}`,
+        ruleId: "python-marker",
+        ruleName: "Python marker",
+        severity: "low",
+        confidence: 0.9,
+        message: "Python marker found.",
+        file: file.relativePath,
+        location: { startLine: 1 },
+        tags: ["python", "policy"],
+        suggestion: "Remove the marker or encode the policy as a real detector.",
+      }));
+  },
+};
+
+export default { rules: [pythonMarkerDetector] };
+```
+
+Config can run this beside a built-in pack:
+
+```json
+{
+  "pluginApiVersion": 1,
+  "plugins": ["./debtlens-rules/python-marker.mjs"],
+  "pack": "core"
+}
+```
+
 ## Implementation phases
 
 1. **RFC merged** (this document) — no runtime change ✅
@@ -149,6 +203,7 @@ A runnable version of this plugin lives in [`examples/plugin/`](../examples/plug
 3. **Schema + docs** — `plugins` / `pluginApiVersion` in JSON schema ✅ ([#69](https://github.com/ColumbusLabs/DebtLens/issues/69))
 4. **Example plugin** — [`examples/plugin/`](../examples/plugin/) + integration test ✅ ([#72](https://github.com/ColumbusLabs/DebtLens/issues/72))
 5. **Stable export** — `debtlens/plugin` types entry point ✅ ([#70](https://github.com/ColumbusLabs/DebtLens/issues/70))
+6. **Language-aware plugins** — public `SourceLanguage`, `SUPPORTED_SOURCE_LANGUAGES`, validation, and discovery/routing ✅
 
 ## Open questions
 

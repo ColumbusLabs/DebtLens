@@ -196,6 +196,20 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /Min severity: defaults/);
   });
 
+  it("describes pack discovery from language metadata", () => {
+    const result = runDoctor([
+      ".",
+      "--cwd",
+      dir,
+      "--provenance",
+      "--pack",
+      "python,compose",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Include globs: defaults \+ python \+ compose pack discovery/);
+  });
+
   it("uses config minSeverity when the CLI flag is omitted", () => {
     const configPath = join(dir, "debtlens.config.json");
     writeFileSync(configPath, JSON.stringify({

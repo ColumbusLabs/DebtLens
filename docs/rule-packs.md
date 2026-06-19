@@ -13,11 +13,12 @@ The product splits into layers:
    Native, Next.js, Expo, Node APIs, Python, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
    such as Vue, Svelte, Swift, and Ruby follow the same model.
 
-Today all TS/JS built-in rules run together by default, while Python and Kotlin discovery
-are enabled by their language packs or explicit language-specific rules. Select a pack in config or use
-`debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config or
-`--rules` on the CLI override the pack. Organization policy packages can layer plugins
-and presets on top of these built-ins; see [`policy-packages.md`](./policy-packages.md).
+Today all TS/JS built-in rules run together by default, while non-TS/JS discovery is
+driven by language metadata on built-in packs and detectors. Select a pack in config
+or use `debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config
+or `--rules` on the CLI override the pack but still use detector language metadata for
+default discovery. Organization policy packages can layer plugins and presets on top of
+these built-ins; see [`policy-packages.md`](./policy-packages.md).
 For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 
 ## Current built-in rules
@@ -111,8 +112,8 @@ The `node` pack combines core rules with route ownership checks:
 
 ### Python pack (shipped today)
 
-The `python` pack widens discovery to `.py` files and emits the same `ScanResult` shape
-as TS/JS rules:
+The `python` pack declares the Python language in pack metadata, which widens discovery
+to `.py` files and emits the same `ScanResult` shape as TS/JS rules:
 
 - **`python-duplicate-logic`**
 - **`python-dead-abstraction`**
@@ -122,8 +123,8 @@ Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 
 ### Kotlin pack (shipped today)
 
-The `kotlin` pack widens discovery to `.kt` and `.kts` files and emits the same
-`ScanResult` shape as TS/JS rules:
+The `kotlin` pack declares Kotlin discovery metadata, which widens discovery to `.kt`
+and `.kts` files and emits the same `ScanResult` shape as TS/JS rules:
 
 - **`kotlin-duplicate-logic`**
 - **`kotlin-large-function`**
@@ -135,8 +136,9 @@ Kotlin paths. Jetpack Compose-specific UI debt lives in the separate `compose` p
 
 ### Jetpack Compose pack (shipped today)
 
-The `compose` pack widens discovery to `.kt` and `.kts` files, but selects only
-Compose-specific UI rules rather than generic Kotlin core rules:
+The `compose` pack is a Kotlin-backed framework pack: it declares Kotlin discovery
+metadata, but selects only Compose-specific UI rules rather than generic Kotlin core
+rules:
 
 - **`compose-large-composable`**
 - **`compose-state-hoisting`**
@@ -171,7 +173,9 @@ for the Vue parser recommendation and [`ROADMAP.md`](../ROADMAP.md) for sequenci
 ## Language packs
 
 Detection is language-specific; reporting, baselines, CI, and the issue contract are not.
-Python and Kotlin are the first non-TS/JS built-in language packs. Other languages should
+Python and Kotlin are the first non-TS/JS built-in language packs. Built-in pack metadata
+now owns language discovery and extension routing, so future Vue, Svelte, Swift, and Ruby
+packs can add discovery without editing central scan conditionals. Other languages should
 follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |

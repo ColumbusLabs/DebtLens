@@ -395,7 +395,10 @@ The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/De
 
 ### Rule packs
 
-Built-in presets select a rule set without hand-picking every rule id. See [`docs/rule-packs.md`](./docs/rule-packs.md).
+Built-in presets select a rule set without hand-picking every rule id. Language packs
+also declare their discovery metadata, so selecting `python`, `kotlin`, or `compose`
+adds the registered source globs without one-off CLI flags. See
+[`docs/rule-packs.md`](./docs/rule-packs.md).
 
 | Pack | Rules |
 | --- | --- |

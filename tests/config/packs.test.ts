@@ -8,6 +8,7 @@ describe("rule packs", () => {
     const packs = listRulePacks();
     assert.equal(packs.length, 11);
     assert.equal(getRulePack("core").rules.length, 13);
+    assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
     assert.equal(getRulePack("react-native").rules.length, 21);
     assert.ok(getRulePack("react-native").rules.includes("rn-host-forwarding"));
@@ -24,16 +25,19 @@ describe("rule packs", () => {
       "python-dead-abstraction",
       "python-todo-comment",
     ]);
+    assert.deepEqual(getRulePack("python").languages, ["python"]);
     assert.deepEqual(getRulePack("kotlin").rules, [
       "kotlin-duplicate-logic",
       "kotlin-large-function",
       "kotlin-dead-abstraction",
       "kotlin-todo-comment",
     ]);
+    assert.deepEqual(getRulePack("kotlin").languages, ["kotlin"]);
     assert.deepEqual(getRulePack("compose").rules, [
       "compose-large-composable",
       "compose-state-hoisting",
     ]);
+    assert.deepEqual(getRulePack("compose").languages, ["kotlin"]);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });
@@ -117,5 +121,18 @@ describe("rule packs", () => {
     assert.deepEqual(options.rules, ["compose-large-composable"]);
     assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
     assert.ok(options.include.includes("**/*.{kt,kts}"));
+  });
+
+  it("derives pack includes from language metadata", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "python,compose" });
+
+    assert.deepEqual(options.rules, [
+      "python-duplicate-logic",
+      "python-dead-abstraction",
+      "python-todo-comment",
+      "compose-large-composable",
+      "compose-state-hoisting",
+    ]);
+    assert.deepEqual(options.include, ["**/*.py", "**/*.{kt,kts}"]);
   });
 });

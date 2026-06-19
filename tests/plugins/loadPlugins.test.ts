@@ -43,6 +43,60 @@ describe("loadPlugins", () => {
     });
   });
 
+  it("accepts registered plugin languages", async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, "plugin.mjs"), `
+export default {
+  id: "python-policy",
+  name: "Python policy",
+  description: "Example Python-only plugin rule.",
+  defaultSeverity: "low",
+  tags: ["example"],
+  languages: ["python"],
+  detect: () => [],
+};
+`);
+      const result = await loadPlugins(dir, { plugins: ["./plugin.mjs"] }, builtInIds);
+      assert.deepEqual(result.detectors[0]?.languages, ["python"]);
+    });
+  });
+
+  it("rejects malformed or unknown plugin languages", async () => {
+    await withTempDir(async (dir) => {
+      writeFileSync(join(dir, "bad-shape.mjs"), `
+export default {
+  id: "bad-language-shape",
+  name: "Bad language shape",
+  description: "Example plugin rule.",
+  defaultSeverity: "low",
+  tags: ["example"],
+  languages: "python",
+  detect: () => [],
+};
+`);
+      writeFileSync(join(dir, "bad-id.mjs"), `
+export default {
+  id: "bad-language-id",
+  name: "Bad language id",
+  description: "Example plugin rule.",
+  defaultSeverity: "low",
+  tags: ["example"],
+  languages: ["ruby"],
+  detect: () => [],
+};
+`);
+
+      await assert.rejects(
+        loadPlugins(dir, { plugins: ["./bad-shape.mjs"] }, builtInIds),
+        /"languages" must be a non-empty array of registered source languages: tsjs, python, kotlin/,
+      );
+      await assert.rejects(
+        loadPlugins(dir, { plugins: ["./bad-id.mjs"] }, builtInIds),
+        /"languages" must contain registered source languages: tsjs, python, kotlin; received "ruby"/,
+      );
+    });
+  });
+
   it("loads a { rules } export with vocabulary and thresholds", async () => {
     await withTempDir(async (dir) => {
       writeFileSync(join(dir, "plugin.mjs"), `

@@ -69,6 +69,56 @@ describe("mergeConfig", () => {
     assert.deepEqual(options.rules, ["todo-comment"]);
   });
 
+  it("derives explicit plugin-rule discovery from detector language metadata", () => {
+    const pythonPluginDetector = {
+      ...pluginDetector,
+      id: "policy-python-fixture",
+      languages: ["python"],
+    } satisfies Detector;
+
+    const options = mergeConfig(".", {}, {
+      cwd: process.cwd(),
+      rules: ["policy-python-fixture"],
+      pluginDetectors: [pythonPluginDetector],
+    });
+
+    assert.deepEqual(options.rules, ["policy-python-fixture"]);
+    assert.deepEqual(options.include, ["**/*.py"]);
+  });
+
+  it("adds plugin language discovery when plugin rules run beside pack defaults", () => {
+    const pythonPluginDetector = {
+      ...pluginDetector,
+      id: "policy-python-fixture",
+      languages: ["python"],
+    } satisfies Detector;
+
+    const options = mergeConfig(".", { pack: "core" }, {
+      cwd: process.cwd(),
+      pluginDetectors: [pythonPluginDetector],
+    });
+
+    assert.ok(options.rules?.includes("duplicate-logic"));
+    assert.ok(options.rules?.includes("policy-python-fixture"));
+    assert.deepEqual(options.include, ["**/*.{ts,tsx,js,jsx}", "**/*.py"]);
+  });
+
+  it("adds plugin language discovery when plugin rules run beside default built-ins", () => {
+    const pythonPluginDetector = {
+      ...pluginDetector,
+      id: "policy-python-fixture",
+      languages: ["python"],
+    } satisfies Detector;
+
+    const options = mergeConfig(".", {}, {
+      cwd: process.cwd(),
+      pluginDetectors: [pythonPluginDetector],
+    });
+
+    assert.equal(options.rules, undefined);
+    assert.deepEqual(options.include, ["**/*.{ts,tsx,js,jsx}", "**/*.py"]);
+  });
+
   it("passes through valid ruleSeverities and ruleConfidenceFloors", () => {
     const options = mergeConfig(".", {
       ruleSeverities: { "naming-drift": "info" },

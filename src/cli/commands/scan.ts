@@ -78,6 +78,8 @@ export function registerScanCommand(program: Command): void {
     .option("--blame-age", "add introducedDaysAgo metadata to JSON issues using git blame")
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
     .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
+    .option("--sarif-category <category>", "with --format sarif, set runs[].automationDetails.id for separated code scanning runs")
+    .option("--junit-fail-on <severity>", "with --format junit, mark findings at or above this severity as failed testcases")
     .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
     .option("--pr-comment-max-findings <count>", "with --format pr-comment, cap detailed findings and summarize omitted findings", parseNonNegativeInteger)
     .option("--pr-comment-max-bytes <count>", "with --format pr-comment, cap the rendered comment body in bytes", parseInteger)
@@ -115,6 +117,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
 
   const format = parseFormat(String(rawOptions.format ?? "terminal"));
   const groupBy = parseGroupBy(String(rawOptions.groupBy ?? "severity"));
+  const junitFailOn = rawOptions.junitFailOn !== undefined ? parseSeverity(String(rawOptions.junitFailOn), "info") : undefined;
   const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
   let scanTarget = target;
   let packageDirectory: string | undefined;
@@ -231,6 +234,8 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     sourceUrlBase: format === "pr-comment" ? getGitHubSourceUrlBase(process.env) : undefined,
     groupBy,
     sarifCompact: rawOptions.sarifCompact === true,
+    sarifCategory: rawOptions.sarifCategory ? String(rawOptions.sarifCategory) : undefined,
+    junitFailOn,
     markdownHeatmapLimit: normalizeOptionalLimit(rawOptions.markdownHeatmap, 10),
     prCommentMaxFindings: rawOptions.prCommentMaxFindings as number | undefined,
     prCommentMaxBytes: rawOptions.prCommentMaxBytes as number | undefined,

@@ -54,7 +54,7 @@ _debtlens_complete() {
   case "$prev" in
     --pack) COMPREPLY=( $(compgen -W "${RULE_PACK_IDS.join(" ")}" -- "$cur") ); return ;;
     --rules|explain|--rule) COMPREPLY=( $(compgen -W "${detectorIds.join(" ")}" -- "$cur") ); return ;;
-    --min-severity|--fail-on) COMPREPLY=( $(compgen -W "${severities.join(" ")}" -- "$cur") ); return ;;
+    --min-severity|--fail-on|--junit-fail-on) COMPREPLY=( $(compgen -W "${severities.join(" ")}" -- "$cur") ); return ;;
     --format) COMPREPLY=( $(compgen -W "${formats.join(" ")}" -- "$cur") ); return ;;
   esac
   if [[ "\${COMP_WORDS[1]}" == "baseline" ]]; then
@@ -119,6 +119,7 @@ ${flagSpecs}
     '--rule[rule id]:rule:(${detectorIds.join(" ")})' \
     '--min-severity[minimum severity]:severity:(${severities.join(" ")})' \
     '--fail-on[failing severity]:severity:(${severities.join(" ")})' \
+    '--junit-fail-on[JUnit failing severity]:severity:(${severities.join(" ")})' \
     '--format[output format]:format:(${formats.join(" ")})' \
     '*::arg:->args'
 }
@@ -143,6 +144,7 @@ function renderFish(): string {
     `complete -c debtlens -n "${scanLikeCondition}" -l rule -a "${detectorIds.join(" ")}"`,
     `complete -c debtlens -n "${scanLikeCondition}" -l min-severity -a "${severities.join(" ")}"`,
     `complete -c debtlens -n "${scanLikeCondition}" -l fail-on -a "${severities.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l junit-fail-on -a "${severities.join(" ")}"`,
     `complete -c debtlens -n "${scanLikeCondition}" -l format -a "${formats.join(" ")}"`,
     `complete -c debtlens -n "${compareCondition}" -l format -a "${compareFormats.join(" ")}"`,
     `complete -c debtlens -n "${baselineCondition}" -l pack -a "${RULE_PACK_IDS.join(" ")}"`,

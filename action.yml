@@ -90,6 +90,12 @@ inputs:
   sarif-compact:
     description: SARIF only - emit only rules referenced by findings.
     default: "false"
+  sarif-category:
+    description: SARIF only - set runs[].automationDetails.id for separated code scanning runs.
+    default: ""
+  junit-fail-on:
+    description: JUnit only - severity threshold for failed testcases (info, low, medium, high). Defaults to all reported findings.
+    default: ""
   markdown-heatmap:
     description: Markdown only - append a debt heatmap table. Use a positive integer limit or leave empty to disable.
     default: ""
@@ -225,6 +231,8 @@ runs:
         DL_QUIET: ${{ inputs.quiet }}
         DL_GROUP_BY: ${{ inputs.group-by }}
         DL_SARIF_COMPACT: ${{ inputs.sarif-compact }}
+        DL_SARIF_CATEGORY: ${{ inputs.sarif-category }}
+        DL_JUNIT_FAIL_ON: ${{ inputs.junit-fail-on }}
         DL_MARKDOWN_HEATMAP: ${{ inputs.markdown-heatmap }}
         DL_FAIL_ON_REGRESSION: ${{ inputs.fail-on-regression }}
         DL_JSON_OUTPUT: ${{ inputs.json-output }}
@@ -318,6 +326,8 @@ runs:
         export DEBTLENS_QUIET="$DL_QUIET"
         export DEBTLENS_GROUP_BY="$DL_GROUP_BY"
         export DEBTLENS_SARIF_COMPACT="$DL_SARIF_COMPACT"
+        export DEBTLENS_SARIF_CATEGORY="$DL_SARIF_CATEGORY"
+        export DEBTLENS_JUNIT_FAIL_ON="$DL_JUNIT_FAIL_ON"
         export DEBTLENS_MARKDOWN_HEATMAP="$DL_MARKDOWN_HEATMAP"
         export DEBTLENS_PR_COMMENT_DELTA_ONLY="$DL_COMMENT_DELTA_ONLY"
         export DEBTLENS_PR_COMMENT_MAX_FINDINGS="$DL_COMMENT_MAX_FINDINGS"

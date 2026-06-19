@@ -30,6 +30,8 @@ export const SCAN_ARG_FLAGS = [
   "--blame-age",
   "--group-by",
   "--sarif-compact",
+  "--sarif-category",
+  "--junit-fail-on",
   "--markdown-heatmap",
 ] as const;
 
@@ -66,6 +68,8 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addBoolean(args, "--blame-age", rawOptions.blameAge);
   addString(args, "--group-by", rawOptions.groupBy);
   addBoolean(args, "--sarif-compact", rawOptions.sarifCompact);
+  addString(args, "--sarif-category", rawOptions.sarifCategory);
+  addString(args, "--junit-fail-on", rawOptions.junitFailOn);
   addOptionalValue(args, "--markdown-heatmap", rawOptions.markdownHeatmap);
   return args;
 }

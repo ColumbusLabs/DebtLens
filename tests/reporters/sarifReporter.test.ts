@@ -85,10 +85,26 @@ describe("sarif reporter", () => {
     assert.equal(high.properties.suggestion, "Colocate the data owner.");
     assert.deepEqual(high.properties.evidence, ["Child: a, b, c, d, e"]);
     assert.equal(high.properties.fingerprint, "dl_1");
+    assert.equal(high.partialFingerprints.debtLensFingerprint, "dl_1");
 
     const info = results.find((r: { ruleId: string }) => r.ruleId === "naming-drift");
     assert.equal(info.level, "note");
     assert.equal(info.locations[0].physicalLocation.region.startLine, 1);
+  });
+
+  it("uses the issue id as the SARIF partial fingerprint fallback", () => {
+    const legacyIssue = { ...infoIssue, id: "legacy-id", fingerprint: undefined };
+    const sarif = JSON.parse(renderSarif(makeResult([legacyIssue])));
+    const [result] = sarif.runs[0].results;
+
+    assert.equal(result.partialFingerprints.debtLensFingerprint, "legacy-id");
+    assert.equal(result.properties.fingerprint, "legacy-id");
+  });
+
+  it("emits optional run automation details for separated code scanning runs", () => {
+    const sarif = JSON.parse(renderSarif(makeResult([highIssue]), { category: "packages/web" }));
+
+    assert.equal(sarif.runs[0].automationDetails.id, "packages/web");
   });
 
   it("emits an empty results array when there are no issues", () => {

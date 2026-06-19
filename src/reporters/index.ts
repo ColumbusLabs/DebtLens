@@ -1,4 +1,4 @@
-import type { OutputFormat, ScanResult } from "../core/types.js";
+import type { OutputFormat, ScanResult, Severity } from "../core/types.js";
 import { renderHtml } from "./htmlReporter.js";
 import { renderJson } from "./jsonReporter.js";
 import { renderJunit } from "./junitReporter.js";
@@ -13,6 +13,8 @@ export interface RenderReportOptions {
   sourceUrlBase?: string;
   groupBy?: "severity" | "rule" | "file";
   sarifCompact?: boolean;
+  sarifCategory?: string;
+  junitFailOn?: Severity;
   markdownHeatmapLimit?: number;
   prCommentDeltaOnly?: boolean;
   prCommentMaxFindings?: number;
@@ -33,9 +35,9 @@ export function renderReport(result: ScanResult, format: OutputFormat, options: 
       artifactLink: options.prCommentArtifactLink,
     });
   }
-  if (format === "sarif") return renderSarif(result, { compact: options.sarifCompact });
+  if (format === "sarif") return renderSarif(result, { compact: options.sarifCompact, category: options.sarifCategory });
   if (format === "html") return renderHtml(result);
-  if (format === "junit") return renderJunit(result);
+  if (format === "junit") return renderJunit(result, { failOn: options.junitFailOn });
   if (format === "terminal") return renderTerminal(result, { color: options.color ?? true, quiet: options.quiet, groupBy: options.groupBy });
   throw new Error(`Invalid format "${format}". Expected terminal, json, markdown, pr-comment, sarif, html, or junit.`);
 }

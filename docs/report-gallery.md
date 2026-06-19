@@ -9,9 +9,9 @@ reviewers already work.
 | JSON | `debtlens scan examples/react --format json --output debtlens-report.json` | Integrations, dashboards, and trend tooling. |
 | Markdown | `debtlens scan examples/react --format markdown --output debtlens-report.md` | PR descriptions, release notes, and maintainer handoffs. |
 | PR comment | `debtlens scan examples/react --format pr-comment --output debtlens-pr-comment.md` | Compact GitHub review comments with prioritized fix targets and optional caps. |
-| SARIF | `debtlens scan examples/react --format sarif --output debtlens.sarif` | GitHub code scanning and compatible quality dashboards. |
+| SARIF | `debtlens scan examples/react --format sarif --sarif-category examples-react --output debtlens.sarif` | GitHub code scanning and compatible quality dashboards. |
 | HTML | `debtlens scan examples/react --format html --output debtlens-report.html` | Shareable human-readable artifact. |
-| JUnit | `debtlens scan examples/react --format junit --output debtlens-junit.xml` | CI systems that surface test-style failures. |
+| JUnit | `debtlens scan examples/react --format junit --junit-fail-on high --output debtlens-junit.xml` | CI systems that surface test-style failures while keeping lower severities visible. |
 
 The GitHub Action runs one canonical JSON scan and renders requested reports from that
 result so counts, filters, baselines, suppressions, and source links stay aligned.
@@ -21,6 +21,8 @@ when `comment-max-findings` or `comment-max-bytes` caps are reached.
 Step summaries include gate decisions, warnings, filter stats, report paths, artifacts,
 and optional trend comparisons. The Action also exposes issue-count outputs and can emit
 capped workflow command annotations when SARIF/code scanning is not configured.
+SARIF findings include stable `partialFingerprints`; set `sarif-category` when separate
+package or rule-pack runs should appear as distinct code scanning analyses.
 
 ## Compare reports
 

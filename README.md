@@ -221,6 +221,8 @@ Options:
 --audit-suppressions           include used and unused inline suppression directives
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
+--sarif-category <category>    SARIF only: set runs[].automationDetails.id
+--junit-fail-on <severity>     JUnit only: failed testcase severity threshold
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
 --pr-comment-max-findings <count>  PR comment only: cap detailed findings
 --pr-comment-max-bytes <count>     PR comment only: cap rendered body bytes
@@ -247,7 +249,7 @@ debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-
 
 # Create HTML and JUnit reports for CI artifacts
 debtlens scan --format html --output reports/debtlens.html
-debtlens scan --format junit --output reports/debtlens.junit.xml
+debtlens scan --format junit --junit-fail-on high --output reports/debtlens.junit.xml
 
 # Package-scoped adoption report in a workspace
 debtlens adopt . --package web --format markdown
@@ -544,7 +546,7 @@ guidance.
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards. HTML is a self-contained human report; JUnit XML is for CI systems that expect test-style failures.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards; findings include stable SARIF `partialFingerprints`, and `--sarif-category` can set `runs[].automationDetails.id` for package or pack-separated uploads. HTML is a self-contained human report. JUnit XML is for CI systems that expect test-style failures; `--junit-fail-on` can keep lower-severity findings visible as skipped testcases while only the selected severity threshold fails the suite. When omitted, every reported finding fails to preserve existing behavior.
 
 ```bash
 debtlens scan --format json
@@ -552,9 +554,9 @@ debtlens scan --audit-suppressions --format markdown
 debtlens scan --format markdown --markdown-heatmap 10 --output reports/debtlens.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
 debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-bytes 60000 --output debtlens-pr-comment.md
-debtlens scan --format sarif --sarif-compact --output debtlens.sarif
+debtlens scan --format sarif --sarif-compact --sarif-category packages/web --output debtlens.sarif
 debtlens scan --format html --output reports/debtlens.html
-debtlens scan --format junit --output reports/debtlens.junit.xml
+debtlens scan --format junit --junit-fail-on high --output reports/debtlens.junit.xml
 debtlens scan --group-by rule
 debtlens compare previous.json current.json --format terminal
 debtlens compare previous.json current.json --format markdown
@@ -585,6 +587,7 @@ jobs:
           changed: origin/${{ github.base_ref }}
           format: sarif
           output: debtlens.sarif
+          sarif-category: debtlens-pr
           upload-json-artifact: true
           thresholds: large-component.maxLines=300
           quiet: true
@@ -595,7 +598,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `sarif-category`, `junit-fail-on`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Action outputs include `scan-status`, `gate-status`, `total-issues`, `high-issues`, `medium-issues`, `low-issues`, `info-issues`, `top-rule`, `top-rule-count`, `json-path`, `json-artifact-name`, `report-path`, and `report-format`. Give the Action step an `id` to use them in later steps:
 

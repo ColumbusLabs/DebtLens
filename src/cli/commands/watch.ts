@@ -16,7 +16,7 @@ export function registerWatchCommand(program: Command): void {
     .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
     .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
     .option("--max-files <count>", "maximum files to scan", parseInteger)
-    .option("--format <format>", "terminal, json, markdown, pr-comment, sarif, html, or junit", "terminal")
+    .option("--format <format>", "terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality", "terminal")
     .option("-o, --output <path>", "write the report to a file instead of stdout")
     .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
     .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)

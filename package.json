@@ -24,6 +24,7 @@
   "files": [
     "dist",
     "schema",
+    "scripts/emit-azure-log-issues.mjs",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",

@@ -12,6 +12,7 @@ reviewers already work.
 | SARIF | `debtlens scan examples/react --format sarif --sarif-category examples-react --output debtlens.sarif` | GitHub code scanning and compatible quality dashboards. |
 | HTML | `debtlens scan examples/react --format html --output debtlens-report.html` | Shareable human-readable artifact. |
 | JUnit | `debtlens scan examples/react --format junit --junit-fail-on high --output debtlens-junit.xml` | CI systems that surface test-style failures while keeping lower severities visible. |
+| GitLab Code Quality | `debtlens scan examples/react --format gitlab-codequality --output gl-code-quality-report.json` | Native GitLab Merge Request Code Quality widgets. |
 
 The GitHub Action runs one canonical JSON scan and renders requested reports from that
 result so counts, filters, baselines, suppressions, and source links stay aligned.
@@ -23,6 +24,10 @@ and optional trend comparisons. The Action also exposes issue-count outputs and 
 capped workflow command annotations when SARIF/code scanning is not configured.
 SARIF findings include stable `partialFingerprints`; set `sarif-category` when separate
 package or rule-pack runs should appear as distinct code scanning analyses.
+GitLab Code Quality output uses GitLab's required JSON array shape with stable
+DebtLens fingerprints. Azure Pipelines can keep the canonical JSON artifact and
+emit native `task.logissue` entries by running `scripts/emit-azure-log-issues.mjs`
+against that report.
 
 ## Compare reports
 

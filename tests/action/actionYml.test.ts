@@ -39,6 +39,7 @@ describe("GitHub Action metadata", () => {
   });
 
   it("renders reports from one canonical JSON scan and optionally uploads the artifact before replaying status", () => {
+    assert.match(actionYml, /Output format \(terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality\)/);
     assert.match(actionYml, /--format json --output "\$internal_json"/);
     assert.match(actionYml, /scripts\/render-scan-result\.mjs/);
     assert.match(actionYml, /upload-json-artifact:\n    description:.*\n    default: "false"/s);

@@ -47,7 +47,7 @@ function parseOptionalInteger(value, options = {}) {
 }
 
 function parseFormat(value) {
-  const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit"];
+  const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit", "gitlab-codequality"];
   if (formats.includes(value)) return value;
   throw new Error(`Invalid format "${value}". Expected ${formats.join(", ")}.`);
 }

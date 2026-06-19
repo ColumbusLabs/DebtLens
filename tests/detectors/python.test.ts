@@ -190,6 +190,42 @@ def describe_policy():
     assert.equal(issues.length, 0);
   });
 
+  it("detects complexity rules for multiline Python function signatures", async () => {
+    const files = {
+      "src/service.py": `
+def classify_invoice(
+    invoice,
+    account,
+):
+    if invoice.get("paid"):
+        if account.get("active"):
+            return "paid"
+    for line in invoice.get("lines", []):
+        if line.get("blocked"):
+            return "blocked"
+    return "review"
+`,
+    };
+
+    const largeIssues = await runDetector(pythonLargeFunctionDetector, files, {
+      thresholds: {
+        "large-function.maxLines": 8,
+        "large-function.maxBranches": 3,
+      },
+    });
+    const controlFlowIssues = await runDetector(pythonComplexControlFlowDetector, files, {
+      thresholds: {
+        "complex-control-flow.maxComplexity": 5,
+        "complex-control-flow.maxDepth": 3,
+      },
+    });
+
+    assert.equal(largeIssues.length, 1);
+    assert.equal(largeIssues[0]?.location?.startLine, 2);
+    assert.equal(controlFlowIssues.length, 1);
+    assert.equal(controlFlowIssues[0]?.location?.startLine, 2);
+  });
+
   it("does not flag Python wrappers that add behavior", async () => {
     const issues = await runDetector(pythonDeadAbstractionDetector, {
       "src/service.py": `

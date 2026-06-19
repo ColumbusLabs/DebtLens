@@ -16,6 +16,33 @@ reviewers already work.
 The GitHub Action runs one canonical JSON scan and renders requested reports from that
 result so counts, filters, baselines, suppressions, and source links stay aligned.
 
+## Compare reports
+
+Use `debtlens compare` when you already have two ScanResult JSON files and want a
+trend report without rescanning:
+
+```bash
+debtlens compare previous-debtlens-report.json debtlens-report.json --format terminal
+debtlens compare previous-debtlens-report.json debtlens-report.json --format markdown
+debtlens compare previous-debtlens-report.json debtlens-report.json --format json
+```
+
+Compare reports include total, severity, and rule deltas. When both JSON files include
+issue arrays, DebtLens also reports exact new, resolved, changed, severity-regression,
+and top-new-file counts. Keep the scan target, include/exclude filters, rule selection,
+and minimum severity aligned between the two reports so the trend describes the same
+surface.
+
+Scheduled CI jobs can write a fresh canonical JSON report, restore the previous report
+artifact, and append the Markdown compare output to the job summary:
+
+```yaml
+- name: Compare DebtLens trend
+  if: hashFiles('previous/debtlens-report.json') != ''
+  run: |
+    npx debtlens compare previous/debtlens-report.json current/debtlens-report.json --format markdown >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## Minimal Markdown excerpt
 
 ```markdown

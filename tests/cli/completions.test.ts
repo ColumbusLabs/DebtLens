@@ -21,9 +21,11 @@ describe("debtlens completions", () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /complete -F _debtlens_complete debtlens/);
     assert.match(result.stdout, /scan doctor watch packs rules explain/);
-    assert.match(result.stdout, /suppress baseline init/);
+    assert.match(result.stdout, /suppress baseline compare init/);
     assert.match(result.stdout, /adopt mcp completions/);
     assert.match(result.stdout, /diff prune update/);
+    assert.match(result.stdout, /\$\{COMP_WORDS\[1\]\}" == "compare" && "\$prev" == "--format"/);
+    assert.match(result.stdout, /terminal markdown json/);
     assert.match(result.stdout, /--dry-run/);
     assert.match(result.stdout, /--audit-suppressions/);
     assert.match(result.stdout, /prop-drilling/);
@@ -39,6 +41,8 @@ describe("debtlens completions", () => {
     assert.equal(zsh.status, 0);
     assert.match(zsh.stdout, /#compdef debtlens/);
     assert.match(zsh.stdout, /baseline_subcommands=\(diff prune update\)/);
+    assert.match(zsh.stdout, /if \[\[ \$\{words\[2\]\} == compare \]\]/);
+    assert.match(zsh.stdout, /--format\[output format\]:format:\(terminal markdown json\)/);
     assert.match(zsh.stdout, /--pack\[rule pack\]/);
     assert.match(zsh.stdout, /'--package' \\/);
     assert.match(zsh.stdout, /'--threshold' \\/);
@@ -48,7 +52,8 @@ describe("debtlens completions", () => {
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline/);
     assert.match(fish.stdout, /-l dry-run/);
     assert.match(fish.stdout, /-l audit-suppressions/);
-    assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline" -l format -a "terminal json markdown pr-comment sarif html junit"/);
+    assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline compare" -l format -a "terminal json markdown pr-comment sarif html junit"/);
+    assert.match(fish.stdout, /__fish_seen_subcommand_from compare" -l format -a "terminal markdown json"/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline" -l format -a "terminal json"/);
   });
 

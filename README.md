@@ -167,6 +167,7 @@ debtlens suppress --rule <rule> --reason "<why>"   # print a copy-paste inline s
 debtlens baseline diff . --baseline debtlens-baseline.json    # preview baseline drift without writing
 debtlens baseline prune . --baseline debtlens-baseline.json   # remove resolved entries from a baseline
 debtlens baseline update . --baseline debtlens-baseline.json  # rewrite a baseline from the current scan
+debtlens compare previous.json current.json --format terminal # compare two ScanResult JSON reports
 debtlens scan [target]
 ```
 
@@ -297,6 +298,8 @@ When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns tha
 `debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
 
 Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. Pass `--audit-suppressions` to also export `suppressionDirectives`, a directive-level audit of used, unused, and not-evaluated inline suppressions with file, line, rule, reason, hidden-finding count, and recommended action. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
+
+Use `debtlens compare previous.json current.json --format terminal|markdown|json` to compare two ScanResult JSON files without rescanning. The compare report includes total, severity, and rule deltas; when both inputs contain issue arrays, it also reports exact new, resolved, changed, severity-regression, and top-new-file counts. Run compare with the same scan scope and options for meaningful trends.
 
 Pass `--blame-age` to enrich JSON issues with optional `introducedDaysAgo` metadata from
 `git blame`. This is best-effort: outside git repositories, uncommitted lines, and staged
@@ -522,6 +525,9 @@ debtlens scan --format sarif --sarif-compact --output debtlens.sarif
 debtlens scan --format html --output reports/debtlens.html
 debtlens scan --format junit --output reports/debtlens.junit.xml
 debtlens scan --group-by rule
+debtlens compare previous.json current.json --format terminal
+debtlens compare previous.json current.json --format markdown
+debtlens compare previous.json current.json --format json
 ```
 
 ## GitHub Action
@@ -582,6 +588,43 @@ The JSON artifact is named `debtlens-scan-result` by default. To also write it i
     changed: origin/${{ github.base_ref }}
     json-output: debtlens-report.json
     json-artifact-name: debt-metrics
+```
+
+A scheduled debt trend job can restore the last canonical JSON report, produce a fresh one, and render a Markdown comparison into the job summary:
+
+```yaml
+name: DebtLens trend
+on:
+  schedule:
+    - cron: "0 13 * * 1"
+  workflow_dispatch:
+
+jobs:
+  trend:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download previous report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          run_id="$(gh run list --workflow "$GITHUB_WORKFLOW" --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" --name debtlens-scan-result --dir previous || true
+          fi
+      - uses: ColumbusLabs/debtlens@v0
+        with:
+          json-output: current/debtlens-report.json
+          upload-json-artifact: true
+          quiet: true
+      - name: Compare trend
+        if: hashFiles('previous/debtlens-report.json') != ''
+        run: |
+          npx debtlens compare previous/debtlens-report.json current/debtlens-report.json --format markdown >> "$GITHUB_STEP_SUMMARY"
 ```
 
 A Shields endpoint badge can be generated from the artifact by publishing a tiny JSON file derived from `summary.totalIssues`:

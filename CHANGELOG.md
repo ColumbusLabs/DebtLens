@@ -51,6 +51,9 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **`debtlens compare previous.json current.json`** report trend command for comparing
+  two ScanResult JSON reports without rescanning, with terminal, Markdown, and JSON
+  output plus scheduled trend-job docs ([#183](https://github.com/ColumbusLabs/DebtLens/issues/183)).
 - **Shared `buildScanArgv` helper** and `SCAN_ARG_FLAGS` for watch, MCP, and shell
   completions so scan flags stay in sync with the CLI.
 - **`spawnCliSync` with a 64MB output buffer** for watch and MCP subprocess scans.

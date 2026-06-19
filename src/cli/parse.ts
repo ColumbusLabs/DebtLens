@@ -94,6 +94,11 @@ export function parseAdoptFormat(value: string): "terminal" | "markdown" {
   throw new Error(`Invalid adopt format "${value}". Expected terminal or markdown.`);
 }
 
+export function parseCompareFormat(value: string): "terminal" | "markdown" | "json" {
+  if (value === "terminal" || value === "markdown" || value === "json") return value;
+  throw new Error(`Invalid compare format "${value}". Expected terminal, markdown, or json.`);
+}
+
 export function getGitHubSourceUrlBase(env: NodeJS.ProcessEnv): string | undefined {
   const serverUrl = env.GITHUB_SERVER_URL;
   const repository = env.GITHUB_REPOSITORY;

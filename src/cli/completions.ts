@@ -3,8 +3,9 @@ import { severities } from "../core/severity.js";
 import { detectorIds } from "../detectors/index.js";
 import { SCAN_ARG_FLAGS } from "./argv.js";
 
-const commands = ["scan", "doctor", "watch", "packs", "rules", "explain", "suppress", "baseline", "init", "adopt", "mcp", "completions"];
+const commands = ["scan", "doctor", "watch", "packs", "rules", "explain", "suppress", "baseline", "compare", "init", "adopt", "mcp", "completions"];
 const baselineSubcommands = ["diff", "prune", "update"];
+const compareFlags = ["--format", "--cwd"];
 const baselineFlags = [
   "--baseline",
   "--format",
@@ -26,6 +27,7 @@ const baselineFlags = [
 ];
 const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit"];
 const baselineFormats = ["terminal", "json"];
+const compareFormats = ["terminal", "markdown", "json"];
 const scanFlags = [...SCAN_ARG_FLAGS, "--from-eslint", "--debounce"];
 
 export type CompletionShell = "bash" | "zsh" | "fish";
@@ -45,6 +47,10 @@ _debtlens_complete() {
     COMPREPLY=( $(compgen -W "${baselineFormats.join(" ")}" -- "$cur") )
     return
   fi
+  if [[ "\${COMP_WORDS[1]}" == "compare" && "$prev" == "--format" ]]; then
+    COMPREPLY=( $(compgen -W "${compareFormats.join(" ")}" -- "$cur") )
+    return
+  fi
   case "$prev" in
     --pack) COMPREPLY=( $(compgen -W "${RULE_PACK_IDS.join(" ")}" -- "$cur") ); return ;;
     --rules|explain|--rule) COMPREPLY=( $(compgen -W "${detectorIds.join(" ")}" -- "$cur") ); return ;;
@@ -57,6 +63,10 @@ _debtlens_complete() {
       return
     fi
     COMPREPLY=( $(compgen -W "${baselineFlags.join(" ")}" -- "$cur") )
+    return
+  fi
+  if [[ "\${COMP_WORDS[1]}" == "compare" ]]; then
+    COMPREPLY=( $(compgen -W "${compareFlags.join(" ")}" -- "$cur") )
     return
   fi
   COMPREPLY=( $(compgen -W "${[...commands, ...scanFlags].join(" ")}" -- "$cur") )
@@ -72,9 +82,13 @@ function renderZsh(): string {
   const baselineFlagSpecs = baselineFlags
     .map((flag) => `      '${flag}' \\`)
     .join("\n");
+  const compareFlagSpecs = compareFlags
+    .filter((flag) => flag !== "--format")
+    .map((flag) => `      '${flag}' \\`)
+    .join("\n");
   return `#compdef debtlens
 _debtlens() {
-  local -a commands flags baseline_subcommands packs rules severities formats
+  local -a commands flags baseline_subcommands packs rules severities formats compare_formats
   commands=(${commands.join(" ")})
   flags=(${scanFlags.join(" ")})
   baseline_subcommands=(${baselineSubcommands.join(" ")})
@@ -82,10 +96,18 @@ _debtlens() {
   rules=(${detectorIds.join(" ")})
   severities=(${severities.join(" ")})
   formats=(${formats.join(" ")})
+  compare_formats=(${compareFormats.join(" ")})
   if [[ \${words[2]} == baseline ]]; then
     _arguments \\
       '2:baseline subcommand:(${baselineSubcommands.join(" ")})' \\
 ${baselineFlagSpecs}
+      '*:path:_files'
+    return
+  fi
+  if [[ \${words[2]} == compare ]]; then
+    _arguments \\
+${compareFlagSpecs}
+      '--format[output format]:format:(${compareFormats.join(" ")})' \\
       '*:path:_files'
     return
   fi
@@ -106,20 +128,23 @@ _debtlens "$@"
 
 function renderFish(): string {
   const baselineCondition = "__fish_seen_subcommand_from baseline";
-  const nonBaselineCondition = "not __fish_seen_subcommand_from baseline";
+  const compareCondition = "__fish_seen_subcommand_from compare";
+  const scanLikeCondition = "not __fish_seen_subcommand_from baseline compare";
   const lines = [
     "# DebtLens fish completions",
     "complete -c debtlens -f",
     ...commands.map((command) => `complete -c debtlens -n "__fish_use_subcommand" -a "${command}"`),
     `complete -c debtlens -n "${baselineCondition}; and not __fish_seen_subcommand_from ${baselineSubcommands.join(" ")}" -a "${baselineSubcommands.join(" ")}"`,
     ...baselineFlags.map((flag) => `complete -c debtlens -n "${baselineCondition}" -l ${flag.slice(2)}`),
-    ...scanFlags.map((flag) => `complete -c debtlens -n "${nonBaselineCondition}" -l ${flag.slice(2)}`),
-    `complete -c debtlens -n "${nonBaselineCondition}" -l pack -a "${RULE_PACK_IDS.join(" ")}"`,
-    `complete -c debtlens -n "${nonBaselineCondition}" -l rules -a "${detectorIds.join(" ")}"`,
-    `complete -c debtlens -n "${nonBaselineCondition}" -l rule -a "${detectorIds.join(" ")}"`,
-    `complete -c debtlens -n "${nonBaselineCondition}" -l min-severity -a "${severities.join(" ")}"`,
-    `complete -c debtlens -n "${nonBaselineCondition}" -l fail-on -a "${severities.join(" ")}"`,
-    `complete -c debtlens -n "${nonBaselineCondition}" -l format -a "${formats.join(" ")}"`,
+    ...compareFlags.filter((flag) => flag !== "--format").map((flag) => `complete -c debtlens -n "${compareCondition}" -l ${flag.slice(2)}`),
+    ...scanFlags.map((flag) => `complete -c debtlens -n "${scanLikeCondition}" -l ${flag.slice(2)}`),
+    `complete -c debtlens -n "${scanLikeCondition}" -l pack -a "${RULE_PACK_IDS.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l rules -a "${detectorIds.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l rule -a "${detectorIds.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l min-severity -a "${severities.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l fail-on -a "${severities.join(" ")}"`,
+    `complete -c debtlens -n "${scanLikeCondition}" -l format -a "${formats.join(" ")}"`,
+    `complete -c debtlens -n "${compareCondition}" -l format -a "${compareFormats.join(" ")}"`,
     `complete -c debtlens -n "${baselineCondition}" -l pack -a "${RULE_PACK_IDS.join(" ")}"`,
     `complete -c debtlens -n "${baselineCondition}" -l rules -a "${detectorIds.join(" ")}"`,
     `complete -c debtlens -n "${baselineCondition}" -l min-severity -a "${severities.join(" ")}"`,

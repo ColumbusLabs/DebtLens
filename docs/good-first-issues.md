@@ -7,13 +7,32 @@ contribution layers.
 
 **Labels:** `good first issue` (general) · `good-first-rule` (detector/rule work)
 
-## Roadmap status (v0.3.0)
+## Active starter board
+
+The historical v0.3 starter batch is complete, but newcomer-sized work should keep flowing
+through labeled issues. Start with the live
+[`good first issue`](https://github.com/ColumbusLabs/DebtLens/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+and [`good-first-rule`](https://github.com/ColumbusLabs/DebtLens/issues?q=is%3Aissue+is%3Aopen+label%3Agood-first-rule)
+queues.
+
+| Track | Good starter shape | Evidence to include |
+| --- | --- | --- |
+| Contributor docs | Refresh an outdated guide, broken link, or missing cross-link. | Before/after doc links and a quick `rg` proving stale wording is gone. |
+| Issue templates | Add fields that capture language, command, config, artifacts, or reporter surface. | Parsed template YAML and screenshots or field descriptions if needed. |
+| Report examples | Add a small output snippet or fixture command for one report format. | Command, expected output excerpt, and reason the format is useful. |
+| Python rules | Add one fixture or one conservative detector improvement. | A positive example, a near-miss, and a targeted detector test. |
+| Reporter snapshots | Improve Markdown, PR comment, SARIF, HTML, JUnit, or JSON coverage. | Snapshot or contract test plus the generated command. |
+
+If no listed issue fits, use the
+[rule idea template](../.github/ISSUE_TEMPLATE/rule_idea.yml), the
+[false-positive template](../.github/ISSUE_TEMPLATE/rule_false_positive.yml), or
+[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) before starting a
+broad implementation.
+
+## Historical roadmap status (v0.3.0)
 
 The original contributor roadmap batch is **complete**. There are no open good-first
-implementation issues. New work should start in
-[Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), the
-[rule request template](../.github/ISSUE_TEMPLATE/rule_request.md), or the plugin API RFC
-([`docs/plugin-api-rfc.md`](./plugin-api-rfc.md)).
+implementation issues from that batch.
 
 Statuses below are historical. **Done** means the GitHub issue is closed.
 

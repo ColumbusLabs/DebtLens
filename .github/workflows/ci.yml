@@ -23,6 +23,12 @@ jobs:
       - run: npm run typecheck:tests
       - run: npm test
       - run: npm run build
+      - name: Verify source/runtime pack parity
+        run: |
+          node --import tsx src/cli/index.ts packs --format json > /tmp/debtlens-source-packs.json
+          node dist/cli/index.js packs --format json > /tmp/debtlens-dist-packs.json
+          diff -u /tmp/debtlens-source-packs.json /tmp/debtlens-dist-packs.json
+          node dist/cli/index.js scan examples/python --pack python --format json --output debtlens-python-report.json
       - name: Benchmark regression gate
         run: npm run benchmark:ci
         env:
@@ -30,3 +36,4 @@ jobs:
       - run: node dist/cli/index.js scan examples/react --min-severity info --format markdown --output debtlens-react-report.md
       - run: node dist/cli/index.js scan examples/react-native --min-severity info --format markdown --output debtlens-react-native-report.md
       - run: node dist/cli/index.js scan examples/next --min-severity info --format markdown --output debtlens-next-report.md
+      - run: node dist/cli/index.js scan examples/python --pack python --min-severity info --format markdown --output debtlens-python-report.md

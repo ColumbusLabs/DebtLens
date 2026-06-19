@@ -44,9 +44,27 @@ body:
       description: What happened instead? Include output or error text.
     validations:
       required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - CLI scan
+        - CLI doctor/adopt/init
+        - GitHub Action
+        - Reporter output
+        - Config/schema
+        - Plugin loading
+        - Language pack
+        - Documentation
+        - Other
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Report or CI artifact
+      description: Attach or paste the relevant ScanResult JSON, SARIF, JUnit, Markdown, HTML, PR comment, or CI log excerpt.
   - type: textarea
     id: environment
     attributes:
       label: Environment
       description: Node version, package manager, OS, CI provider, and anything else relevant.
-

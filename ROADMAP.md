@@ -1,10 +1,11 @@
 # DebtLens Roadmap
 
-DebtLens is a **maintainability scanner** for TypeScript and JavaScript today, with other
-languages (Python, Swift, Kotlin, …) planned as future language packs. React is the first
-serious rule pack; React Native, Next.js, Expo, and plain TS/JS projects are supported
-targets, not the product identity. See [`docs/rule-packs.md`](./docs/rule-packs.md) for
-the core vs pack taxonomy, future languages, and contribution paths.
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, and Python today,
+with additional languages (Vue, Svelte, Swift, Kotlin, Ruby, …) planned as future language
+packs. React was the first framework pack; React Native, Next.js, Expo, Node, Python, and
+plain TS/JS projects are current supported targets, not the product identity. See
+[`docs/rule-packs.md`](./docs/rule-packs.md) and [`docs/pack-chooser.md`](./docs/pack-chooser.md)
+for the current support matrix, future languages, and contribution paths.
 
 ## v0.1 — Runnable proof of concept
 
@@ -41,7 +42,7 @@ the core vs pack taxonomy, future languages, and contribution paths.
 
 - Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`) — **partially shipped in v0.3**.
 - Vue/Svelte detectors where applicable.
-- **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO/naming rules; same `ScanResult` and SARIF contract as TS/JS.
+- **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO rules; same `ScanResult` and SARIF contract as TS/JS.
 - Configurable domain vocabulary for naming drift.
 - Plugin API for third-party rules ([#26](https://github.com/ColumbusLabs/DebtLens/issues/26)).
 - Maintainer-oriented packs: `ai-assisted`, `oss-maintainer`.

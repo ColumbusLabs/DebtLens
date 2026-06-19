@@ -13,7 +13,11 @@ DebtLens has four layers:
 
 ## Scanner
 
-`src/core/scan.ts` resolves files with `fast-glob`, creates a `ts-morph` project, loads source files, runs selected detectors, filters by minimum severity, and returns a stable `ScanResult` object.
+`src/core/scan.ts` resolves files with `fast-glob`, creates a `ts-morph` project, loads
+source files, runs selected detectors, filters by minimum severity, and returns a stable
+`ScanResult` object. Language-specific detectors share that result contract; Python rules
+already run beside TS/JS rules and future language packs should preserve the same summary,
+baseline, SARIF, HTML, JUnit, Markdown, PR comment, and JSON shapes.
 
 The scanner does not execute project code.
 
@@ -50,13 +54,17 @@ In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines.
 
 Reporter-specific views share aggregate helpers for severity counts, file/rule grouping, correlations, and heatmaps so CLI output, PR comments, Markdown, HTML, and JSON stay aligned.
 
-## Why JSON config only?
+## Why JSON config by default?
 
-DebtLens intentionally starts with JSON config rather than JavaScript config. Static-analysis tools should avoid executing arbitrary project code by default. A plugin API can come later with clear security boundaries.
+DebtLens keeps `debtlens.config.json` as the default because static-analysis tools should
+avoid executing arbitrary project code by default. Local plugins are now supported, but
+they must be explicitly configured, versioned with `pluginApiVersion`, and can be disabled
+in CI with `DEBTLENS_DISABLE_PLUGINS=1`.
 
-## Future plugin model
+## Plugin model
 
-See [`plugin-api-rfc.md`](./plugin-api-rfc.md) for the proposed third-party rule API (RFC — not implemented yet).
+See [`plugin-api-rfc.md`](./plugin-api-rfc.md) for the shipped plugin API contract and
+remaining future extension points.
 
 Potential design:
 
@@ -69,4 +77,4 @@ export default defineDebtLensPlugin({
 });
 ```
 
-Plugin loading should be explicit and disabled in untrusted CI contexts.
+Plugin loading is explicit and should be disabled in untrusted CI contexts.

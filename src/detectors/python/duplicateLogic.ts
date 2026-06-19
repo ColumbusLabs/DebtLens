@@ -30,7 +30,7 @@ export const pythonDuplicateLogicDetector: Detector = {
     const snippets: PythonSnippet[] = [];
 
     for (const file of context.files) {
-      for (const fn of extractPythonFunctions(file)) {
+      for (const fn of extractPythonFunctions(file, { addWarning: context.addWarning })) {
         const lines = fn.endLine - fn.startLine + 1;
         if (lines < minLines || lines > 220) continue;
         const normalized = normalizePythonSnippet(fn.text);

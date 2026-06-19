@@ -1,19 +1,78 @@
 import type { SourceFileInfo } from "../../core/types.js";
+import {
+  parsePythonAstSidecar,
+  type PythonAstFunctionInfo,
+  type PythonAstModuleInfo,
+  type PythonClassInfo,
+  type PythonCommentInfo,
+  type PythonDecoratorInfo,
+  type PythonImportInfo,
+} from "./astSidecar.js";
 
 export interface PythonFunction {
   name: string;
+  qualifiedName?: string;
   params: string[];
   file: SourceFileInfo;
   startLine: number;
   endLine: number;
   text: string;
   bodyLines: string[];
+  isAsync?: boolean;
+  kind?: "function" | "method" | "nested-function";
+  parentClass?: string;
+  decorators?: PythonDecoratorInfo[];
+  bodyStartLine?: number;
+}
+
+export interface PythonModuleInfo {
+  functions: PythonFunction[];
+  classes: PythonClassInfo[];
+  imports: PythonImportInfo[];
+  comments: PythonCommentInfo[];
+  usedAstSidecar: boolean;
+}
+
+export interface PythonParseOptions {
+  addWarning?: (warning: string) => void;
+  pythonCommands?: readonly string[];
+  preferAstSidecar?: boolean;
 }
 
 const PYTHON_DEF_START_PATTERN = /^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/;
 const MAX_FUNCTION_HEADER_LINES = 20;
 
-export function extractPythonFunctions(file: SourceFileInfo): PythonFunction[] {
+export function extractPythonModule(file: SourceFileInfo, options: PythonParseOptions = {}): PythonModuleInfo {
+  if (options.preferAstSidecar !== false) {
+    const moduleInfo = parsePythonAstSidecar(file, {
+      addWarning: options.addWarning,
+      pythonCommands: options.pythonCommands,
+    });
+    if (moduleInfo) {
+      return {
+        functions: moduleInfo.functions.map((fn) => pythonFunctionFromAst(file, fn)),
+        classes: moduleInfo.classes,
+        imports: moduleInfo.imports,
+        comments: moduleInfo.comments,
+        usedAstSidecar: true,
+      };
+    }
+  }
+
+  return {
+    functions: extractPythonFunctionsWithHeuristics(file),
+    classes: [],
+    imports: [],
+    comments: [],
+    usedAstSidecar: false,
+  };
+}
+
+export function extractPythonFunctions(file: SourceFileInfo, options: PythonParseOptions = {}): PythonFunction[] {
+  return extractPythonModule(file, options).functions;
+}
+
+function extractPythonFunctionsWithHeuristics(file: SourceFileInfo): PythonFunction[] {
   const lines = file.content.split(/\r?\n/);
   const functions: PythonFunction[] = [];
 
@@ -46,6 +105,41 @@ export function extractPythonFunctions(file: SourceFileInfo): PythonFunction[] {
   }
 
   return functions;
+}
+
+function pythonFunctionFromAst(file: SourceFileInfo, fn: PythonAstFunctionInfo): PythonFunction {
+  const lines = file.content.split(/\r?\n/);
+  const startLine = Math.max(1, fn.startLine);
+  const endLine = Math.max(startLine, fn.endLine);
+  const bodyStartLine = fn.bodyStartLine && fn.bodyStartLine >= startLine
+    ? fn.bodyStartLine
+    : firstBodyLineFromText(lines, startLine, endLine);
+  const text = lines.slice(startLine - 1, endLine).join("\n");
+  return {
+    name: fn.name,
+    qualifiedName: fn.qualifiedName,
+    params: fn.params,
+    file,
+    startLine,
+    endLine,
+    text,
+    bodyLines: bodyStartLine ? lines.slice(bodyStartLine - 1, endLine) : [],
+    isAsync: fn.isAsync,
+    kind: fn.kind,
+    parentClass: fn.parentClass,
+    decorators: fn.decorators,
+    bodyStartLine,
+  };
+}
+
+function firstBodyLineFromText(lines: string[], startLine: number, endLine: number): number | undefined {
+  for (let line = startLine; line <= endLine; line += 1) {
+    const text = lines[line - 1] ?? "";
+    if (!text.trim() || text.trim().startsWith("@")) continue;
+    if (/^\s*(?:async\s+)?def\b/.test(text)) continue;
+    return line;
+  }
+  return undefined;
 }
 
 export function parsePythonParams(raw: string): string[] {

@@ -80,15 +80,15 @@ This keeps reporters, baselines, PR comments, SARIF, HTML, and JSON schemas stab
 
 ## Python parser recommendation
 
-Recommendation: use Python's built-in `ast` module plus `tokenize` through a small
+Recommendation: use Python's built-in `ast` and `tokenize` modules through a small
 sidecar process when Python rules need higher-fidelity syntax.
 
 Why:
 
 - The standard `ast` module is stable, fast enough for static shape rules, and avoids
   vendoring a Python parser into Node.
-- A sidecar would let Python-specific rules evolve in Python while the Node CLI remains
-  the orchestration layer.
+- A sidecar lets Python-specific rules use Python's own syntax model while the Node CLI
+  remains the orchestration layer.
 - The first rules map well to syntax trees or conservative function spans: TODO comments,
   duplicate function shape, function size, control-flow shape, and thin wrappers.
 
@@ -101,10 +101,20 @@ Why:
 Current implementation:
 
 - `python-todo-comment` uses conservative in-process comment scanning and shared TODO marker patterns.
-- `python-duplicate-logic` extracts function spans, normalizes tokens, and reuses the duplicate-pair pruning shared with TS/JS.
-- `python-large-function` reuses the shared line and branch budgets for oversized or branch-heavy Python functions.
-- `python-complex-control-flow` counts conservative branch tokens and indentation-based nesting depth for review-heavy functions.
-- `python-dead-abstraction` flags single-statement pass-through functions such as `def f(x): return g(x)`.
+- Python function extraction first tries an embedded stdlib-`ast`/`tokenize` sidecar
+  using `python3`, then `python`, and falls back to the previous text parser with a
+  scan warning if no runtime is available or parsing fails.
+- The sidecar returns normalized function, class, import, decorator, async, method, and
+  nested-function metadata plus tokenized comments without changing `ScanResult` or
+  reporter schemas.
+- `python-duplicate-logic` uses sidecar-backed function spans when available, normalizes
+  tokens, and reuses the duplicate-pair pruning shared with TS/JS.
+- `python-large-function` reuses the shared line and branch budgets for oversized or
+  branch-heavy Python functions.
+- `python-complex-control-flow` counts conservative branch tokens and indentation-based
+  nesting depth for review-heavy functions.
+- `python-dead-abstraction` flags single-statement pass-through functions such as
+  `def f(x): return g(x)`.
 - `--pack python` widens discovery to `.py` files. Use `--pack core,python` for one merged TS/JS + Python scan.
 
 Possible future sidecar command:
@@ -123,9 +133,12 @@ Initial Python rules:
 
 Known limitations:
 
-- Comments are not preserved in `ast`, so TODO detection needs tokenization.
-- Type checkers and import resolution are out of scope for the first pack.
-- Framework packs such as Django or Flask should wait until core Python rules are useful.
+- Comments are not preserved in `ast`, so TODO detection remains text-based even though
+  the sidecar exposes tokenized comment metadata for future rules.
+- Type checkers and import resolution are out of scope for the first pack; imports are
+  reported as syntax metadata only.
+- Framework packs such as Django or Flask can build on decorator/function metadata, but
+  URLConf resolution and class-based view inference remain separate framework work.
 
 ## Kotlin parser recommendation
 

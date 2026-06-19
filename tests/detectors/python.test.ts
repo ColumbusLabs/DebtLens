@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
+import type { SourceFileInfo } from "../../src/core/types.js";
 import { defaultConfig } from "../../src/config/defaults.js";
 import { getRulePack } from "../../src/config/packs.js";
 import { scan } from "../../src/core/scan.js";
@@ -11,6 +14,7 @@ import {
   pythonLargeFunctionDetector,
   pythonTodoCommentDetector,
 } from "../../src/detectors/python/index.js";
+import { extractPythonFunctions, extractPythonModule } from "../../src/detectors/python/parse.js";
 import { renderReport } from "../../src/reporters/index.js";
 import { runDetector } from "../helpers/runDetector.js";
 
@@ -26,6 +30,16 @@ function pythonScan(target: string, rules = getRulePack("python").rules) {
     maxFiles: defaultConfig.maxFiles,
     respectGitignore: defaultConfig.respectGitignore,
   });
+}
+
+function pythonFile(content: string, relativePath = "src/service.py"): SourceFileInfo {
+  return {
+    absolutePath: `/${relativePath}`,
+    relativePath,
+    content,
+    language: "python",
+    sourceFile: undefined as unknown as SourceFileInfo["sourceFile"],
+  };
 }
 
 describe("python language pack", () => {
@@ -110,6 +124,121 @@ async def load_items(session):
     assert.equal(issues.length, 2);
     assert.ok(issues.some((issue) => issue.message.includes("list_items")));
     assert.ok(issues.some((issue) => issue.message.includes("load_items")));
+  });
+
+  it("uses the Python AST sidecar for async functions, decorators, classes, imports, and nested functions", () => {
+    const moduleInfo = extractPythonModule(pythonFile(`
+from django.urls import path, re_path as regex_path
+import flask as flask_mod
+
+@controller
+class InvoiceView:
+    # TODO: replace sample route
+    @bp.get("/invoices")
+    async def list(self, account):
+        def normalize(value):
+            return value
+        return await fetch(account)
+`));
+
+    assert.equal(moduleInfo.usedAstSidecar, true);
+    assert.deepEqual(moduleInfo.imports.map((entry) => entry.kind), ["from", "import"]);
+    assert.equal(moduleInfo.imports[0]?.module, "django.urls");
+    assert.deepEqual(moduleInfo.imports[0]?.names, ["path", "re_path as regex_path"]);
+    assert.equal(moduleInfo.comments[0]?.text, "# TODO: replace sample route");
+    assert.equal(moduleInfo.classes[0]?.qualifiedName, "InvoiceView");
+    assert.equal(moduleInfo.classes[0]?.decorators[0]?.text, "controller");
+
+    const method = moduleInfo.functions.find((fn) => fn.qualifiedName === "InvoiceView.list");
+    assert.equal(method?.kind, "method");
+    assert.equal(method?.parentClass, "InvoiceView");
+    assert.equal(method?.isAsync, true);
+    assert.deepEqual(method?.params, ["self", "account"]);
+    assert.equal(method?.decorators?.[0]?.text, "bp.get(\"/invoices\")");
+    assert.equal(method?.startLine, 9);
+
+    const nested = moduleInfo.functions.find((fn) => fn.qualifiedName === "InvoiceView.list.normalize");
+    assert.equal(nested?.kind, "nested-function");
+    assert.deepEqual(nested?.params, ["value"]);
+  });
+
+  it("warns and falls back to text parsing when the Python runtime is unavailable", () => {
+    const warnings: string[] = [];
+    const functions = extractPythonFunctions(pythonFile(`
+def passthrough(value):
+    return render(value)
+`), {
+      addWarning: (warning) => warnings.push(warning),
+      pythonCommands: ["debtlens-python-that-does-not-exist"],
+    });
+
+    assert.equal(functions.length, 1);
+    assert.equal(functions[0]?.name, "passthrough");
+    assert.match(warnings[0] ?? "", /Python AST sidecar unavailable/);
+  });
+
+  it("tries the next Python command when an earlier candidate starts but fails", () => {
+    const warnings: string[] = [];
+    const moduleInfo = extractPythonModule(pythonFile(`
+async def load(value):
+    return value
+`), {
+      addWarning: (warning) => warnings.push(warning),
+      pythonCommands: [process.execPath, "python3", "python"],
+    });
+
+    assert.equal(moduleInfo.usedAstSidecar, true);
+    assert.equal(moduleInfo.functions[0]?.isAsync, true);
+    assert.deepEqual(warnings, []);
+  });
+
+  it("isolates the Python sidecar from repo-local stdlib module shadows", () => {
+    const previousCwd = process.cwd();
+    const sandbox = mkdtempSync(join(tmpdir(), "debtlens-python-sidecar-"));
+    const marker = join(sandbox, "local-import-executed");
+    const maliciousModule = `
+from pathlib import Path
+Path(${JSON.stringify(marker)}).write_text("executed")
+raise RuntimeError("repo-local stdlib shadow imported")
+`;
+
+    writeFileSync(join(sandbox, "ast.py"), maliciousModule);
+    writeFileSync(join(sandbox, "tokenize.py"), maliciousModule);
+
+    try {
+      process.chdir(sandbox);
+      const warnings: string[] = [];
+      const moduleInfo = extractPythonModule(pythonFile(`
+def isolated(value):
+    return value
+`, "shadowed.py"), {
+        addWarning: (warning) => warnings.push(warning),
+      });
+
+      assert.equal(moduleInfo.usedAstSidecar, true);
+      assert.equal(moduleInfo.functions[0]?.name, "isolated");
+      assert.deepEqual(warnings, []);
+      assert.equal(existsSync(marker), false);
+    } finally {
+      process.chdir(previousCwd);
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+
+  it("warns and falls back to text parsing when AST parsing fails", () => {
+    const warnings: string[] = [];
+    const functions = extractPythonFunctions(pythonFile(`
+def passthrough(value):
+    return render(value)
+
+if (
+`), {
+      addWarning: (warning) => warnings.push(warning),
+    });
+
+    assert.equal(functions.length, 1);
+    assert.equal(functions[0]?.name, "passthrough");
+    assert.match(warnings[0] ?? "", /could not parse/);
   });
 
   it("detects large Python functions with stable fingerprints and suggestions", async () => {

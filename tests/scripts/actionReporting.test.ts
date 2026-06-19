@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -122,6 +122,41 @@ describe("Action reporting scripts", () => {
 
       const result = spawnSync(process.execPath, ["scripts/emit-github-annotations.mjs", reportPath], {
         cwd: repoRoot,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GITHUB_WORKSPACE: workspace,
+          DEBTLENS_ANNOTATIONS_MAX_COUNT: "5",
+        },
+      });
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /::error file=packages\/app\/src\/App\.tsx,line=4,title=DebtLens high prop-drilling::/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("emits repository-relative annotation paths for scoped working directories", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-annotations-cwd-"));
+    try {
+      const workspace = join(dir, "workspace");
+      const packageDir = join(workspace, "packages", "app");
+      mkdirSync(packageDir, { recursive: true });
+      const reportPath = join(dir, "report.json");
+      const report = makeReport();
+      report.options.target = ".";
+      report.issues = [{
+        ...report.issues[0],
+        file: "src/App.tsx",
+      }];
+      report.summary.totalIssues = 1;
+      report.summary.bySeverity = { high: 1, medium: 0, low: 0, info: 0 };
+      report.summary.byRule = { "prop-drilling": 1, "todo-comment": 0 };
+      writeFileSync(reportPath, JSON.stringify(report), "utf8");
+
+      const result = spawnSync(process.execPath, [join(repoRoot, "scripts/emit-github-annotations.mjs"), reportPath], {
+        cwd: packageDir,
         encoding: "utf8",
         env: {
           ...process.env,

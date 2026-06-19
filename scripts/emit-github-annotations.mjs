@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
 const reportPath = process.argv[2];
@@ -57,11 +57,9 @@ function annotationFilePath(issue, result) {
 
 function repoRelativeTargetPrefix(result) {
   const target = typeof result?.options?.target === "string" ? result.options.target : "";
-  if (!target || target === ".") return "";
-
   const workspacePath = workspaceRoot();
   if (workspacePath) {
-    const targetPath = isAbsolute(target) ? resolve(target) : resolve(process.cwd(), target);
+    const targetPath = isAbsolute(target) ? resolve(target) : resolve(process.cwd(), target || ".");
     if (isPathWithin(workspacePath, targetPath)) {
       const issueRoot = safeIsFile(targetPath) ? dirname(targetPath) : targetPath;
       const targetRelativePath = normalizeWorkflowPath(relative(workspacePath, issueRoot));
@@ -69,13 +67,14 @@ function repoRelativeTargetPrefix(result) {
     }
   }
 
+  if (!target || target === ".") return "";
   if (isAbsolute(target)) return "";
   const normalizedTarget = normalizeWorkflowPath(target).replace(/\/+$/, "");
   return normalizedTarget === "." ? "" : normalizedTarget;
 }
 
 function workspaceRoot() {
-  return process.env.GITHUB_WORKSPACE ? resolve(process.env.GITHUB_WORKSPACE) : "";
+  return process.env.GITHUB_WORKSPACE ? canonicalPath(process.env.GITHUB_WORKSPACE) : "";
 }
 
 function safeIsFile(filePath) {
@@ -87,8 +86,16 @@ function safeIsFile(filePath) {
 }
 
 function isPathWithin(parent, child) {
-  const relativePath = relative(resolve(parent), resolve(child));
+  const relativePath = relative(canonicalPath(parent), canonicalPath(child));
   return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function canonicalPath(filePath) {
+  try {
+    return realpathSync(filePath);
+  } catch {
+    return resolve(filePath);
+  }
 }
 
 function pathStartsWith(filePath, prefix) {

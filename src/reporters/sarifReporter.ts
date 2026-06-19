@@ -1,4 +1,4 @@
-import type { DebtIssue, InlineSuppressionAudit, ScanResult, Severity } from "../core/types.js";
+import type { DebtIssue, InlineSuppressionAudit, ScanResult, Severity, SuppressionDirectiveAudit } from "../core/types.js";
 import { allDetectors } from "../detectors/index.js";
 import { packageVersion } from "../utils/packageInfo.js";
 
@@ -35,6 +35,7 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
   const usedRuleIds = new Set([
     ...result.issues.map((issue) => issue.ruleId),
     ...(result.suppressions ?? []).map((suppression) => suppression.ruleId),
+    ...(result.suppressionDirectives ?? []).map((directive) => directive.ruleId),
   ]);
   const catalog = options.compact
     ? allDetectors.filter((detector) => usedRuleIds.has(detector.id))
@@ -70,6 +71,7 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
     ...result.issues.map((issue) => toSarifResult(issue, ruleIndex)),
     ...(result.suppressions ?? []).map((suppression) => toSarifResult(suppression.issue, ruleIndex, suppression)),
   ];
+  const toolExecutionNotifications = (result.suppressionDirectives ?? []).map(toSarifSuppressionNotification);
 
   const sarif = {
     $schema: "https://json.schemastore.org/sarif-2.1.0.json",
@@ -85,11 +87,47 @@ export function renderSarif(result: ScanResult, options: { compact?: boolean } =
           },
         },
         results,
+        ...(toolExecutionNotifications.length
+          ? { invocations: [{ executionSuccessful: true, toolExecutionNotifications }] }
+          : {}),
       },
     ],
   };
 
   return `${JSON.stringify(sarif, null, 2)}\n`;
+}
+
+function toSarifSuppressionNotification(directive: SuppressionDirectiveAudit) {
+  return {
+    level: directive.status === "unused" || directive.kind === "file" ? "warning" : "note",
+    message: {
+      text: [
+        `Suppression directive ${directive.status}: ${directive.ruleId}`,
+        `kind=${directive.kind}`,
+        `reason=${directive.reason}`,
+        `hidden findings=${directive.suppressedIssueCount}`,
+        `action=${directive.recommendedAction}`,
+      ].join("; "),
+    },
+    locations: [
+      {
+        physicalLocation: {
+          artifactLocation: { uri: directive.file },
+          region: { startLine: directive.directiveLine },
+        },
+      },
+    ],
+    properties: {
+      ruleId: directive.ruleId,
+      kind: directive.kind,
+      reason: directive.reason,
+      status: directive.status,
+      suppressedIssueCount: directive.suppressedIssueCount,
+      recommendedAction: directive.recommendedAction,
+      directiveLine: directive.directiveLine,
+      ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
+    },
+  };
 }
 
 function toSarifResult(

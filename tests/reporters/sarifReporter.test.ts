@@ -129,7 +129,7 @@ describe("sarif reporter", () => {
     assert.equal(suppressed.properties.suppressionDirectiveLine, 12);
   });
 
-  it("does not emit unused suppression directive audits as SARIF results", () => {
+  it("emits suppression directive audits as SARIF tool execution notifications", () => {
     const sarif = JSON.parse(renderSarif({
       ...makeResult([]),
       suppressionDirectives: [{
@@ -146,6 +146,13 @@ describe("sarif reporter", () => {
     }, { compact: true }));
 
     assert.deepEqual(sarif.runs[0].results, []);
-    assert.deepEqual(sarif.runs[0].tool.driver.rules.map((rule: { id: string }) => rule.id), []);
+    assert.deepEqual(sarif.runs[0].tool.driver.rules.map((rule: { id: string }) => rule.id), ["prop-drilling"]);
+    const [notification] = sarif.runs[0].invocations[0].toolExecutionNotifications;
+    assert.equal(notification.level, "note");
+    assert.match(notification.message.text, /Suppression directive not-evaluated: prop-drilling/);
+    assert.equal(notification.locations[0].physicalLocation.artifactLocation.uri, "src/Parent.tsx");
+    assert.equal(notification.locations[0].physicalLocation.region.startLine, 12);
+    assert.equal(notification.properties.status, "not-evaluated");
+    assert.equal(notification.properties.recommendedAction, "Run this rule in the audit scan before deciding whether this suppression is stale.");
   });
 });

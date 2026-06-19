@@ -82,6 +82,11 @@ export function mergeDebtLensConfig(base: DebtLensConfig, override: DebtLensConf
     thresholds: mergeRecord(base.thresholds, override.thresholds),
     vocabulary: mergeRecord(base.vocabulary, override.vocabulary),
     propDrilling: mergeRecord(base.propDrilling, override.propDrilling),
+    duplicatedLiteral: mergeRuleConfigWithStringArray(
+      base.duplicatedLiteral,
+      override.duplicatedLiteral,
+      "ignoreStrings",
+    ),
     namingDrift: mergeRecord(base.namingDrift, override.namingDrift),
     todoComment: mergeRecord(base.todoComment, override.todoComment),
     ruleSeverities: mergeRecord(base.ruleSeverities, override.ruleSeverities),
@@ -115,6 +120,23 @@ export function loadConfigAtPath(configPath: string): DebtLensConfig {
 function mergeRecord<T extends object>(base: T | undefined, override: T | undefined): T | undefined {
   if (!base && !override) return undefined;
   return { ...(base ?? {}), ...(override ?? {}) } as T;
+}
+
+function mergeRuleConfigWithStringArray<
+  T extends Record<string, unknown>,
+  K extends keyof T,
+>(
+  base: T | undefined,
+  override: T | undefined,
+  key: K,
+): T | undefined {
+  const merged = mergeRecord(base, override);
+  const mergedValues = mergeStringArrays(base?.[key] as string[] | undefined, override?.[key] as string[] | undefined);
+  if (!merged && !mergedValues) return undefined;
+  return {
+    ...(merged ?? {}),
+    ...(mergedValues ? { [key]: mergedValues } : {}),
+  } as T;
 }
 
 function stripUndefined(config: DebtLensConfig): DebtLensConfig {

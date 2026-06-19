@@ -15,6 +15,8 @@ export interface RunDetectorOptions {
   namingDriftDisableBuiltInVocabulary?: boolean;
   /** Prop-drilling custom ignore components. */
   propDrillingIgnoreComponents?: string[];
+  /** Duplicated-literal custom string ignores. */
+  duplicatedLiteralIgnoreStrings?: string[];
   /** Todo-comment: replace built-in marker patterns. */
   todoCommentReplaceDefaults?: boolean;
   /** Todo-comment: built-in marker labels to disable. */
@@ -78,6 +80,7 @@ export async function runDetector(
     vocabulary: options.vocabulary,
     namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
     propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
+    duplicatedLiteralIgnoreStrings: options.duplicatedLiteralIgnoreStrings,
     todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
     todoCommentDisableDefaults: options.todoCommentDisableDefaults,
     todoCommentMarkers: options.todoCommentMarkers

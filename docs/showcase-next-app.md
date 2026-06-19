@@ -57,9 +57,9 @@ debtlens scan . \
 | `api-surface-sprawl` | 2 |
 
 The raw count is less important than the signal shape. The highest-value review prompts
-are the repeated Shopify adapter helpers and public API surface checks; repeated framework
-literals such as `"use client"` are expected in App Router apps and are good candidates for
-threshold tuning or confidence floors in a real rollout.
+are the repeated Shopify adapter helpers and public API surface checks. Since this snapshot
+was recorded, the `next` pack has learned to ignore framework directives such as
+`"use client"` for `duplicated-literal`.
 
 ---
 
@@ -107,10 +107,10 @@ signals can help spot when a reusable primitive has become an accidental feature
 
 ### Repeated literals that should be tuned
 
-The largest low-signal item was repeated `"use client"` directives across client files.
-That is expected in App Router code and should usually be handled by threshold tuning,
-rule confidence floors, or a future framework-aware literal ignore. This is a useful
-example of why first adoption should start with a baseline and human review.
+Repeated `"use client"` directives are expected in App Router code. The `next` pack now
+ignores `use client` and `use server` for `duplicated-literal`; projects with their own
+framework or build directives can add exact values under `duplicatedLiteral.ignoreStrings`.
+This is a useful example of why first adoption should start with a baseline and human review.
 
 ---
 
@@ -119,8 +119,9 @@ example of why first adoption should start with a baseline and human review.
 - The `next` pack produced a small, reviewable result set on a public App Router template.
 - The most actionable signals were **duplicate adapter logic** and **public API surface
   size** in the Shopify integration layer.
-- Some findings, especially repeated framework literals, are adoption-tuning material
-  rather than defects.
+- Some findings are adoption-tuning material rather than defects; framework directives
+  can be ignored through `duplicatedLiteral.ignoreStrings` when a pack does not already
+  cover them.
 - A real team should adopt with `--write-baseline`, review only newly introduced findings
   in PRs, and tune per-rule confidence floors before making DebtLens a hard gate.
 

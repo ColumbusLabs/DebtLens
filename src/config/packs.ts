@@ -3,6 +3,9 @@ export interface RulePack {
   description: string;
   rules: string[];
   thresholds?: Record<string, number>;
+  duplicatedLiteral?: {
+    ignoreStrings?: string[];
+  };
 }
 
 const CORE_RULES = [
@@ -116,6 +119,9 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "next",
     description: "React rule pack for Next.js apps with App Router boundary signals.",
     rules: [...NEXT_RULES],
+    duplicatedLiteral: {
+      ignoreStrings: ["use client", "use server"],
+    },
     thresholds: {
       "api-surface-sprawl.maxExports": 14,
       "barrel-file.maxReExports": 8,

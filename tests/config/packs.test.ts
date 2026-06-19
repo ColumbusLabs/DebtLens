@@ -15,6 +15,7 @@ describe("rule packs", () => {
     assert.ok(getRulePack("next").rules.includes("server-client-boundary"));
     assert.ok(getRulePack("next").rules.includes("route-handler-size"));
     assert.ok(getRulePack("next").rules.includes("data-loader-sprawl"));
+    assert.deepEqual(getRulePack("next").duplicatedLiteral?.ignoreStrings, ["use client", "use server"]);
     assert.equal(getRulePack("expo").rules.length, 21);
     assert.ok(getRulePack("node").rules.includes("handler-depth"));
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
@@ -59,6 +60,16 @@ describe("rule packs", () => {
     assert.equal(packOnly.thresholds["rn-host-forwarding.maxForwardedProps"], 6);
     assert.equal(options.thresholds["prop-drilling.maxForwardedProps"], 7);
     assert.equal(options.thresholds["large-component.maxLines"], 180);
+  });
+
+  it("merges pack duplicated-literal ignores below user config", () => {
+    const options = mergeConfig(
+      ".",
+      { pack: "next", duplicatedLiteral: { ignoreStrings: ["runtime constant"] } },
+      { cwd: process.cwd() },
+    );
+
+    assert.deepEqual(options.duplicatedLiteralIgnoreStrings, ["use client", "use server", "runtime constant"]);
   });
 
   it("lets explicit config rules override a pack", () => {

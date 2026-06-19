@@ -17,7 +17,7 @@ interface LiteralBucket {
   files: Set<string>;
 }
 
-const COMMON_STRING_LITERALS = new Set([
+const COMMON_STRING_LITERALS = [
   "",
   "id",
   "key",
@@ -35,7 +35,7 @@ const COMMON_STRING_LITERALS = new Set([
   "loading",
   "error",
   "success",
-]);
+];
 
 const COMMON_NUMBER_LITERALS = new Set(["0", "1", "2", "-1"]);
 
@@ -48,11 +48,12 @@ export const duplicatedLiteralDetector: Detector = {
   detect(context: DetectorContext): DebtIssue[] {
     const minLength = context.getThreshold("duplicated-literal.minLength", 6);
     const minCount = context.getThreshold("duplicated-literal.minCount", 3);
+    const ignoredStringLiterals = buildIgnoredStringLiteralSet(context.options.duplicatedLiteralIgnoreStrings);
     const buckets = new Map<string, LiteralBucket>();
 
     for (const file of context.files) {
       for (const node of file.sourceFile.getDescendants()) {
-        const literal = readLiteral(node, minLength);
+        const literal = readLiteral(node, minLength, ignoredStringLiterals);
         if (!literal || isIgnoredLiteralContext(node)) continue;
 
         const key = `${literal.kind}:${literal.value}`;
@@ -102,11 +103,15 @@ export const duplicatedLiteralDetector: Detector = {
   },
 };
 
-function readLiteral(node: MorphNode, minLength: number): { kind: "string" | "number"; value: string } | undefined {
+function readLiteral(
+  node: MorphNode,
+  minLength: number,
+  ignoredStringLiterals: Set<string>,
+): { kind: "string" | "number"; value: string } | undefined {
   if (Node.isStringLiteral(node) || Node.isNoSubstitutionTemplateLiteral(node)) {
     const text = node.getText();
     const value = text.length >= 2 ? text.slice(1, -1) : text;
-    if (value.length < minLength || COMMON_STRING_LITERALS.has(value)) return undefined;
+    if (value.length < minLength || ignoredStringLiterals.has(value)) return undefined;
     return { kind: "string", value };
   }
 
@@ -117,6 +122,10 @@ function readLiteral(node: MorphNode, minLength: number): { kind: "string" | "nu
   }
 
   return undefined;
+}
+
+function buildIgnoredStringLiteralSet(configuredIgnores: string[] | undefined): Set<string> {
+  return new Set([...COMMON_STRING_LITERALS, ...(configuredIgnores ?? [])]);
 }
 
 function isIgnoredLiteralContext(node: MorphNode): boolean {

@@ -119,6 +119,18 @@ export function buildConfigSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      duplicatedLiteral: {
+        type: "object",
+        description: "Duplicated-literal rule configuration.",
+        properties: {
+          ignoreStrings: {
+            type: "array",
+            items: { type: "string" },
+            description: "Exact string literal values to ignore, such as framework directives.",
+          },
+        },
+        additionalProperties: false,
+      },
       todoComment: {
         type: "object",
         description: "Todo-comment rule configuration.",

@@ -16,7 +16,7 @@ export const pythonComplexControlFlowDetector: Detector = {
     const issues: DebtIssue[] = [];
 
     for (const file of context.files) {
-      for (const fn of extractPythonFunctions(file)) {
+      for (const fn of extractPythonFunctions(file, { addWarning: context.addWarning })) {
         const { complexity, maxDepth: depth } = analyzePythonControlFlow(fn);
         if (complexity < maxComplexity && depth < maxDepth) continue;
         const overage = Math.max(complexity / maxComplexity, depth / maxDepth);

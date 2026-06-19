@@ -14,7 +14,7 @@ export const pythonDeadAbstractionDetector: Detector = {
     const maxWrapperLines = context.getThreshold("dead-abstraction.maxWrapperLines", 8);
 
     for (const file of context.files) {
-      for (const fn of extractPythonFunctions(file)) {
+      for (const fn of extractPythonFunctions(file, { addWarning: context.addWarning })) {
         const lines = fn.endLine - fn.startLine + 1;
         if (lines > maxWrapperLines) continue;
         const wrapper = describePythonWrapper(fn);

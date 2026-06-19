@@ -16,7 +16,7 @@ export const pythonLargeFunctionDetector: Detector = {
     const issues: DebtIssue[] = [];
 
     for (const file of context.files) {
-      for (const fn of extractPythonFunctions(file)) {
+      for (const fn of extractPythonFunctions(file, { addWarning: context.addWarning })) {
         const lines = fn.endLine - fn.startLine + 1;
         const branches = analyzePythonControlFlow(fn).branches;
         if (lines <= maxLines && branches <= maxBranches) continue;

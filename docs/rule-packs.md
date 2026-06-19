@@ -124,6 +124,8 @@ to `.py` files and emits the same `ScanResult` shape as TS/JS rules:
 - **`python-todo-comment`**
 
 Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
+Python function-based rules use a stdlib-`ast` sidecar when `python3` or `python` is
+available, then fall back to conservative text parsing with a scan warning.
 
 ### Kotlin pack (shipped today)
 

@@ -45,6 +45,8 @@ describe("markdown reporter", () => {
     assert.match(md, /^# DebtLens Report/);
     assert.match(md, /Scanned \*\*1\*\* files with \*\*8\*\* rules/);
     assert.match(md, /- Total issues: \*\*1\*\*/);
+    assert.match(md, /## Fix these first/);
+    assert.match(md, /\| `src\/Parent\.tsx` \| 1 high-severity finding \| prop-drilling \(1\) \|/);
     assert.match(md, /## High severity/);
     assert.match(md, /### Prop drilling — `src\/Parent\.tsx:13`/);
     assert.match(md, /Confidence: \*\*73%\*\*/);
@@ -106,6 +108,26 @@ describe("markdown reporter", () => {
     assert.match(md, /## Rule correlations/);
     assert.match(md, /\| `src\/Parent\.tsx` \| prop-drilling \(1\), state-sprawl \(1\) \| 2 \|/);
     assert.match(md, /## Debt heatmap/);
+  });
+
+  it("renders fix targets with duplicate cluster reasons", () => {
+    const result = makeResult([
+      { ...issue, ruleId: "duplicate-logic", ruleName: "Duplicate logic", severity: "medium", file: "src/a.ts" },
+      { ...issue, id: "dl_test_2", ruleId: "state-sprawl", ruleName: "State sprawl", severity: "medium", file: "src/a.ts" },
+    ]);
+    result.summary.duplicateClusters = [{
+      clusterId: "dup_test",
+      issueCount: 1,
+      locations: [
+        { file: "src/a.ts", startLine: 10, endLine: 20 },
+        { file: "src/b.ts", startLine: 30, endLine: 40 },
+      ],
+    }];
+
+    const md = renderMarkdown(result);
+
+    assert.match(md, /## Fix these first/);
+    assert.match(md, /\| `src\/a\.ts` \| 2 medium-severity findings; 2 distinct rules; 1 duplicate cluster \|/);
   });
 
   it("renders duplicate logic clusters", () => {

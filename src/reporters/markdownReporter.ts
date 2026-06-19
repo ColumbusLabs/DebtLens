@@ -1,4 +1,4 @@
-import { buildDebtHeatmap } from "../core/issueAggregates.js";
+import { buildDebtHeatmap, buildFixTargets } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
 import { escapeMarkdownTableCell } from "./markdownEscape.js";
@@ -40,6 +40,8 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
     lines.push("No maintainability debt found at the configured severity level.");
     return `${lines.join("\n")}\n`;
   }
+
+  renderFixTargets(lines, result);
 
   for (const severity of severityOrder) {
     const issues = result.issues.filter((issue) => issue.severity === severity);
@@ -115,6 +117,24 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderFixTargets(lines: string[], result: ScanResult): void {
+  const targets = buildFixTargets(result.issues, {
+    duplicateClusters: result.summary.duplicateClusters,
+    limit: 5,
+  });
+  if (targets.length === 0) return;
+
+  lines.push("");
+  lines.push("## Fix these first");
+  lines.push("");
+  lines.push("| File | Why | Top rules |");
+  lines.push("| --- | --- | --- |");
+  for (const target of targets) {
+    const topRules = target.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+    lines.push(`| \`${escapeMarkdownTableCell(target.file)}\` | ${escapeMarkdownTableCell(target.reasons.join("; "))} | ${escapeMarkdownTableCell(topRules)} |`);
+  }
 }
 
 function renderSuppressionAudit(lines: string[], result: ScanResult): void {

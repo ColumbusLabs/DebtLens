@@ -120,6 +120,18 @@ inputs:
   comment:
     description: Post or update a pull request comment with the scan report.
     default: "false"
+  comment-max-findings:
+    description: PR comment only - maximum detailed findings before omitted findings are summarized. Leave empty to rely on the byte cap.
+    default: ""
+  comment-max-bytes:
+    description: PR comment only - maximum rendered comment size in bytes.
+    default: "60000"
+  comment-full-report-url:
+    description: PR comment only - optional URL for the full report artifact when findings are omitted.
+    default: ""
+  comment-fail-on-error:
+    description: Fail the Action when PR comment posting fails. Defaults to warn-only for fork and permission-limited PRs.
+    default: "false"
 
 runs:
   using: composite
@@ -173,6 +185,10 @@ runs:
         DL_COMMENT: ${{ inputs.comment }}
         DL_PREVIOUS_REPORT: ${{ inputs.previous-report }}
         DL_COMMENT_DELTA_ONLY: ${{ inputs.comment-delta-only }}
+        DL_COMMENT_MAX_FINDINGS: ${{ inputs.comment-max-findings }}
+        DL_COMMENT_MAX_BYTES: ${{ inputs.comment-max-bytes }}
+        DL_COMMENT_FULL_REPORT_URL: ${{ inputs.comment-full-report-url }}
+        DL_COMMENT_FAIL_ON_ERROR: ${{ inputs.comment-fail-on-error }}
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
@@ -244,6 +260,9 @@ runs:
         export DEBTLENS_SARIF_COMPACT="$DL_SARIF_COMPACT"
         export DEBTLENS_MARKDOWN_HEATMAP="$DL_MARKDOWN_HEATMAP"
         export DEBTLENS_PR_COMMENT_DELTA_ONLY="$DL_COMMENT_DELTA_ONLY"
+        export DEBTLENS_PR_COMMENT_MAX_FINDINGS="$DL_COMMENT_MAX_FINDINGS"
+        export DEBTLENS_PR_COMMENT_MAX_BYTES="$DL_COMMENT_MAX_BYTES"
+        export DEBTLENS_PR_COMMENT_FULL_REPORT_URL="$DL_COMMENT_FULL_REPORT_URL"
 
         if [ "$DL_FORMAT" = "json" ]; then
           if [ -n "$DL_OUTPUT" ]; then
@@ -263,7 +282,7 @@ runs:
         if [ "$DL_COMMENT" = "true" ]; then
           comment_output="$RUNNER_TEMP/debtlens-pr-comment.md"
           node "$GITHUB_ACTION_PATH/scripts/render-scan-result.mjs" "$internal_json" pr-comment "$comment_output"
-          node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$comment_output"
+          DEBTLENS_COMMENT_FAIL_ON_ERROR="$DL_COMMENT_FAIL_ON_ERROR" node "$GITHUB_ACTION_PATH/scripts/post-pr-comment.mjs" "$comment_output"
         fi
 
         echo "scan-status=$scan_status" >> "$GITHUB_OUTPUT"

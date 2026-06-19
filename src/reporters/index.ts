@@ -15,13 +15,24 @@ export interface RenderReportOptions {
   sarifCompact?: boolean;
   markdownHeatmapLimit?: number;
   prCommentDeltaOnly?: boolean;
+  prCommentMaxFindings?: number;
+  prCommentMaxBytes?: number;
+  prCommentArtifactLink?: string;
   previousResult?: ScanResult;
 }
 
 export function renderReport(result: ScanResult, format: OutputFormat, options: RenderReportOptions = {}): string {
   if (format === "json") return renderJson(result);
   if (format === "markdown") return renderMarkdown(result, { heatmapLimit: options.markdownHeatmapLimit });
-  if (format === "pr-comment") return renderPrComment(result, { sourceUrlBase: options.sourceUrlBase, deltaOnly: options.prCommentDeltaOnly });
+  if (format === "pr-comment") {
+    return renderPrComment(result, {
+      sourceUrlBase: options.sourceUrlBase,
+      deltaOnly: options.prCommentDeltaOnly,
+      maxFindings: options.prCommentMaxFindings,
+      maxBytes: options.prCommentMaxBytes,
+      artifactLink: options.prCommentArtifactLink,
+    });
+  }
   if (format === "sarif") return renderSarif(result, { compact: options.sarifCompact });
   if (format === "html") return renderHtml(result);
   if (format === "junit") return renderJunit(result);

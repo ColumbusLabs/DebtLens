@@ -10,6 +10,13 @@ Scanned **3** files with **26** rules in **174ms**.
 - Low: **4**
 - Info: **0**
 
+## Fix these first
+
+| File | Why | Top rules |
+| --- | --- | --- |
+| `src/Dashboard.tsx` | 1 high-severity finding; 2 medium-severity findings; 5 distinct rules | dead-abstraction (3), effect-complexity (1), prop-drilling (1) |
+| `src/duplicateOne.ts` | 1 high-severity finding; 1 duplicate cluster | duplicate-logic (1) |
+
 ## High severity
 
 ### Prop drilling — `src/Dashboard.tsx:13`

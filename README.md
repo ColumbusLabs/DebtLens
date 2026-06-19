@@ -222,6 +222,9 @@ Options:
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
+--pr-comment-max-findings <count>  PR comment only: cap detailed findings
+--pr-comment-max-bytes <count>     PR comment only: cap rendered body bytes
+--pr-comment-full-report-url <url> PR comment only: link omitted findings to a full report
 ```
 
 Examples:
@@ -238,6 +241,9 @@ debtlens scan --format markdown --output debtlens-report.md
 
 # Create a compact grouped PR comment body
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
+
+# Keep a busy PR comment compact while linking to the full report
+debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-bytes 60000 --pr-comment-full-report-url "$DEBTLENS_REPORT_URL" --output debtlens-pr-comment.md
 
 # Create HTML and JUnit reports for CI artifacts
 debtlens scan --format html --output reports/debtlens.html
@@ -538,13 +544,14 @@ guidance.
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with collapsible per-file sections for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards. HTML is a self-contained human report; JUnit XML is for CI systems that expect test-style failures.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards. HTML is a self-contained human report; JUnit XML is for CI systems that expect test-style failures.
 
 ```bash
 debtlens scan --format json
 debtlens scan --audit-suppressions --format markdown
 debtlens scan --format markdown --markdown-heatmap 10 --output reports/debtlens.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
+debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-bytes 60000 --output debtlens-pr-comment.md
 debtlens scan --format sarif --sarif-compact --output debtlens.sarif
 debtlens scan --format html --output reports/debtlens.html
 debtlens scan --format junit --output reports/debtlens.junit.xml
@@ -588,7 +595,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 
@@ -692,7 +699,7 @@ For local hooks, see [pre-commit hooks](./docs/pre-commit.md). For monorepo roll
 For shared organization policy, see [policy packs as npm packages](./docs/policy-packages.md). For hosted GitHub integration tradeoffs, see the [GitHub App RFC](./docs/github-app-rfc.md).
 For agent integrations, see the [MCP server setup](./docs/mcp.md).
 
-Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`):
+Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`). Comment posting is warn-only by default so forked or permission-limited pull requests can still produce artifacts and annotations; set `comment-fail-on-error: true` when a missing comment should fail the Action.
 
 ```yaml
 permissions:
@@ -705,8 +712,12 @@ permissions:
     diff-base: origin/${{ github.base_ref }}
     comment: true
     comment-delta-only: true
+    comment-max-findings: 20
+    comment-max-bytes: 60000
     fail-on: high
 ```
+
+PR comment source links use the pull request head SHA when the workflow event provides it, falling back to `GITHUB_SHA` for push and other events. Use `comment-full-report-url` when capped comments should point reviewers to the complete Markdown, JSON, or HTML artifact.
 
 For very large monorepos, keep the first Action rollout intentionally narrow.
 Diff against the pull request base, limit to the package or changed files you

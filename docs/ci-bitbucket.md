@@ -1,12 +1,18 @@
 # Bitbucket Pipelines
 
 This template publishes the canonical JSON report, posts a Bitbucket Code
-Insights report with inline annotations, and gates high-severity findings.
+Insights report with inline annotations, and demonstrates the named quality-gate
+presets: `advisory`, `new-code`, `strict-new-code`, and `legacy-baseline`.
 
 Replace `npm ci` with `pnpm install --frozen-lockfile`, `yarn install --immutable`, or a preinstalled `debtlens` binary when your project does not use npm.
+Use a full clone or fetch the destination branch before running `--diff-base`
+so refs such as `origin/$BITBUCKET_PR_DESTINATION_BRANCH` are available to git.
 
 ```yaml
 image: node:20
+
+clone:
+  depth: full
 
 pipelines:
   pull-requests:
@@ -17,9 +23,10 @@ pipelines:
             - node
           script:
             - npm ci
+            - git fetch origin "$BITBUCKET_PR_DESTINATION_BRANCH"
             - |
               set +e
-              npx debtlens scan . --format json --output debtlens-report.json --fail-on high
+              npx debtlens scan . --gate new-code --diff-base "origin/$BITBUCKET_PR_DESTINATION_BRANCH" --format json --output debtlens-report.json
               status=$?
               DEBTLENS_BITBUCKET_ANNOTATIONS_MAX_COUNT=100 \
                 node node_modules/debtlens/scripts/post-bitbucket-code-insights.mjs debtlens-report.json
@@ -31,6 +38,13 @@ pipelines:
           artifacts:
             - debtlens-report.json
 ```
+
+For an advisory first rollout, use `--gate advisory` and keep the Code Insights
+report visible without blocking pull requests. For mature repositories, commit a
+reviewed baseline and use `--gate legacy-baseline --baseline debtlens-baseline.json`.
+After teams have tuned rules and pruned accepted legacy findings, move either lane to
+`--gate strict-new-code --diff-base "origin/$BITBUCKET_PR_DESTINATION_BRANCH"` so
+medium+ new findings and count regressions block the pull request.
 
 The Code Insights helper reads the canonical JSON report, creates or updates a
 commit report at `reports/debtlens`, and bulk-posts annotations with stable

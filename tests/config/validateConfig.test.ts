@@ -17,6 +17,16 @@ describe("validateConfigShape", () => {
     assert.match(result.errors.join("\n"), /pack must be one or more of/);
   });
 
+  it("accepts known gate presets and rejects unknown gate presets", () => {
+    const valid = validateConfigShape({ gatePreset: "strict-new-code" });
+    const invalid = validateConfigShape({ gatePreset: "block-everything" });
+
+    assert.equal(valid.valid, true);
+    assert.deepEqual(valid.errors, []);
+    assert.equal(invalid.valid, false);
+    assert.match(invalid.errors.join("\n"), /gatePreset must be one of advisory, new-code, strict-new-code, legacy-baseline/);
+  });
+
   it("accepts duplicated-literal ignore config", () => {
     const result = validateConfigShape({
       duplicatedLiteral: {

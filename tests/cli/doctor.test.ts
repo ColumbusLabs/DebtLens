@@ -223,6 +223,21 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, new RegExp(`Min severity: root config \\(${escapeRegex(configPath)}\\)`));
   });
 
+  it("shows quality gate preset behavior and provenance", () => {
+    const configPath = join(dir, "debtlens.config.json");
+    writeFileSync(configPath, JSON.stringify({
+      gatePreset: "advisory",
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir, "--gate", "strict-new-code", "--provenance"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Gate preset: strict-new-code - Gate medium\+ findings on new code/);
+    assert.match(result.stdout, /Defaults: --diff-base origin\/main --fail-on medium --fail-on-confidence 0\.8 --fail-on-regression/);
+    assert.match(result.stdout, /Gate preset: CLI --gate/);
+    assert.doesNotMatch(result.stdout, new RegExp(`Gate preset: root config \\(${escapeRegex(configPath)}\\)`));
+  });
+
   it("shows package-level config provenance for workspace doctor runs", () => {
     mkdirSync(join(dir, "packages", "pkg-a", "src"), { recursive: true });
     writeFileSync(join(dir, "package.json"), JSON.stringify({

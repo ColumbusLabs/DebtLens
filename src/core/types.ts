@@ -3,6 +3,7 @@ import type { Project, SourceFile } from "ts-morph";
 export type Severity = "info" | "low" | "medium" | "high";
 export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit" | "gitlab-codequality";
 export type TerminalGroupBy = "severity" | "rule" | "file";
+export type GatePreset = "advisory" | "new-code" | "strict-new-code" | "legacy-baseline";
 
 export interface IssueLocation {
   startLine: number;
@@ -87,6 +88,8 @@ export interface DebtLensConfig {
   failOn?: Severity;
   /** Exit with code 1 only when a reported issue meets `--fail-on` and this confidence floor. */
   failOnConfidence?: number;
+  /** Named quality-gate rollout preset. Explicit CLI/config gate flags can override its defaults. */
+  gatePreset?: GatePreset;
   /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
   ruleSeverities?: Record<string, Severity>;
   /** Rule id -> minimum confidence; issues from that rule below the floor are not reported. */
@@ -154,6 +157,7 @@ export interface CliOptions {
   output?: string;
   failOn?: Severity;
   failOnConfidence?: number;
+  gatePreset?: GatePreset;
   configPath?: string;
   noColor?: boolean;
   changedFiles?: string[];

@@ -35,6 +35,8 @@ build or pinned Action tag.
 npx debtlens scan
 npx debtlens scan src --format markdown
 npx debtlens scan --min-severity medium --fail-on high
+npx debtlens scan --gate advisory
+npx debtlens scan --gate new-code
 npx debtlens scan --rules duplicates,state,effects
 ```
 
@@ -201,6 +203,7 @@ Options:
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
 --fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
+--gate <preset>                advisory, new-code, strict-new-code, or legacy-baseline
 --fail-on-regression           exit 1 when issue counts increase vs --baseline or --diff-base
 --baseline <path>              report only issues absent from this baseline file
 --diff-base <ref>              report only findings introduced since this git ref
@@ -260,6 +263,12 @@ debtlens adopt . --package web --format markdown
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
 debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
 
+# Named quality-gate presets for Clean-as-You-Code adoption
+debtlens scan --gate advisory
+debtlens scan --gate new-code --diff-base origin/main
+debtlens scan --gate strict-new-code --diff-base origin/main
+debtlens scan --gate legacy-baseline --baseline debtlens-baseline.json
+
 # Tune component-size threshold
 debtlens scan --threshold "large-component.maxLines=320,state-sprawl.maxStatefulHooks=8"
 
@@ -309,6 +318,17 @@ debtlens adopt --write-config --write-baseline --force
 ```
 
 The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). For established repositories, follow the generated plan's baseline or `--diff-base` CI commands so pull requests focus on newly introduced debt; add `--fail-on-regression` when you want count increases to fail as well.
+
+Named quality-gate presets give teams a shared rollout vocabulary:
+
+| Preset | Use when | Default behavior |
+| --- | --- | --- |
+| `advisory` | First rollout, tuning, or report-only jobs | Reports findings without adding a blocking gate |
+| `new-code` | Pull requests after reviewers trust the signal | Gates high-severity findings introduced since `origin/main` |
+| `legacy-baseline` | Mature repos with accepted historical debt | Gates findings outside `debtlens-baseline.json` and count regressions |
+| `strict-new-code` | Teams ready to block medium+ new debt | Gates medium+ new findings with confidence >= 0.8 and count regressions |
+
+Migrate in two lanes. Clean or near-clean repositories usually start with `--gate advisory`, move to `--gate new-code --diff-base origin/main`, then tighten to `--gate strict-new-code` after false positives and ownership are settled. Legacy repositories usually create and review `debtlens-baseline.json`, run `--gate legacy-baseline`, prune the baseline as debt is fixed, and use `--gate strict-new-code` for pull requests once the team is ready to block medium-severity new debt. Use explicit `--diff-base`, `--baseline`, `--fail-on`, or `--fail-on-confidence` flags when your branch names or severity policy differ from the preset defaults.
 
 Baseline fingerprints are stable across line shifts, so moving existing code up or down does not resurface already-recorded debt — only genuinely new issues are reported. The JSON reporter exposes the same line-stable value as both `id` and `fingerprint` in ScanResult schema v1.
 
@@ -592,17 +612,20 @@ jobs:
           format: sarif
           output: debtlens.sarif
           sarif-category: debtlens-pr
+          gate: new-code
+          diff-base: origin/${{ github.base_ref }}
           upload-json-artifact: true
           thresholds: large-component.maxLines=300
           quiet: true
-          fail-on: high
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `sarif-category`, `junit-fail-on`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `gate`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `sarif-category`, `junit-fail-on`, `markdown-heatmap`, `step-summary`, `annotations`, `annotations-max-count`, `comment`, `comment-delta-only`, `comment-max-findings`, `comment-max-bytes`, `comment-full-report-url`, and `comment-fail-on-error`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action passes `gate` to normal scans, but not to `write-baseline` mode, so baseline creation remains a snapshot operation. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+
+For GitHub-specific preset recipes, including advisory, new-code, legacy-baseline, and strict-new-code migrations, see [`docs/ci-github.md`](./docs/ci-github.md).
 
 Action outputs include `scan-status`, `gate-status`, `total-issues`, `high-issues`, `medium-issues`, `low-issues`, `info-issues`, `top-rule`, `top-rule-count`, `json-path`, `json-artifact-name`, `report-path`, and `report-format`. Give the Action step an `id` to use them in later steps:
 

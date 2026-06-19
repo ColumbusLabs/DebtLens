@@ -5,6 +5,7 @@ import { parseSeverity } from "../../core/severity.js";
 import { detectorIds } from "../../detectors/index.js";
 import { getChangedFiles, getStagedFiles } from "../../utils/git.js";
 import { runDoctor } from "../doctor.js";
+import { gatePresets, parseGatePreset } from "../../core/gatePresets.js";
 import { parseCommaList, parseInteger, parseRuleList, parseThresholds } from "../parse.js";
 
 export interface DoctorCommandResult {
@@ -23,6 +24,7 @@ export function registerDoctorCommand(program: Command): void {
     .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
     .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
     .option("--max-files <count>", "maximum files to scan", parseInteger)
+    .option("--gate <preset>", `named quality gate preset (${gatePresets.join(", ")})`)
     .option("--baseline <path>", "baseline path to report (not loaded)")
     .option("--changed [ref]", "include git changed-file diagnostics")
     .option("--staged", "include git staged-file diagnostics")
@@ -83,6 +85,7 @@ export async function runDoctorCommand(target: string, rawOptions: Record<string
     configPath: rawOptions.config ? String(rawOptions.config) : undefined,
     packageName: rawOptions.package ? String(rawOptions.package) : undefined,
     baselinePath: rawOptions.baseline ? String(rawOptions.baseline) : undefined,
+    gatePreset: rawOptions.gate ? parseGatePreset(String(rawOptions.gate)) : undefined,
     usedChanged: rawOptions.changed !== undefined,
     usedStaged: rawOptions.staged === true,
     changedIgnored,
@@ -100,6 +103,7 @@ export async function runDoctorCommand(target: string, rawOptions: Record<string
         : undefined,
       thresholds: parseThresholds(rawOptions.threshold as string | undefined),
       maxFiles: rawOptions.maxFiles as number | undefined,
+      gatePreset: rawOptions.gate ? parseGatePreset(String(rawOptions.gate)) : undefined,
       respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
       changedFiles,
     },
@@ -111,6 +115,7 @@ export async function runDoctorCommand(target: string, rawOptions: Record<string
       rules: rawOptions.rules !== undefined,
       thresholds: rawOptions.threshold !== undefined,
       maxFiles: rawOptions.maxFiles !== undefined,
+      gatePreset: rawOptions.gate !== undefined,
       respectGitignore: rawOptions.respectGitignore === true,
     },
     showProvenance: rawOptions.provenance === true,

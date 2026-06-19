@@ -90,6 +90,19 @@ const cases: CalibrationCase[] = [
       "python-todo-comment": 1,
     },
   },
+  {
+    id: "examples-python-web",
+    target: "examples/python-web",
+    minSeverity: "info",
+    minIssuesByRule: {
+      "python-route-sprawl": 1,
+    },
+    maxIssuesByRule: {
+      "python-route-sprawl": 1,
+      "python-duplicate-logic": 5,
+      "python-dead-abstraction": 9,
+    },
+  },
 ];
 
 const falsePositiveCases = [
@@ -111,13 +124,15 @@ describe("calibrated quality fixtures", () => {
       const result = await scan({
         cwd: process.cwd(),
         target: resolve(calibration.target),
-        include: calibration.id === "examples-python" ? ["**/*.py"] : defaultConfig.include,
+        include: calibration.id.startsWith("examples-python") ? ["**/*.py"] : defaultConfig.include,
         exclude: defaultConfig.exclude,
         minSeverity: calibration.minSeverity,
         rules: calibration.id === "examples-node-api-core"
           ? getRulePack("core").rules
           : calibration.id === "examples-python"
             ? getRulePack("python").rules
+            : calibration.id === "examples-python-web"
+              ? getRulePack("python-web").rules
             : undefined,
         thresholds: defaultConfig.thresholds,
         maxFiles: defaultConfig.maxFiles,

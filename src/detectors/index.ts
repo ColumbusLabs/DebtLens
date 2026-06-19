@@ -23,6 +23,7 @@ import {
   pythonDeadAbstractionDetector,
   pythonDuplicateLogicDetector,
   pythonLargeFunctionDetector,
+  pythonRouteSprawlDetector,
   pythonTodoCommentDetector,
 } from "./python/index.js";
 import { rnHostForwardingDetector } from "./rnHostForwarding.js";
@@ -67,6 +68,7 @@ export const allDetectors: Detector[] = [
   pythonComplexControlFlowDetector,
   pythonDuplicateLogicDetector,
   pythonDeadAbstractionDetector,
+  pythonRouteSprawlDetector,
   kotlinTodoCommentDetector,
   kotlinLargeFunctionDetector,
   kotlinDuplicateLogicDetector,

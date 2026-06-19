@@ -47,6 +47,7 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
     "handler-depth.maxDepth": 4,
     "handler-depth.maxMiddleware": 5,
     "route-sprawl.maxRoutes": 8,
+    "python-route-sprawl.maxRoutes": 8,
     "duplicate-logic.minSimilarity": 0.86,
     "duplicate-logic.minLines": 8,
     "duplicate-logic.maxSnippets": 450,

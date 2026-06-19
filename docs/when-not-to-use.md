@@ -1,7 +1,7 @@
 # When Not To Use DebtLens
 
 DebtLens is a maintainability signal scanner for TypeScript, JavaScript, Python, Kotlin,
-and Jetpack Compose with framework packs for React, React Native, Next.js, Expo, and Node. It is useful when a team
+and Jetpack Compose with framework packs for React, React Native, Next.js, Expo, Node, and Python web. It is useful when a team
 wants review prompts for code shape, baseline drift, and CI rollout discipline. It is not
 the right tool for every repository.
 

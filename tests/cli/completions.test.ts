@@ -29,7 +29,9 @@ describe("debtlens completions", () => {
     assert.match(result.stdout, /--dry-run/);
     assert.match(result.stdout, /--audit-suppressions/);
     assert.match(result.stdout, /prop-drilling/);
+    assert.match(result.stdout, /python-route-sprawl/);
     assert.match(result.stdout, /react-native/);
+    assert.match(result.stdout, /python-web/);
     assert.match(result.stdout, /markdown/);
     assert.match(result.stdout, /high/);
   });

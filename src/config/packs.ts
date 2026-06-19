@@ -87,6 +87,11 @@ const PYTHON_RULES = [
   "python-todo-comment",
 ] as const;
 
+const PYTHON_WEB_RULES = [
+  ...PYTHON_RULES,
+  "python-route-sprawl",
+] as const;
+
 const KOTLIN_RULES = [
   "kotlin-duplicate-logic",
   "kotlin-large-function",
@@ -163,6 +168,15 @@ export const RULE_PACKS: Record<string, RulePack> = {
     description: "Core Python maintainability rules for duplicate functions, large and branch-heavy functions, thin wrappers, and debt comments.",
     rules: [...PYTHON_RULES],
     languages: ["python"],
+  },
+  "python-web": {
+    id: "python-web",
+    description: "Python web framework rules for Flask, Blueprint, and Django URL route ownership.",
+    rules: [...PYTHON_WEB_RULES],
+    languages: ["python"],
+    thresholds: {
+      "python-route-sprawl.maxRoutes": 8,
+    },
   },
   kotlin: {
     id: "kotlin",

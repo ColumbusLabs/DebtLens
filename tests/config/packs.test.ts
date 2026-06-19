@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 11);
+    assert.equal(packs.length, 12);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
@@ -28,6 +28,16 @@ describe("rule packs", () => {
       "python-todo-comment",
     ]);
     assert.deepEqual(getRulePack("python").languages, ["python"]);
+    assert.deepEqual(getRulePack("python-web").rules, [
+      "python-duplicate-logic",
+      "python-large-function",
+      "python-complex-control-flow",
+      "python-dead-abstraction",
+      "python-todo-comment",
+      "python-route-sprawl",
+    ]);
+    assert.deepEqual(getRulePack("python-web").languages, ["python"]);
+    assert.equal(getRulePack("python-web").thresholds?.["python-route-sprawl.maxRoutes"], 8);
     assert.deepEqual(getRulePack("kotlin").rules, [
       "kotlin-duplicate-logic",
       "kotlin-large-function",
@@ -89,11 +99,12 @@ describe("rule packs", () => {
   });
 
   it("combines comma-separated packs and widens includes for language packs", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python,kotlin,compose" });
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python-web,kotlin,compose" });
 
-    assert.equal(options.pack, "core,python,kotlin,compose");
+    assert.equal(options.pack, "core,python-web,kotlin,compose");
     assert.ok(options.rules?.includes("todo-comment"));
     assert.ok(options.rules?.includes("python-todo-comment"));
+    assert.ok(options.rules?.includes("python-route-sprawl"));
     assert.ok(options.rules?.includes("kotlin-todo-comment"));
     assert.ok(options.rules?.includes("compose-large-composable"));
     assert.ok(options.include.includes("**/*.py"));
@@ -126,7 +137,7 @@ describe("rule packs", () => {
   });
 
   it("derives pack includes from language metadata", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "python,compose" });
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "python-web,compose" });
 
     assert.deepEqual(options.rules, [
       "python-duplicate-logic",
@@ -134,6 +145,7 @@ describe("rule packs", () => {
       "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
+      "python-route-sprawl",
       "compose-large-composable",
       "compose-state-hoisting",
     ]);

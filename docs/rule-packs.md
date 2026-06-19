@@ -10,7 +10,7 @@ The product splits into layers:
    reporters, config, CI, and GitHub Action integration.
 2. **Core rules** — detectors that apply to most TS/JS projects regardless of UI framework.
 3. **Framework and language packs** — optional rule groups and tuning for React, React
-   Native, Next.js, Expo, Node APIs, Python, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
+   Native, Next.js, Expo, Node APIs, Python, Python web apps, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
    such as Vue, Svelte, Swift, and Ruby follow the same model.
 
 Today all TS/JS built-in rules run together by default, while non-TS/JS discovery is
@@ -56,6 +56,7 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `python-complex-control-flow` | **python** | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
+| `python-route-sprawl` | **python-web** | Flask/Blueprint or Django URL modules registering too many routes | Medium |
 | `kotlin-duplicate-logic` | **kotlin** | Near-duplicate Kotlin functions using normalized function-body similarity | Medium |
 | `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
 | `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
@@ -127,6 +128,18 @@ Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 Python function-based rules use a stdlib-`ast` sidecar when `python3` or `python` is
 available, then fall back to conservative text parsing with a scan warning.
 
+### Python web pack (shipped today)
+
+The `python-web` pack combines core Python rules with route ownership checks for common
+Flask, Blueprint, and Django URL module shapes:
+
+- **`python-route-sprawl`**
+
+Use `--pack python-web` for Python web services. It includes the core Python rules from
+`python`; use explicit `--rules python-route-sprawl` if you only want the route-count
+check. Django URLConf route counting is conservative; class-based view resolution and
+import alias analysis are out of scope.
+
 ### Kotlin pack (shipped today)
 
 The `kotlin` pack declares Kotlin discovery metadata, which widens discovery to `.kt`
@@ -166,6 +179,7 @@ and Compose UI debt.
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
 | `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO debt | **Shipped** |
+| `python-web` | Flask/Blueprint and Django URL route ownership | **Shipped** |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
@@ -186,7 +200,7 @@ follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
+| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
 | **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 
@@ -234,6 +248,9 @@ debtlens scan --pack node
 
 # Python sources
 debtlens scan examples/python --pack python
+
+# Python web routes
+debtlens scan examples/python-web --pack python-web
 
 # Mixed TS/JS plus Python scan
 debtlens scan . --pack core,python

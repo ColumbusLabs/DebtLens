@@ -51,6 +51,9 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **Python web pack** with `python-route-sprawl` for Flask/Blueprint decorators and
+  conservative Django URLConf route-count checks, plus examples and docs for
+  `--pack python-web` ([#191](https://github.com/ColumbusLabs/DebtLens/issues/191)).
 - **Python AST sidecar prototype** for function, class, import, decorator, async,
   method, and nested-function metadata with warning-based fallback to text parsing when
   Python is unavailable or a file cannot be parsed ([#189](https://github.com/ColumbusLabs/DebtLens/issues/189)).

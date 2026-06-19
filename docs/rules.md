@@ -419,6 +419,37 @@ When this is a false positive:
 
 Confidence: **0.80**. Route call counting is direct, but API shape is project-specific.
 
+## `python-route-sprawl`
+
+Flags Python web modules that register too many routes in one file. The first version
+counts Flask app and Blueprint decorators such as `@app.get(...)`, `@bp.post(...)`, and
+`@app.route(..., methods=[...])`, plus conservative Django URLConf `path(...)` and
+`re_path(...)` entries.
+
+Default threshold:
+
+- `python-route-sprawl.maxRoutes`: 8
+
+Why it matters: route-heavy modules become ownership hotspots for authentication,
+validation, response shape, and framework wiring. Splitting by resource or workflow makes
+future review smaller and safer.
+
+Good fixes:
+
+- split Flask blueprints by resource or workflow
+- move Django URL groups into app-local `urls.py` modules
+- move shared auth, validation, or serialization into named helpers
+- keep generated route maps separate from hand-owned controller code
+
+When this is a false positive:
+
+- the route map is generated from an API spec
+- many decorators are a deliberate compatibility shim
+- decorator-like APIs such as caches or task queues are not HTTP route registrations
+
+Confidence: **0.78**. Decorator and URLConf counting is direct, but framework ownership
+boundaries are project-specific.
+
 ## `duplicate-logic`
 
 Finds structurally similar functions/components after comments, identifiers, strings, and numeric literals are normalized.

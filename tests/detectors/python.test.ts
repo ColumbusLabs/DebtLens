@@ -12,6 +12,7 @@ import {
   pythonDeadAbstractionDetector,
   pythonDuplicateLogicDetector,
   pythonLargeFunctionDetector,
+  pythonRouteSprawlDetector,
   pythonTodoCommentDetector,
 } from "../../src/detectors/python/index.js";
 import { extractPythonFunctions, extractPythonModule } from "../../src/detectors/python/parse.js";
@@ -353,6 +354,168 @@ def classify_invoice(
     assert.equal(largeIssues[0]?.location?.startLine, 2);
     assert.equal(controlFlowIssues.length, 1);
     assert.equal(controlFlowIssues[0]?.location?.startLine, 2);
+  });
+
+  it("flags Flask modules with too many decorator-backed routes", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/accounts.py": `
+from flask import Blueprint
+
+bp = Blueprint("accounts", __name__)
+
+@bp.get("/accounts")
+def list_accounts():
+    return "ok"
+
+@bp.post("/accounts")
+def create_account():
+    return "ok"
+
+@bp.get("/accounts/<account_id>")
+def show_account(account_id):
+    return "ok"
+
+@bp.patch("/accounts/<account_id>")
+def update_account(account_id):
+    return "ok"
+
+@bp.delete("/accounts/<account_id>")
+def delete_account(account_id):
+    return "ok"
+
+@bp.post("/accounts/<account_id>/archive")
+def archive_account(account_id):
+    return "ok"
+
+@bp.post("/accounts/<account_id>/restore")
+def restore_account(account_id):
+    return "ok"
+
+@bp.get("/accounts/<account_id>/events")
+def list_events(account_id):
+    return "ok"
+
+@bp.post("/accounts/<account_id>/events")
+def create_event(account_id):
+    return "ok"
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-route-sprawl");
+    assert.match(issues[0]?.message ?? "", /registers 9 Python web routes/);
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("GET /accounts")));
+  });
+
+  it("counts Flask route decorators with configured methods", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/sessions.py": `
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route(rule="/sessions", methods=["GET", "POST"])
+def sessions():
+    return "ok"
+
+@app.route(rule="/sessions/<id>", methods=["DELETE"])
+def session_detail(id):
+    return "ok"
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 2 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("GET,POST /sessions")));
+  });
+
+  it("recognizes named Flask Blueprint receivers without counting cache decorators", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/billing.py": `
+from flask import Blueprint
+
+accounts = Blueprint("accounts", __name__)
+
+@accounts.get("/accounts")
+def accounts_index():
+    return "ok"
+
+@cache.get("/accounts")
+def cached_accounts():
+    return []
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 1 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.deepEqual(issues[0]?.evidence, ["GET /accounts at line 6"]);
+  });
+
+  it("does not count unbound api or router clients as Flask route receivers", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/tasks.py": `
+from flask import Flask
+
+app = Flask(__name__)
+
+@api.get("/remote/accounts")
+def remote_accounts():
+    return []
+
+@router.post("/jobs")
+def enqueue_job():
+    return "ok"
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 1 },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("keeps small Python web route modules quiet", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/routes/health.py": `
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.get("/health")
+def health():
+    return "ok"
+
+@cache.get("/health")
+def recent_invoices():
+    return []
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("counts conservative Django URLConf route registrations", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/urls.py": `
+from django.urls import path, re_path
+from . import views
+
+urlpatterns = [
+    path("accounts/", views.accounts),
+    path("accounts/create/", views.create_account),
+    path("accounts/<uuid:account_id>/", views.account_detail),
+    re_path(r"^accounts/(?P<account_id>[^/]+)/archive/$", views.archive_account),
+]
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 4 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-route-sprawl");
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_PATH accounts/")));
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_RE_PATH ^accounts/")));
   });
 
   it("does not flag Python wrappers that add behavior", async () => {

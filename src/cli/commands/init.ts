@@ -9,6 +9,7 @@ export function registerInitCommand(program: Command): void {
     .description("Create a starter debtlens.config.json in the current directory.")
     .option("--force", "overwrite an existing config file")
     .option("--pack <pack>", `built-in rule pack preset (${RULE_PACK_IDS.join(", ")})`)
+    .option("--policy <package-or-path>", "policy package name or local plugin module path")
     .option("--from-eslint <path>", "print a suggested config from an ESLint JSON config without writing")
     .option("--cwd <path>", "working directory", process.cwd())
     .action((rawOptions: Record<string, unknown>) => {
@@ -20,7 +21,8 @@ export function registerInitCommand(program: Command): void {
         }
 
         const pack = rawOptions.pack ? String(rawOptions.pack) : undefined;
-        const result = runInit(cwd, rawOptions.force === true, pack);
+        const policy = rawOptions.policy ? String(rawOptions.policy) : undefined;
+        const result = runInit(cwd, rawOptions.force === true, pack, {}, policy);
         process.stdout.write(`${result.overwritten ? "Overwrote" : "Created"} ${result.path}\n`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

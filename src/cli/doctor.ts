@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { findConfigPath, findLocalConfigPath, loadEffectiveConfig, type EffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { validateConfigShape } from "../config/validateConfig.js";
@@ -8,8 +9,8 @@ import { allDetectors, detectorIds } from "../detectors/index.js";
 import { resolveFilePaths } from "../core/resolveFiles.js";
 import { defaultConfig } from "../config/defaults.js";
 import { getRulePack } from "../config/packs.js";
-import { loadPlugins } from "../plugins/loadPlugins.js";
-import type { CliOptions, DebtLensConfig, ScanOptions, ScanThresholds } from "../core/types.js";
+import { loadPlugins, pluginsDisabled } from "../plugins/loadPlugins.js";
+import type { CliOptions, DebtLensConfig, Detector, ScanOptions, ScanThresholds } from "../core/types.js";
 import { getChangedFiles, getStagedFiles, isGitRepo } from "../utils/git.js";
 import { buildZeroFilesScannedWarning } from "./scanWarnings.js";
 
@@ -47,9 +48,20 @@ export interface DoctorCliSources {
 }
 
 interface DoctorPluginContribution {
+  detectors: Detector[];
+  ruleIds: string[];
+  modulePaths: DoctorPluginModulePath[];
+  ruleSources: Map<string, string>;
   thresholds?: ScanThresholds;
+  thresholdSources: Map<string, string>;
   vocabulary?: Record<string, string[]>;
+  vocabularySources: Map<string, string>;
   warnings: string[];
+}
+
+interface DoctorPluginModulePath {
+  configuredPath: string;
+  resolvedPath: string;
 }
 
 export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
@@ -85,14 +97,15 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     : effectiveConfig.config;
   const pluginContribution = configValidation.state !== "invalid"
     ? await loadPluginContributionForDoctor(effectiveConfig, fileConfig)
-    : { warnings: [] };
+    : emptyPluginContribution();
   const options = mergeConfig(target, fileConfig, {
     ...input.cliOptions,
+    ...(pluginContribution.detectors.length ? { pluginDetectors: pluginContribution.detectors } : {}),
     ...(pluginContribution.thresholds ? { pluginThresholds: pluginContribution.thresholds } : {}),
     ...(pluginContribution.vocabulary ? { pluginVocabulary: pluginContribution.vocabulary } : {}),
   });
   const filePaths = await resolveFilePaths(options);
-  const resolvedRules = resolveRuleIds(options);
+  const resolvedRules = resolveRuleIds(options, pluginContribution);
   const warnings = missingConfigPath
     ? [`DebtLens warning: config file not found at ${missingConfigPath}.`]
     : configValidation.state === "invalid"
@@ -176,13 +189,102 @@ async function loadPluginContributionForDoctor(
   effectiveConfig: EffectiveConfig,
   fileConfig: DebtLensConfig,
 ): Promise<DoctorPluginContribution> {
-  if (!fileConfig.plugins?.length) return { warnings: [] };
+  if (!fileConfig.plugins?.length) return emptyPluginContribution();
+  const modulePaths = resolvePluginModulePaths(effectiveConfig.pluginConfigDir, fileConfig.plugins);
   const loaded = await loadPlugins(effectiveConfig.pluginConfigDir, fileConfig, new Set(detectorIds));
+  const metadata = pluginsDisabled()
+    ? emptyPluginMetadata()
+    : await loadPluginMetadataForDoctor(modulePaths);
   return {
+    detectors: loaded.detectors,
+    ruleIds: loaded.detectors.map((detector) => detector.id),
+    modulePaths,
+    ruleSources: metadata.ruleSources,
     thresholds: Object.keys(loaded.thresholds).length ? loaded.thresholds : undefined,
+    thresholdSources: metadata.thresholdSources,
     vocabulary: Object.keys(loaded.vocabulary).length ? loaded.vocabulary : undefined,
+    vocabularySources: metadata.vocabularySources,
     warnings: loaded.warnings,
   };
+}
+
+function emptyPluginContribution(): DoctorPluginContribution {
+  return {
+    detectors: [],
+    ruleIds: [],
+    modulePaths: [],
+    ruleSources: new Map(),
+    thresholdSources: new Map(),
+    vocabularySources: new Map(),
+    warnings: [],
+  };
+}
+
+function resolvePluginModulePaths(configDir: string, plugins: string[]): DoctorPluginModulePath[] {
+  return plugins.map((pluginPath) => ({
+    configuredPath: pluginPath,
+    resolvedPath: resolve(configDir, pluginPath),
+  }));
+}
+
+interface DoctorPluginMetadata {
+  ruleSources: Map<string, string>;
+  thresholdSources: Map<string, string>;
+  vocabularySources: Map<string, string>;
+}
+
+function emptyPluginMetadata(): DoctorPluginMetadata {
+  return {
+    ruleSources: new Map(),
+    thresholdSources: new Map(),
+    vocabularySources: new Map(),
+  };
+}
+
+async function loadPluginMetadataForDoctor(modulePaths: DoctorPluginModulePath[]): Promise<DoctorPluginMetadata> {
+  const metadata = emptyPluginMetadata();
+
+  for (const modulePath of modulePaths) {
+    const moduleExports = await import(pathToFileURL(modulePath.resolvedPath).href) as { default?: unknown };
+    const inspected = inspectPluginExportForDoctor(moduleExports.default);
+    const ruleSource = formatPluginRuleSource(modulePath.resolvedPath);
+    const defaultsSource = formatPluginDefaultsSource([modulePath]);
+
+    for (const ruleId of inspected.ruleIds) {
+      metadata.ruleSources.set(ruleId, ruleSource);
+    }
+    for (const thresholdKey of inspected.thresholdKeys) {
+      metadata.thresholdSources.set(thresholdKey, defaultsSource);
+    }
+    for (const vocabularyKey of inspected.vocabularyKeys) {
+      metadata.vocabularySources.set(vocabularyKey, defaultsSource);
+    }
+  }
+
+  return metadata;
+}
+
+function inspectPluginExportForDoctor(exported: unknown): {
+  ruleIds: string[];
+  thresholdKeys: string[];
+  vocabularyKeys: string[];
+} {
+  if (!isRecord(exported)) {
+    return { ruleIds: [], thresholdKeys: [], vocabularyKeys: [] };
+  }
+
+  const rules = Array.isArray(exported.rules) ? exported.rules : [exported];
+  const ruleIds = rules
+    .map((rule) => isRecord(rule) && typeof rule.id === "string" ? rule.id : undefined)
+    .filter((ruleId): ruleId is string => ruleId !== undefined);
+  const thresholdKeys = isRecord(exported.thresholds) ? Object.keys(exported.thresholds) : [];
+  const vocabularyKeys = isRecord(exported.vocabulary) ? Object.keys(exported.vocabulary) : [];
+
+  return { ruleIds, thresholdKeys, vocabularyKeys };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function validateConfigAtPath(configPath: string | undefined, missingConfigPath: string | undefined): ConfigValidationResultForDoctor {
@@ -250,12 +352,15 @@ function formatThresholds(thresholds: ScanOptions["thresholds"]): string {
   return entries.map(([key, value]) => `${key}=${value}`).join(", ");
 }
 
-function resolveRuleIds(options: ScanOptions): string[] {
+function resolveRuleIds(options: ScanOptions, pluginContribution: DoctorPluginContribution): string[] {
   if (options.rules?.length) {
     return options.rules;
   }
 
-  return allDetectors.map((detector) => detector.id);
+  return [
+    ...allDetectors.map((detector) => detector.id),
+    ...pluginContribution.ruleIds,
+  ];
 }
 
 function formatProvenance(input: {
@@ -267,13 +372,13 @@ function formatProvenance(input: {
 }): string[] {
   const sourceContext = buildSourceContext(input.effectiveConfig);
   const packIds = input.options.pack?.split(",").filter(Boolean) ?? [];
-  const thresholdSources = buildThresholdSources(input.effectiveConfig, packIds, input.pluginContribution.thresholds, input.cliOptions.thresholds);
-  const vocabularySources = buildVocabularySources(input.effectiveConfig, input.pluginContribution.vocabulary);
+  const thresholdSources = buildThresholdSources(input.effectiveConfig, packIds, input.pluginContribution, input.cliOptions.thresholds);
+  const vocabularySources = buildVocabularySources(input.effectiveConfig, input.pluginContribution);
   const lines = [
     "Provenance",
     "----------",
     `Pack: ${formatPackSource(input.effectiveConfig, input.cliSources)}`,
-    `Rules: ${formatRulesSource(input.effectiveConfig, input.cliSources, packIds)}`,
+    `Rules: ${formatRulesSource(input.effectiveConfig, input.cliSources, packIds, input.pluginContribution)}`,
     `Include globs: ${formatIncludeSource(input.effectiveConfig, input.cliSources, input.options.include, packIds)}`,
     `Exclude globs: ${formatLayeredSource([
       "defaults",
@@ -284,6 +389,8 @@ function formatProvenance(input: {
     `Max files: ${formatScalarSource(input.effectiveConfig, input.cliSources.maxFiles, "maxFiles", "CLI --max-files", "defaults")}`,
     `Respect gitignore: ${formatScalarSource(input.effectiveConfig, input.cliSources.respectGitignore, "respectGitignore", "CLI --respect-gitignore", "defaults")}`,
     `Plugins: ${formatEffectiveConfigSource(input.effectiveConfig, "plugins", "(none)")}`,
+    ...formatPluginModuleLines(input.pluginContribution.modulePaths),
+    ...formatPluginRuleLines(input.pluginContribution),
     "Thresholds:",
     ...Object.keys(input.options.thresholds).sort((left, right) => left.localeCompare(right)).map((key) =>
       `  ${key}: ${thresholdSources.get(key) ?? "unknown"}`),
@@ -309,7 +416,7 @@ function buildSourceContext(effectiveConfig: EffectiveConfig): string[] {
 function buildThresholdSources(
   effectiveConfig: EffectiveConfig,
   packIds: string[],
-  pluginThresholds: ScanThresholds | undefined,
+  pluginContribution: DoctorPluginContribution,
   cliThresholds: ScanThresholds | undefined,
 ): Map<string, string> {
   const sources = new Map<string, string>();
@@ -317,7 +424,12 @@ function buildThresholdSources(
   for (const packId of packIds) {
     setRecordSources(sources, getRulePack(packId).thresholds, `pack "${packId}" defaults`);
   }
-  setRecordSources(sources, pluginThresholds, "plugin defaults");
+  setPluginRecordSources(
+    sources,
+    pluginContribution.thresholds,
+    pluginContribution.thresholdSources,
+    formatPluginDefaultsSource(pluginContribution.modulePaths),
+  );
   setRecordSources(sources, effectiveConfig.rootConfig?.thresholds, sourceLabel("root config", effectiveConfig.rootConfigPath));
   setRecordSources(sources, effectiveConfig.packageConfig?.thresholds, sourceLabel("package config", effectiveConfig.packageConfigPath));
   setRecordSources(sources, cliThresholds, "CLI --threshold");
@@ -326,11 +438,16 @@ function buildThresholdSources(
 
 function buildVocabularySources(
   effectiveConfig: EffectiveConfig,
-  pluginVocabulary: Record<string, string[]> | undefined,
+  pluginContribution: DoctorPluginContribution,
 ): Map<string, string> {
   const sources = new Map<string, string>();
   setRecordSources(sources, defaultConfig.vocabulary, "defaults");
-  setRecordSources(sources, pluginVocabulary, "plugin defaults");
+  setPluginRecordSources(
+    sources,
+    pluginContribution.vocabulary,
+    pluginContribution.vocabularySources,
+    formatPluginDefaultsSource(pluginContribution.modulePaths),
+  );
   setRecordSources(sources, effectiveConfig.rootConfig?.vocabulary, sourceLabel("root config", effectiveConfig.rootConfigPath));
   setRecordSources(sources, effectiveConfig.packageConfig?.vocabulary, sourceLabel("package config", effectiveConfig.packageConfigPath));
   return sources;
@@ -346,6 +463,17 @@ function setRecordSources(
   }
 }
 
+function setPluginRecordSources(
+  sources: Map<string, string>,
+  record: Record<string, unknown> | undefined,
+  pluginSources: Map<string, string>,
+  fallback: string,
+): void {
+  for (const key of Object.keys(record ?? {})) {
+    sources.set(key, pluginSources.get(key) ?? fallback);
+  }
+}
+
 function formatPackSource(effectiveConfig: EffectiveConfig, cliSources: DoctorCliSources): string {
   if (cliSources.pack) return "CLI --pack";
   return formatEffectiveConfigSource(effectiveConfig, "pack", "(none)");
@@ -355,12 +483,24 @@ function formatRulesSource(
   effectiveConfig: EffectiveConfig,
   cliSources: DoctorCliSources,
   packIds: string[],
+  pluginContribution: DoctorPluginContribution,
 ): string {
   if (cliSources.rules) return "CLI --rules";
   const configSources = configFieldSources(effectiveConfig, "rules");
   if (configSources.length) return formatLayeredSource(configSources);
-  if (packIds.length) return packIds.map((packId) => `pack "${packId}" defaults`).join(" + ");
-  return "built-in detector registry";
+  const pluginRuleSource = pluginContribution.ruleIds.length
+    ? formatPluginRuleSource(formatPluginModulePaths(pluginContribution.modulePaths))
+    : undefined;
+  if (packIds.length) {
+    return formatLayeredSource([
+      packIds.map((packId) => `pack "${packId}" defaults`).join(" + "),
+      pluginRuleSource,
+    ].filter((source): source is string => source !== undefined));
+  }
+  return formatLayeredSource([
+    "built-in detector registry",
+    pluginRuleSource,
+  ].filter((source): source is string => source !== undefined));
 }
 
 function formatIncludeSource(
@@ -434,4 +574,41 @@ function formatVocabularyLines(
   const keys = Object.keys(vocabulary ?? {}).sort((left, right) => left.localeCompare(right));
   if (!keys.length) return ["  (none)"];
   return keys.map((key) => `  ${key}: ${sources.get(key) ?? "unknown"}`);
+}
+
+function formatPluginModuleLines(modulePaths: DoctorPluginModulePath[]): string[] {
+  if (!modulePaths.length) return [];
+  return [
+    "Policy/plugin modules:",
+    ...modulePaths.map((modulePath) => `  ${modulePath.configuredPath}: ${modulePath.resolvedPath}`),
+  ];
+}
+
+function formatPluginRuleLines(pluginContribution: DoctorPluginContribution): string[] {
+  if (!pluginContribution.modulePaths.length) return [];
+  if (!pluginContribution.ruleIds.length) return ["Policy/plugin rules: (none)"];
+
+  return [
+    "Policy/plugin rules:",
+    ...pluginContribution.ruleIds.map((ruleId) =>
+      `  ${ruleId}: ${pluginContribution.ruleSources.get(ruleId) ?? formatPluginRuleSource(formatPluginModulePaths(pluginContribution.modulePaths))}`),
+  ];
+}
+
+function formatPluginRuleSource(modulePath: string): string {
+  return `policy/plugin module (${modulePath})`;
+}
+
+function formatPluginDefaultsSource(modulePaths: DoctorPluginModulePath[]): string {
+  if (modulePaths.length === 1) {
+    return `policy/plugin module defaults (${modulePaths[0].resolvedPath})`;
+  }
+  if (modulePaths.length > 1) {
+    return `policy/plugin module defaults (${formatPluginModulePaths(modulePaths)})`;
+  }
+  return "plugin defaults";
+}
+
+function formatPluginModulePaths(modulePaths: DoctorPluginModulePath[]): string {
+  return modulePaths.map((modulePath) => modulePath.resolvedPath).join(" + ");
 }

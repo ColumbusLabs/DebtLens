@@ -1,6 +1,6 @@
 # Policy Packs As npm Packages
 
-Status: **RFC / adopter pattern**
+Status: **policy package scaffold**
 
 Organizations that want a shared DebtLens policy can publish a package such as
 `@org/debtlens-policy`. The package owns a plugin, a config preset, and CI guidance so
@@ -36,9 +36,10 @@ as `debtlens.config.json`:
 }
 ```
 
-Application repos can either copy the preset into `debtlens.config.json` during rollout or
-keep a tiny local file that references the package plugin and repeats only local
-overrides.
+`preset.json` is data, but the referenced `rules/index.mjs` module is trusted code:
+DebtLens loads policy modules as ESM plugins in the scan process. Only use package or
+local policy modules maintained by your organization, and disable plugins in CI when a
+workflow scans untrusted repositories or pull requests.
 
 ## Installation
 
@@ -46,7 +47,29 @@ overrides.
 npm install --save-dev debtlens @org/debtlens-policy
 ```
 
-Then create:
+Then scaffold a local config from the package:
+
+```bash
+debtlens init --policy @org/debtlens-policy
+```
+
+The package-name form uses the default package entry point at `rules/index.mjs`. If the
+package publishes multiple policies, pass the installed package module path:
+
+```bash
+debtlens init --policy ./node_modules/@org/debtlens-policy/rules/index.mjs
+debtlens init --policy ./node_modules/@org/debtlens-policy/presets/strict.mjs
+```
+
+For a checked-in policy module, pass a local file path instead:
+
+```bash
+debtlens init --policy ./debtlens-policy/index.mjs
+debtlens init --policy ./tools/debtlens-policies/strict.mjs
+```
+
+The generated `debtlens.config.json` pins the plugin API version and references the
+policy module. A package-backed config looks like:
 
 ```json
 {
@@ -54,6 +77,17 @@ Then create:
   "pluginApiVersion": 1,
   "plugins": ["./node_modules/@org/debtlens-policy/rules/index.mjs"],
   "pack": "oss-maintainer",
+  "include": ["src/**/*.{ts,tsx,js,jsx}"]
+}
+```
+
+For local files, the same shape uses the local module path:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
+  "pluginApiVersion": 1,
+  "plugins": ["./debtlens-policy/index.mjs"],
   "include": ["src/**/*.{ts,tsx,js,jsx}"]
 }
 ```
@@ -69,13 +103,17 @@ Then create:
     fail-on: high
 ```
 
-Security-sensitive pipelines that scan untrusted pull requests can disable org plugins
-while still running built-in rules:
+Policy modules are trusted code loaded as plugins. Security-sensitive pipelines that scan
+untrusted pull requests can disable org plugins while still running built-in rules:
 
 ```yaml
 env:
   DEBTLENS_DISABLE_PLUGINS: "1"
 ```
+
+With `DEBTLENS_DISABLE_PLUGINS=1`, DebtLens skips configured policy modules, including
+their custom rules, threshold defaults, and vocabulary contributions. Built-in rules and
+local non-plugin config still run.
 
 ## Maintainer requirements
 
@@ -86,10 +124,3 @@ env:
 - Document every custom rule with false-positive examples and a suggested suppression
   policy.
 - Run `npm run test:all` in the policy repo and a sample application before publishing.
-
-## Future CLI support
-
-A future `debtlens init --policy @org/debtlens-policy` command could read a package
-manifest field and scaffold the local config automatically. Until then, the explicit JSON
-pattern above is the supported path because it is auditable and works with the current
-plugin loader.

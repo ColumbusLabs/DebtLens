@@ -234,30 +234,74 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, new RegExp(`shared\\.max: package config \\(${escapeRegex(packageConfigPath)}\\)`));
   });
 
-  it("shows plugin threshold and vocabulary defaults in provenance mode", () => {
-    writeFileSync(join(dir, "plugin.mjs"), `
+  it("shows plugin rule ids and policy module defaults in provenance mode", () => {
+    const pluginPath = join(dir, "policy-plugin.mjs");
+    writeFileSync(pluginPath, `
 export default {
-  rules: [],
-  thresholds: { "plugin.max": 7 },
-  vocabulary: { "plugin-domain": ["alpha", "beta"] }
+  rules: [{
+    id: "policy-no-console",
+    name: "Policy no console",
+    description: "Flags console use from an organization policy module.",
+    defaultSeverity: "low",
+    tags: ["policy"],
+    detect() {
+      return [];
+    }
+  }],
+  thresholds: { "policy-no-console.maxCalls": 7 },
+  vocabulary: { "policy-domain": ["alpha", "beta"] }
 };
 `, "utf8");
     const configPath = join(dir, "debtlens.config.json");
     writeFileSync(configPath, JSON.stringify({
       pluginApiVersion: 1,
-      plugins: ["./plugin.mjs"],
+      plugins: ["./policy-plugin.mjs"],
     }), "utf8");
 
     const plainResult = runDoctor([".", "--cwd", dir]);
     const result = runDoctor([".", "--cwd", dir, "--provenance"]);
 
     assert.equal(plainResult.status, 0);
-    assert.match(plainResult.stdout, /plugin\.max=7/);
+    assert.match(plainResult.stdout, /Rules: .*policy-no-console/);
+    assert.match(plainResult.stdout, /policy-no-console\.maxCalls=7/);
     assert.doesNotMatch(plainResult.stdout, /Provenance/);
     assert.equal(result.status, 0);
     assert.match(result.stdout, new RegExp(`Plugins: root config \\(${escapeRegex(configPath)}\\)`));
-    assert.match(result.stdout, /plugin\.max: plugin defaults/);
-    assert.match(result.stdout, /plugin-domain: plugin defaults/);
+    assert.match(result.stdout, new RegExp(`Policy/plugin modules:\\n  ${escapeRegex("./policy-plugin.mjs")}: ${escapeRegex(pluginPath)}`));
+    assert.match(result.stdout, new RegExp(`Rules: built-in detector registry \\+ policy/plugin module \\(${escapeRegex(pluginPath)}\\)`));
+    assert.match(result.stdout, new RegExp(`Policy/plugin rules:\\n  policy-no-console: policy/plugin module \\(${escapeRegex(pluginPath)}\\)`));
+    assert.match(result.stdout, new RegExp(`policy-no-console\\.maxCalls: policy/plugin module defaults \\(${escapeRegex(pluginPath)}\\)`));
+    assert.match(result.stdout, new RegExp(`policy-domain: policy/plugin module defaults \\(${escapeRegex(pluginPath)}\\)`));
+  });
+
+  it("shows plugin rules alongside pack defaults in provenance mode", () => {
+    const pluginPath = join(dir, "policy-plugin.mjs");
+    writeFileSync(pluginPath, `
+export default {
+  rules: [{
+    id: "policy-no-console",
+    name: "Policy no console",
+    description: "Flags console use from an organization policy module.",
+    defaultSeverity: "low",
+    tags: ["policy"],
+    detect() {
+      return [];
+    }
+  }]
+};
+`, "utf8");
+    writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+      pluginApiVersion: 1,
+      plugins: ["./policy-plugin.mjs"],
+      pack: "core",
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir, "--provenance"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Rules: .*policy-no-console/);
+    assert.match(result.stdout, new RegExp(`Rules: pack "core" defaults \\+ policy/plugin module \\(${escapeRegex(pluginPath)}\\)`));
+    assert.match(result.stdout, new RegExp(`Policy/plugin rules:\\n  policy-no-console: policy/plugin module \\(${escapeRegex(pluginPath)}\\)`));
   });
 
   it("shows package plugin provenance when package config overrides root plugins", () => {
@@ -271,13 +315,15 @@ export default {
       name: "pkg-a",
       private: true,
     }), "utf8");
-    writeFileSync(join(dir, "root-plugin.mjs"), `
+    const rootPluginPath = join(dir, "root-plugin.mjs");
+    const packagePluginPath = join(dir, "packages", "pkg-a", "package-plugin.mjs");
+    writeFileSync(rootPluginPath, `
 export default {
   rules: [],
   thresholds: { "root.plugin": 1 }
 };
 `, "utf8");
-    writeFileSync(join(dir, "packages", "pkg-a", "package-plugin.mjs"), `
+    writeFileSync(packagePluginPath, `
 export default {
   rules: [],
   thresholds: { "package.plugin": 2 }
@@ -299,8 +345,10 @@ export default {
 
     assert.equal(result.status, 0);
     assert.match(result.stdout, new RegExp(`Plugins: package config \\(${escapeRegex(packageConfigPath)}\\)`));
-    assert.match(result.stdout, /package\.plugin: plugin defaults/);
+    assert.match(result.stdout, new RegExp(`Policy/plugin modules:\\n  ${escapeRegex("./package-plugin.mjs")}: ${escapeRegex(packagePluginPath)}`));
+    assert.match(result.stdout, new RegExp(`package\\.plugin: policy/plugin module defaults \\(${escapeRegex(packagePluginPath)}\\)`));
     assert.doesNotMatch(result.stdout, /root\.plugin/);
+    assert.doesNotMatch(result.stdout, new RegExp(escapeRegex(rootPluginPath)));
     assert.doesNotMatch(result.stdout, new RegExp(`Plugins: root config \\(${escapeRegex(rootConfigPath)}\\) \\+ package config`));
   });
 });

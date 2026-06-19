@@ -7,6 +7,7 @@ const azureDocs = readFileSync("docs/ci-azure.md", "utf8");
 const bitbucketDocs = readFileSync("docs/ci-bitbucket.md", "utf8");
 const githubDocs = readFileSync("docs/ci-github.md", "utf8");
 const quickstartDocs = readFileSync("docs/quickstart.md", "utf8");
+const reportGalleryDocs = readFileSync("docs/report-gallery.md", "utf8");
 const readme = readFileSync("README.md", "utf8");
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as { files: string[] };
 
@@ -24,6 +25,17 @@ describe("provider CI docs", () => {
     assert.match(githubDocs, /gate: legacy-baseline/);
     assert.match(githubDocs, /gate: strict-new-code/);
     assert.match(githubDocs, /does not pass `gate` to `write-baseline` mode/);
+  });
+
+  it("documents optional git-derived hotspot prioritization for GitHub Action scans", () => {
+    assert.match(readme, /`blame-age`, `hotspots`, `churn-days`, `churn-range`, `audit-suppressions`/);
+    assert.match(readme, /fetch-depth: 0\s+# needed for --changed and optional hotspot churn/);
+    assert.match(readme, /optional, git-derived hotspot data/);
+    assert.match(readme, /use `actions\/checkout` with `fetch-depth: 0` for full history/);
+    assert.match(readme, /Hotspots do not affect default scan speed unless enabled/);
+    assert.match(readme, /does not pass hotspot inputs to `write-baseline` mode/);
+    assert.match(reportGalleryDocs, /optional git-derived hotspot\s+prioritization/);
+    assert.match(reportGalleryDocs, /full checkout in CI/);
   });
 
   it("documents GitLab Code Quality baseline and new-code gates", () => {

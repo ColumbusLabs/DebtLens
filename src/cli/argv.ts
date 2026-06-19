@@ -29,6 +29,9 @@ export const SCAN_ARG_FLAGS = [
   "--parallel",
   "--batch-size",
   "--blame-age",
+  "--hotspots",
+  "--churn-days",
+  "--churn-range",
   "--group-by",
   "--sarif-compact",
   "--sarif-category",
@@ -68,6 +71,9 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addBoolean(args, "--parallel", rawOptions.parallel);
   addValue(args, "--batch-size", rawOptions.batchSize);
   addBoolean(args, "--blame-age", rawOptions.blameAge);
+  addOptionalValue(args, "--hotspots", rawOptions.hotspots);
+  addValue(args, "--churn-days", rawOptions.churnDays);
+  addString(args, "--churn-range", rawOptions.churnRange);
   addString(args, "--group-by", rawOptions.groupBy);
   addBoolean(args, "--sarif-compact", rawOptions.sarifCompact);
   addString(args, "--sarif-category", rawOptions.sarifCategory);
@@ -111,6 +117,6 @@ function addOptionalValue(args: string[], flag: string, value: unknown): void {
   if (value === true) {
     args.push(flag);
   } else {
-    addString(args, flag, value);
+    addValue(args, flag, value);
   }
 }

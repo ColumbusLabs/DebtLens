@@ -1,15 +1,16 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import type { Command } from "commander";
 import { loadEffectiveConfig } from "../../config/loadConfig.js";
 import { mergeConfig } from "../../config/mergeConfig.js";
 import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
+import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { scan } from "../../core/scan.js";
-import { getChangedFiles, getStagedFiles } from "../../utils/git.js";
+import { canonicalizePath, getChangedFiles, getFileChurn, getStagedFiles } from "../../utils/git.js";
 import { parseSeverity } from "../../core/severity.js";
-import type { OutputFormat } from "../../core/types.js";
+import type { DebtIssue, OutputFormat, ScanOptions, ScanResult } from "../../core/types.js";
 import { detectorIds } from "../../detectors/index.js";
 import { renderReport } from "../../reporters/index.js";
 import { applyGatePresetDefaults, gatePresets } from "../../core/gatePresets.js";
@@ -78,6 +79,9 @@ export function registerScanCommand(program: Command): void {
     .option("--parallel", "run detectors concurrently after source loading")
     .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
     .option("--blame-age", "add introducedDaysAgo metadata to JSON issues using git blame")
+    .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
+    .option("--churn-days <count>", "with --hotspots, look back this many days", parseInteger)
+    .option("--churn-range <range>", "with --hotspots, use this git revision range instead of --churn-days")
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
     .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
     .option("--sarif-category <category>", "with --format sarif, set runs[].automationDetails.id for separated code scanning runs")
@@ -231,6 +235,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   if (rawOptions.blameAge === true) {
     enrichIssuesWithBlameAge(cwd, options, reported);
   }
+  enrichWithHotspots(cwd, options, reported, rawOptions, writeStderr);
 
   const report = renderReport(reported, format, {
     color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
@@ -259,6 +264,76 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     exitCode,
     stderr: stderrChunks.join(""),
   };
+}
+
+function enrichWithHotspots(
+  cwd: string,
+  options: ScanOptions,
+  result: ScanResult,
+  rawOptions: Record<string, unknown>,
+  writeStderr: (text: string) => void,
+): void {
+  if (!shouldBuildHotspots(rawOptions) || result.issues.length === 0) return;
+
+  const churnDays = rawOptions.churnDays !== undefined ? Number(rawOptions.churnDays) : 90;
+  const churnRange = typeof rawOptions.churnRange === "string" && rawOptions.churnRange.length > 0
+    ? rawOptions.churnRange
+    : undefined;
+  if (churnRange && rawOptions.churnDays !== undefined) {
+    throw new Error("Use either --churn-days or --churn-range, not both.");
+  }
+  const paths = buildIssuePathMaps(options, result.issues);
+  const churn = getFileChurn(cwd, [...paths.absoluteByFile.values()], churnRange ? { range: churnRange } : { days: churnDays });
+  if (churn === null) {
+    writeStderr("DebtLens: --hotspots ignored (not a git repository).\n");
+    return;
+  }
+
+  const fileToRepositoryPath = new Map<string, string>();
+  for (const [file, absolutePath] of paths.absoluteByFile.entries()) {
+    const repositoryPath = relative(churn.root, canonicalizePath(absolutePath)).replaceAll("\\", "/");
+    if (repositoryPath && !repositoryPath.startsWith("..")) {
+      fileToRepositoryPath.set(file, repositoryPath);
+    }
+  }
+
+  const hotspots = buildGitChurnHotspots({
+    issues: result.issues,
+    churn: churn.files,
+    window: churn.window,
+    fileToRepositoryPath,
+    limit: normalizeOptionalLimit(rawOptions.hotspots, 5),
+  });
+  if (hotspots) {
+    result.summary.hotspots = hotspots;
+  }
+}
+
+function shouldBuildHotspots(rawOptions: Record<string, unknown>): boolean {
+  if (rawOptions.hotspots === true || typeof rawOptions.hotspots === "number") return true;
+  if (typeof rawOptions.hotspots === "string" && rawOptions.hotspots.trim().length > 0) return true;
+  if (rawOptions.churnDays !== undefined) return true;
+  return typeof rawOptions.churnRange === "string" && rawOptions.churnRange.trim().length > 0;
+}
+
+function buildIssuePathMaps(options: ScanOptions, issues: DebtIssue[]): { absoluteByFile: Map<string, string> } {
+  const base = scanTargetBase(options.target);
+  const absoluteByFile = new Map<string, string>();
+  for (const issue of issues) {
+    if (!absoluteByFile.has(issue.file)) {
+      absoluteByFile.set(issue.file, resolve(base, issue.file));
+    }
+  }
+  return { absoluteByFile };
+}
+
+function scanTargetBase(target: string): string {
+  try {
+    if (existsSync(target) && statSync(target).isFile()) return dirname(target);
+  } catch {
+    return target;
+  }
+  return target;
 }
 
 export async function runScanForMcp(

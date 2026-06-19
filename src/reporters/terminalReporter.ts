@@ -39,6 +39,8 @@ export function renderTerminal(
     return `${lines.join("\n")}\n`;
   }
 
+  renderHotspots(lines, result, color);
+
   if (options.groupBy === "rule") {
     renderGroups(lines, result.issues, groupIssuesByRule(result.issues), "rule", color);
   } else if (options.groupBy === "file") {
@@ -57,6 +59,26 @@ export function renderTerminal(
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderHotspots(lines: string[], result: ScanResult, color: ReturnType<typeof createColorizer>): void {
+  const hotspots = result.summary.hotspots?.ranking ?? [];
+  if (hotspots.length === 0) return;
+
+  lines.push("");
+  lines.push(color.bold("Git churn hotspots"));
+  lines.push(`Optional git-derived ranking from ${formatHotspotWindow(result.summary.hotspots?.window)}.`);
+  for (const hotspot of hotspots.slice(0, 5)) {
+    lines.push(`  ${hotspot.file} | score ${hotspot.score} | ${hotspot.churn.commits} commit${hotspot.churn.commits === 1 ? "" : "s"}, ${hotspot.churn.changedLines} changed line${hotspot.churn.changedLines === 1 ? "" : "s"}`);
+    lines.push(`  ${hotspot.reasons.join("; ")}`);
+  }
+}
+
+function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots"]>["window"] | undefined): string {
+  if (!window) return "the configured git window";
+  if (window.range) return `git range ${window.range}`;
+  if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
+  return "the configured git window";
 }
 
 function renderSuppressionAuditSummary(lines: string[], result: ScanResult): void {

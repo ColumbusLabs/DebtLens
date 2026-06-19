@@ -29,6 +29,9 @@ describe("debtlens completions", () => {
     assert.match(result.stdout, /gitlab-codequality/);
     assert.match(result.stdout, /--dry-run/);
     assert.match(result.stdout, /--audit-suppressions/);
+    assert.match(result.stdout, /--hotspots/);
+    assert.match(result.stdout, /--churn-days/);
+    assert.match(result.stdout, /--churn-range/);
     assert.match(result.stdout, /--junit-fail-on/);
     assert.match(result.stdout, /--gate\) COMPREPLY=\( \$\(compgen -W "advisory new-code strict-new-code legacy-baseline"/);
     assert.match(result.stdout, /prop-drilling/);
@@ -54,6 +57,9 @@ describe("debtlens completions", () => {
     assert.match(zsh.stdout, /'--package' \\/);
     assert.match(zsh.stdout, /'--threshold' \\/);
     assert.match(zsh.stdout, /'--audit-suppressions' \\/);
+    assert.match(zsh.stdout, /'--hotspots' \\/);
+    assert.match(zsh.stdout, /'--churn-days' \\/);
+    assert.match(zsh.stdout, /'--churn-range' \\/);
     assert.match(zsh.stdout, /--junit-fail-on\[JUnit failing severity\]:severity:\(info low medium high\)/);
     assert.match(zsh.stdout, /--gate\[quality gate preset\]:gate:\(advisory new-code strict-new-code legacy-baseline\)/);
     assert.equal(fish.status, 0);
@@ -61,6 +67,9 @@ describe("debtlens completions", () => {
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline/);
     assert.match(fish.stdout, /-l dry-run/);
     assert.match(fish.stdout, /-l audit-suppressions/);
+    assert.match(fish.stdout, /-l hotspots/);
+    assert.match(fish.stdout, /-l churn-days/);
+    assert.match(fish.stdout, /-l churn-range/);
     assert.match(fish.stdout, /-l junit-fail-on -a "info low medium high"/);
     assert.match(fish.stdout, /-l gate -a "advisory new-code strict-new-code legacy-baseline"/);
     assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline compare" -l format -a "terminal json markdown pr-comment sarif html junit gitlab-codequality"/);

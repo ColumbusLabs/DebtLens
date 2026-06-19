@@ -130,6 +130,9 @@ function tools(): Array<Record<string, unknown>> {
           diffBase: { type: "string" },
           baseline: { type: "string" },
           auditSuppressions: { type: "boolean" },
+          hotspots: { oneOf: [{ type: "boolean" }, { type: "number" }, { type: "string" }] },
+          churnDays: { oneOf: [{ type: "number" }, { type: "string" }] },
+          churnRange: { type: "string" },
         },
       },
     },
@@ -268,6 +271,9 @@ async function callTool(
       rules: args.rules,
       staged: args.staged,
       auditSuppressions: args.auditSuppressions,
+      hotspots: args.hotspots,
+      churnDays: args.churnDays,
+      churnRange: args.churnRange,
     }, {
       format,
     });

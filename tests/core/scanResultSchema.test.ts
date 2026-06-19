@@ -23,6 +23,12 @@ describe("ScanResult JSON schema", () => {
             deltaFromBaseline?: { required: string[] };
             correlations?: { items: { required: string[] } };
             duplicateClusters?: { items: { required: string[] } };
+            hotspots?: {
+              required: string[];
+              properties: {
+                ranking: { items: { required: string[]; properties: { churn: { required: string[] } } } };
+              };
+            };
           };
         };
       };
@@ -38,5 +44,8 @@ describe("ScanResult JSON schema", () => {
     assert.ok(schema.properties.summary.properties.deltaFromBaseline?.required.includes("totalDelta"));
     assert.ok(schema.properties.summary.properties.correlations?.items.required.includes("rules"));
     assert.ok(schema.properties.summary.properties.duplicateClusters?.items.required.includes("locations"));
+    assert.ok(schema.properties.summary.properties.hotspots?.required.includes("ranking"));
+    assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.required.includes("churn"));
+    assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.properties.churn.required.includes("changedLines"));
   });
 });

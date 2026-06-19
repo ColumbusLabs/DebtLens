@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+import type { FileChurnMetric } from "../core/types.js";
 
 function git(cwd: string, args: string[]): string {
   return gitRaw(cwd, args).trim();
@@ -43,6 +44,22 @@ export interface ChangedFiles {
   root: string;
   files: string[];
   contents?: Record<string, string>;
+}
+
+export interface FileChurnOptions {
+  days?: number;
+  range?: string;
+  now?: Date;
+}
+
+export interface FileChurn {
+  root: string;
+  window: {
+    days?: number;
+    since?: string;
+    range?: string;
+  };
+  files: FileChurnMetric[];
 }
 
 /**
@@ -151,6 +168,76 @@ export function getRefSnapshot(cwd: string, ref: string): ChangedFiles | null {
 }
 
 /**
+ * Collect per-file churn from git history for the requested current file paths.
+ * Returns `null` outside a git work tree, ignores files outside the repository,
+ * and keeps in-repository files with zero counts so callers can rank a complete
+ * file set. Churn is current-path based; pre-rename history is not followed.
+ */
+export function getFileChurn(cwd: string, files: string[], options: FileChurnOptions = {}): FileChurn | null {
+  if (!isGitRepo(cwd)) return null;
+
+  let root: string;
+  try {
+    root = canonicalize(git(cwd, ["rev-parse", "--show-toplevel"]));
+  } catch {
+    return null;
+  }
+
+  const window = buildChurnWindow(options);
+  if (window.range) validateChurnRange(root, window.range);
+
+  const requestedFiles = repositoryFiles(root, cwd, files);
+  const stats = new Map<string, { commits: Set<string>; additions: number; deletions: number }>();
+  for (const repositoryPath of requestedFiles.keys()) {
+    stats.set(repositoryPath, { commits: new Set(), additions: 0, deletions: 0 });
+  }
+
+  if (requestedFiles.size > 0 && (window.range || hasGitHistory(root))) {
+    const logArgs = [
+      "-c",
+      "core.quotePath=false",
+      "log",
+      "--numstat",
+      "--format=__DEBTLENS_COMMIT__%H",
+    ];
+    if (window.range) logArgs.push(window.range);
+    if (window.since) logArgs.push(`--since=${window.since}`);
+    logArgs.push("--", ...requestedFiles.keys());
+
+    let output = "";
+    try {
+      output = gitRaw(root, logArgs);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (window.range) {
+        throw new Error(`Could not collect git churn for range "${window.range}": ${message}`);
+      }
+      throw new Error(`Could not collect git churn: ${message}`);
+    }
+
+    applyNumstat(output, stats);
+  }
+
+  return {
+    root,
+    window,
+    files: [...requestedFiles.keys()].map((repositoryPath) => {
+      const fileStats = stats.get(repositoryPath);
+      const additions = fileStats?.additions ?? 0;
+      const deletions = fileStats?.deletions ?? 0;
+      return {
+        file: repositoryPath,
+        repositoryPath,
+        commits: fileStats?.commits.size ?? 0,
+        additions,
+        deletions,
+        changedLines: additions + deletions,
+      };
+    }),
+  };
+}
+
+/**
  * Return the canonical absolute paths that git ignores. Returns `null` outside a
  * work tree so callers can keep scanning normally when git context is unavailable.
  */
@@ -249,6 +336,106 @@ function canonicalize(path: string): string {
   } catch {
     return path;
   }
+}
+
+function buildChurnWindow(options: FileChurnOptions): FileChurn["window"] {
+  if (options.range !== undefined && options.days !== undefined) {
+    throw new Error("Specify either git churn days or git churn range, not both.");
+  }
+
+  if (options.range !== undefined) {
+    const range = options.range.trim();
+    if (!range) throw new Error("Git churn range must not be empty.");
+    return { range };
+  }
+
+  if (options.days !== undefined) {
+    if (!Number.isFinite(options.days) || options.days < 0) {
+      throw new Error("Git churn days must be a non-negative finite number.");
+    }
+    const now = options.now ?? new Date();
+    const nowMs = now.getTime();
+    if (!Number.isFinite(nowMs)) throw new Error("Git churn now must be a valid Date.");
+    const since = new Date(nowMs - options.days * 24 * 60 * 60 * 1000).toISOString();
+    return { days: options.days, since };
+  }
+
+  return {};
+}
+
+function validateChurnRange(root: string, range: string): void {
+  try {
+    gitRaw(root, ["rev-list", "--max-count=1", range, "--"]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not resolve git churn range "${range}": ${message}`);
+  }
+}
+
+function hasGitHistory(root: string): boolean {
+  return gitSafe(root, ["rev-parse", "--verify", "HEAD"]) !== "";
+}
+
+function repositoryFiles(root: string, cwd: string, files: string[]): Map<string, string> {
+  const repositoryFilesByPath = new Map<string, string>();
+  for (const file of files) {
+    const absolute = canonicalize(resolve(cwd, file));
+    const relativePath = relative(root, absolute);
+    if (!isInRepository(relativePath)) continue;
+    const repositoryPath = relativePath.replaceAll("\\", "/");
+    if (!repositoryFilesByPath.has(repositoryPath)) {
+      repositoryFilesByPath.set(repositoryPath, repositoryPath);
+    }
+  }
+  return repositoryFilesByPath;
+}
+
+function isInRepository(relativePath: string): boolean {
+  return relativePath !== ""
+    && relativePath !== ".."
+    && !relativePath.startsWith(`..${sep}`)
+    && !isAbsolute(relativePath);
+}
+
+function applyNumstat(
+  output: string,
+  stats: Map<string, { commits: Set<string>; additions: number; deletions: number }>,
+): void {
+  let activeCommit: string | undefined;
+
+  for (const rawLine of output.split("\n")) {
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+    if (line === "") continue;
+
+    if (line.startsWith("__DEBTLENS_COMMIT__")) {
+      activeCommit = line.slice("__DEBTLENS_COMMIT__".length);
+      continue;
+    }
+
+    if (!activeCommit) continue;
+
+    const firstTab = line.indexOf("\t");
+    const secondTab = firstTab === -1 ? -1 : line.indexOf("\t", firstTab + 1);
+    if (firstTab === -1 || secondTab === -1) continue;
+
+    const additions = parseNumstatCount(line.slice(0, firstTab));
+    const deletions = parseNumstatCount(line.slice(firstTab + 1, secondTab));
+    if (additions === undefined || deletions === undefined) continue;
+
+    const repositoryPath = line.slice(secondTab + 1);
+    const fileStats = stats.get(repositoryPath);
+    if (!fileStats) continue;
+
+    fileStats.commits.add(activeCommit);
+    fileStats.additions += additions;
+    fileStats.deletions += deletions;
+  }
+}
+
+function parseNumstatCount(value: string): number | undefined {
+  if (value === "-") return 0;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 /** Canonical absolute path for stable comparisons across symlinks and platforms. */

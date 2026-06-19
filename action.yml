@@ -60,6 +60,15 @@ inputs:
   blame-age:
     description: Add introducedDaysAgo metadata to JSON issues using git blame.
     default: "false"
+  hotspots:
+    description: Enable optional git-derived hotspot prioritization.
+    default: "false"
+  churn-days:
+    description: Hotspot mode - derive churn from commits in the last count days.
+    default: ""
+  churn-range:
+    description: Hotspot mode - derive churn from a git revision range.
+    default: ""
   audit-suppressions:
     description: Include used and unused inline suppression directives in scan output.
     default: "false"
@@ -225,6 +234,9 @@ runs:
         DL_PARALLEL: ${{ inputs.parallel }}
         DL_BATCH_SIZE: ${{ inputs.batch-size }}
         DL_BLAME_AGE: ${{ inputs.blame-age }}
+        DL_HOTSPOTS: ${{ inputs.hotspots }}
+        DL_CHURN_DAYS: ${{ inputs.churn-days }}
+        DL_CHURN_RANGE: ${{ inputs.churn-range }}
         DL_AUDIT_SUPPRESSIONS: ${{ inputs.audit-suppressions }}
         DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
@@ -305,6 +317,9 @@ runs:
         [ "$DL_PARALLEL" = "true" ] && args+=(--parallel)
         [ -n "$DL_BATCH_SIZE" ] && args+=(--batch-size "$DL_BATCH_SIZE")
         [ "$DL_BLAME_AGE" = "true" ] && args+=(--blame-age)
+        [ "$DL_HOTSPOTS" = "true" ] && args+=(--hotspots)
+        [ -n "$DL_CHURN_DAYS" ] && args+=(--churn-days "$DL_CHURN_DAYS")
+        [ -n "$DL_CHURN_RANGE" ] && args+=(--churn-range "$DL_CHURN_RANGE")
         [ "$DL_AUDIT_SUPPRESSIONS" = "true" ] && args+=(--audit-suppressions)
         [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
         [ "$DL_PROFILE" = "true" ] && args+=(--profile)

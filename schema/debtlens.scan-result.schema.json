@@ -651,6 +651,164 @@
             }
           }
         },
+        "hotspots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source",
+            "window",
+            "ranking"
+          ],
+          "properties": {
+            "source": {
+              "const": "git"
+            },
+            "window": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "days": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "since": {
+                  "type": "string"
+                },
+                "range": {
+                  "type": "string"
+                }
+              }
+            },
+            "ranking": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "repositoryPath",
+                  "totalIssues",
+                  "distinctRules",
+                  "bySeverity",
+                  "score",
+                  "churn",
+                  "reasons",
+                  "topRules"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string"
+                  },
+                  "repositoryPath": {
+                    "type": "string"
+                  },
+                  "totalIssues": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "distinctRules": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "bySeverity": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "info",
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "properties": {
+                      "info": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "low": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "medium": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "high": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "score": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "churn": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "file",
+                      "repositoryPath",
+                      "commits",
+                      "additions",
+                      "deletions",
+                      "changedLines"
+                    ],
+                    "properties": {
+                      "file": {
+                        "type": "string"
+                      },
+                      "repositoryPath": {
+                        "type": "string"
+                      },
+                      "commits": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "additions": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "deletions": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "changedLines": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    }
+                  },
+                  "reasons": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "topRules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "ruleId",
+                        "count"
+                      ],
+                      "properties": {
+                        "ruleId": {
+                          "type": "string"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "profile": {
           "type": "object",
           "additionalProperties": false,

@@ -92,6 +92,46 @@ export function buildScanResultSchema(): Record<string, unknown> {
       },
     },
   };
+  const fileChurnMetric = {
+    type: "object",
+    additionalProperties: false,
+    required: ["file", "repositoryPath", "commits", "additions", "deletions", "changedLines"],
+    properties: {
+      file: { type: "string" },
+      repositoryPath: { type: "string" },
+      commits: { type: "integer", minimum: 0 },
+      additions: { type: "integer", minimum: 0 },
+      deletions: { type: "integer", minimum: 0 },
+      changedLines: { type: "integer", minimum: 0 },
+    },
+  };
+  const hotspot = {
+    type: "object",
+    additionalProperties: false,
+    required: ["file", "repositoryPath", "totalIssues", "distinctRules", "bySeverity", "score", "churn", "reasons", "topRules"],
+    properties: {
+      file: { type: "string" },
+      repositoryPath: { type: "string" },
+      totalIssues: { type: "integer", minimum: 1 },
+      distinctRules: { type: "integer", minimum: 1 },
+      bySeverity: severityCountObject(),
+      score: { type: "number", minimum: 0 },
+      churn: fileChurnMetric,
+      reasons: { type: "array", items: { type: "string" } },
+      topRules: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["ruleId", "count"],
+          properties: {
+            ruleId: { type: "string" },
+            count: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+  };
 
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -201,6 +241,24 @@ export function buildScanResultSchema(): Record<string, unknown> {
           },
           correlations: { type: "array", items: correlation },
           duplicateClusters: { type: "array", items: duplicateCluster },
+          hotspots: {
+            type: "object",
+            additionalProperties: false,
+            required: ["source", "window", "ranking"],
+            properties: {
+              source: { const: "git" },
+              window: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  days: { type: "integer", minimum: 0 },
+                  since: { type: "string" },
+                  range: { type: "string" },
+                },
+              },
+              ranking: { type: "array", items: hotspot },
+            },
+          },
           profile: {
             type: "object",
             additionalProperties: false,

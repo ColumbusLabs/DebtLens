@@ -70,6 +70,7 @@ function renderPrCommentBody(
     return `${lines.join("\n")}\n`;
   }
 
+  renderHotspots(lines, result);
   renderFixTargets(lines, result);
   renderOmittedSummary(lines, result.issues, detailIssues, options, omissionReason);
   if (detailIssues.length === 0) {
@@ -112,6 +113,27 @@ function renderPrCommentBody(
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderHotspots(lines: string[], result: ScanResult): void {
+  const hotspots = result.summary.hotspots?.ranking ?? [];
+  if (hotspots.length === 0) return;
+
+  lines.push("");
+  lines.push("### Git churn hotspots");
+  lines.push("");
+  lines.push(`Optional git-derived ranking from ${formatHotspotWindow(result.summary.hotspots?.window)}.`);
+  for (const hotspot of hotspots.slice(0, 5)) {
+    const topRules = hotspot.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+    lines.push(`- \`${hotspot.file}\` - score ${hotspot.score}, ${hotspot.churn.commits} commit${hotspot.churn.commits === 1 ? "" : "s"}, ${hotspot.churn.changedLines} changed line${hotspot.churn.changedLines === 1 ? "" : "s"}: ${hotspot.reasons.join("; ")}. Top rules: ${topRules}.`);
+  }
+}
+
+function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots"]>["window"] | undefined): string {
+  if (!window) return "the configured git window";
+  if (window.range) return `git range \`${window.range}\``;
+  if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
+  return "the configured git window";
 }
 
 function renderFixTargets(lines: string[], result: ScanResult): void {

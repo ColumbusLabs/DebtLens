@@ -88,6 +88,7 @@ describe("config JSON schema", () => {
       "expo",
       "node",
       "python",
+      "kotlin",
       "ai-assisted-maintainer",
       "oss-maintainer",
     ]);

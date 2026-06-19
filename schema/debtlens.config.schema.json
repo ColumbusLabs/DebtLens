@@ -41,6 +41,7 @@
         "expo",
         "node",
         "python",
+        "kotlin",
         "ai-assisted-maintainer",
         "oss-maintainer"
       ],
@@ -81,7 +82,11 @@
               "story-only-component",
               "python-todo-comment",
               "python-duplicate-logic",
-              "python-dead-abstraction"
+              "python-dead-abstraction",
+              "kotlin-todo-comment",
+              "kotlin-large-function",
+              "kotlin-duplicate-logic",
+              "kotlin-dead-abstraction"
             ]
           },
           {
@@ -490,6 +495,38 @@
             "medium",
             "high"
           ]
+        },
+        "kotlin-todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "kotlin-large-function": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "kotlin-duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "kotlin-dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
         }
       },
       "additionalProperties": {
@@ -646,6 +683,26 @@
           "maximum": 1
         },
         "python-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kotlin-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kotlin-large-function": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kotlin-duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kotlin-dead-abstraction": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

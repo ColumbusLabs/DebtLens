@@ -12,6 +12,7 @@ import { effectComplexityDetector } from "./effectComplexity.js";
 import { handlerDepthDetector } from "./handlerDepth.js";
 import { hookDependencySmellDetector } from "./hookDependencySmell.js";
 import { importCycleDetector } from "./importCycle.js";
+import { kotlinDeadAbstractionDetector, kotlinDuplicateLogicDetector, kotlinLargeFunctionDetector, kotlinTodoCommentDetector } from "./kotlin/index.js";
 import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
 import { namingDriftDetector } from "./namingDrift.js";
@@ -57,6 +58,10 @@ export const allDetectors: Detector[] = [
   pythonTodoCommentDetector,
   pythonDuplicateLogicDetector,
   pythonDeadAbstractionDetector,
+  kotlinTodoCommentDetector,
+  kotlinLargeFunctionDetector,
+  kotlinDuplicateLogicDetector,
+  kotlinDeadAbstractionDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);

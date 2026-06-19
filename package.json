@@ -1,7 +1,7 @@
 {
   "name": "debtlens",
   "version": "0.3.0",
-  "description": "Maintainability scanner for TypeScript, JavaScript, and Python codebases with framework rule packs for adoption-friendly CI.",
+  "description": "Maintainability scanner for TypeScript, JavaScript, Python, and Kotlin codebases with framework rule packs for adoption-friendly CI.",
   "type": "module",
   "homepage": "https://github.com/ColumbusLabs/DebtLens#readme",
   "repository": {
@@ -50,6 +50,8 @@
     "typescript",
     "javascript",
     "python",
+    "kotlin",
+    "android",
     "ai-code-review",
     "cli",
     "maintainability"

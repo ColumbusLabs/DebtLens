@@ -12,12 +12,13 @@ describe("public capability messaging", () => {
     const cliIndex = read("src/cli/index.ts");
     const roadmap = read("ROADMAP.md");
 
-    assert.match(packageJson.description, /TypeScript, JavaScript, and Python/);
+    assert.match(packageJson.description, /TypeScript, JavaScript, Python, and Kotlin/);
     assert.ok(packageJson.keywords.includes("python"));
-    assert.match(readme, /TypeScript, JavaScript, and Python/);
-    assert.match(actionYml, /TypeScript, JavaScript, Python/);
-    assert.match(cliIndex, /TypeScript, JavaScript, Python/);
-    assert.match(roadmap, /TypeScript, JavaScript, and Python today/);
+    assert.ok(packageJson.keywords.includes("kotlin"));
+    assert.match(readme, /TypeScript, JavaScript, Python, and Kotlin/);
+    assert.match(actionYml, /TypeScript, JavaScript, Python, Kotlin/);
+    assert.match(cliIndex, /TypeScript, JavaScript, Python, Kotlin/);
+    assert.match(roadmap, /TypeScript, JavaScript, Python, and Kotlin today/);
   });
 
   it("guards against stale TS-only or unshipped-plugin claims", () => {
@@ -25,6 +26,11 @@ describe("public capability messaging", () => {
       "README.md",
       "ROADMAP.md",
       "docs/architecture.md",
+      "docs/examples.md",
+      "docs/language-pack-rfc.md",
+      "docs/pack-chooser.md",
+      "docs/quickstart.md",
+      "docs/rules.md",
       "docs/rule-packs.md",
       "docs/when-not-to-use.md",
       "docs/next-phase-plan.md",
@@ -42,6 +48,8 @@ describe("public capability messaging", () => {
     assert.doesNotMatch(publicDocs, /RFC . not implemented yet/);
     assert.doesNotMatch(publicDocs, /Today all detectors are hardcoded/);
     assert.doesNotMatch(publicDocs, /TypeScript and React codebases/);
+    assert.doesNotMatch(publicDocs, /Kotlin.*future/i);
+    assert.doesNotMatch(publicDocs, /unsupported.*Kotlin/i);
   });
 
   it("links the first-run adoption docs from the README", () => {

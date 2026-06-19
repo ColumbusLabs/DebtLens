@@ -79,6 +79,13 @@ const PYTHON_RULES = [
   "python-todo-comment",
 ] as const;
 
+const KOTLIN_RULES = [
+  "kotlin-duplicate-logic",
+  "kotlin-large-function",
+  "kotlin-dead-abstraction",
+  "kotlin-todo-comment",
+] as const;
+
 export const RULE_PACKS: Record<string, RulePack> = {
   core: {
     id: "core",
@@ -133,6 +140,11 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "python",
     description: "Core Python maintainability rules for duplicate functions, thin wrappers, and debt comments.",
     rules: [...PYTHON_RULES],
+  },
+  kotlin: {
+    id: "kotlin",
+    description: "Core Kotlin maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
+    rules: [...KOTLIN_RULES],
   },
   "ai-assisted-maintainer": {
     id: "ai-assisted-maintainer",

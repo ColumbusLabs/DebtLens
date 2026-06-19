@@ -1,10 +1,10 @@
 # Language Pack RFC
 
-Status: **First Python pack shipped**
+Status: **Python and Kotlin core packs shipped**
 
 DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
-CI workflows, and GitHub Action are language-neutral, and the first Python pack now
-proves that language-specific detectors can share the same `ScanResult` shape.
+CI workflows, and GitHub Action are language-neutral, and the Python and Kotlin packs now
+prove that language-specific detectors can share the same `ScanResult` shape.
 
 ## Shared requirements
 
@@ -38,12 +38,13 @@ export interface LanguageContext {
 
 ```bash
 debtlens scan . --pack core,python
+debtlens scan . --pack core,python,kotlin
 ```
 
 The scanner should:
 
 1. Resolve files once from include/exclude/git filters.
-2. Partition files by language handler (`ts/js`, `python`, `vue`, etc.).
+2. Partition files by language handler (`ts/js`, `python`, `kotlin`, `vue`, etc.).
 3. Run each handler's detectors against its own parsed representation.
 4. Merge findings, warnings, timing, and summary counts into one `ScanResult`.
 5. Preserve deterministic ordering by file path, rule id, and location.
@@ -95,6 +96,26 @@ Known limitations:
 - Type checkers and import resolution are out of scope for the first pack.
 - Framework packs such as Django or Flask should wait until core Python rules are useful.
 
+## Kotlin parser recommendation
+
+Recommendation: keep the first Kotlin pack dependency-free with a conservative lexical
+extractor, then revisit `tree-sitter-kotlin` or Kotlin compiler tooling only when deeper
+Compose or type-aware rules justify it.
+
+Current implementation:
+
+- `kotlin-todo-comment` scans Kotlin line, block, and KDoc comments with shared TODO marker patterns.
+- `kotlin-duplicate-logic` extracts block-bodied functions, normalizes comments, strings, numbers, and identifiers, and reuses duplicate-pair pruning.
+- `kotlin-large-function` counts function lines and conservative branch tokens.
+- `kotlin-dead-abstraction` flags simple expression-body or single-return pass-through wrappers.
+- `--pack kotlin` widens discovery to `.kt` and `.kts` files and keeps Android source trees visible even though they are excluded by TS/JS defaults.
+
+Known limitations:
+
+- The extractor is not a Kotlin compiler. It intentionally avoids type resolution, import graphs, trailing-lambda semantics, and Compose UI-specific debt.
+- `@Composable` wrapper and large-function checks are left to a future Compose pack so core Kotlin does not overclaim UI expertise.
+- Framework packs such as Jetpack Compose should wait until core Kotlin findings are calibrated.
+
 ## Vue parser recommendation
 
 Recommended path: use `vue-eslint-parser` for single-file component parsing, extracting
@@ -125,6 +146,7 @@ Known limitations:
 
 ## Example fixture
 
-[`examples/python/`](../examples/python/) is the calibrated Python pack fixture. It is
-intentionally scanned only when `python` or explicit `python-*` rules are selected, so
-TS/JS defaults do not change for existing users.
+[`examples/python/`](../examples/python/) and [`examples/kotlin/`](../examples/kotlin/)
+are calibrated language-pack fixtures. They are intentionally scanned only when their
+language packs or explicit language-specific rules are selected, so TS/JS defaults do not
+change for existing users.

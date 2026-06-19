@@ -17,15 +17,14 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     : packs.length
       ? unique([...packs.flatMap((pack) => pack.rules), ...pluginRuleIds])
       : undefined;
-  const shouldIncludePython = packIds.includes("python")
-    || rules?.some((ruleId) => ruleId.startsWith("python-")) === true;
+  const languageDiscovery = resolveLanguageDiscovery(packIds, rules);
 
   return {
     cwd,
     target: resolve(cwd, target),
-    include: resolveIncludeGlobs(fileConfig, cliOptions, shouldIncludePython),
+    include: resolveIncludeGlobs(fileConfig, cliOptions, languageDiscovery),
     exclude: [
-      ...defaultConfig.exclude,
+      ...resolveDefaultExcludes(languageDiscovery),
       ...(fileConfig.exclude ?? []),
       ...(cliOptions.exclude ?? []),
     ],
@@ -79,11 +78,45 @@ function parsePackIds(pack: string | undefined): string[] {
 function resolveIncludeGlobs(
   fileConfig: DebtLensConfig,
   cliOptions: CliOptions,
-  shouldIncludePython: boolean,
+  languageDiscovery: LanguageDiscovery,
 ): string[] {
   if (cliOptions.include?.length) return cliOptions.include;
-  const base = fileConfig.include ?? defaultConfig.include;
-  return shouldIncludePython ? unique([...base, "**/*.py"]) : base;
+  const base = resolveBaseIncludeGlobs(fileConfig, languageDiscovery);
+  return unique([
+    ...base,
+    ...(languageDiscovery.python ? ["**/*.py"] : []),
+    ...(languageDiscovery.kotlin ? ["**/*.{kt,kts}"] : []),
+  ]);
+}
+
+interface LanguageDiscovery {
+  tsjs: boolean;
+  python: boolean;
+  kotlin: boolean;
+}
+
+function resolveLanguageDiscovery(packIds: string[], rules: string[] | undefined): LanguageDiscovery {
+  const hasTsjsPack = packIds.some((packId) => packId !== "python" && packId !== "kotlin");
+  const hasTsjsRule = rules?.some((ruleId) => !ruleId.startsWith("python-") && !ruleId.startsWith("kotlin-")) === true;
+  return {
+    tsjs: packIds.length > 0 ? hasTsjsPack : rules?.length ? hasTsjsRule : true,
+    python: packIds.includes("python") || rules?.some((ruleId) => ruleId.startsWith("python-")) === true,
+    kotlin: packIds.includes("kotlin") || rules?.some((ruleId) => ruleId.startsWith("kotlin-")) === true,
+  };
+}
+
+function resolveBaseIncludeGlobs(
+  fileConfig: DebtLensConfig,
+  languageDiscovery: LanguageDiscovery,
+): string[] {
+  if (fileConfig.include) return fileConfig.include;
+  return languageDiscovery.tsjs ? defaultConfig.include : [];
+}
+
+function resolveDefaultExcludes(languageDiscovery: LanguageDiscovery): string[] {
+  return languageDiscovery.kotlin
+    ? defaultConfig.exclude.flatMap((pattern) => pattern === "android/**" ? ["android/**/*.{ts,tsx,js,jsx}"] : [pattern])
+    : defaultConfig.exclude;
 }
 
 function unique<T>(values: readonly T[]): T[] {

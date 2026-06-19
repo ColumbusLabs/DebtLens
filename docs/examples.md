@@ -10,6 +10,7 @@ these commands when evaluating output, writing docs, or checking a reporter chan
 | React Native screen | `debtlens scan examples/react-native --pack react-native --min-severity info` | RN host-forwarding and React-family rules. |
 | Node API | `debtlens scan examples/node-api --pack node --min-severity info` | Route and handler-depth signals for server code. |
 | Python service | `debtlens scan examples/python --pack python --min-severity info` | Python duplicate, thin-wrapper, and TODO rules. |
+| Kotlin service | `debtlens scan examples/kotlin --pack kotlin --min-severity info` | Kotlin duplicate, large-function, thin-wrapper, and TODO rules. |
 | Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |
 | False-positive playground | `debtlens scan examples/false-positives --pack react --min-severity info` | Calibrated near-misses that should stay quiet. |
 

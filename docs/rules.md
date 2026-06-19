@@ -563,6 +563,45 @@ When this is a false positive:
 
 Confidence: **0.90** for bare markers; higher for tracker-linked markers.
 
+## Kotlin core rules
+
+The `kotlin` pack ports the core maintainability signals to `.kt` and `.kts` files while
+reusing the same `ScanResult`, SARIF, baseline, and reporter contracts.
+
+### `kotlin-duplicate-logic`
+
+Finds structurally similar Kotlin functions after comments, identifiers, strings, and
+numeric literals are normalized. It reuses `duplicate-logic.minSimilarity`,
+`duplicate-logic.minLines`, and `duplicate-logic.maxSnippets`.
+
+Good fixes: compare the paired functions, extract stable shared behavior only when the
+variation is intentional, or delete the weaker duplicate.
+
+### `kotlin-large-function`
+
+Flags Kotlin functions that exceed line or branch-count budgets. It reuses
+`large-function.maxLines` and `large-function.maxBranches`.
+
+Good fixes: split branching policy, data normalization, and side effects into named
+helpers. Compose-specific view sizing is intentionally left to a separate Compose pack.
+
+### `kotlin-dead-abstraction`
+
+Flags simple Kotlin wrappers such as expression-body pass-through functions and one-line
+`return callee(args)` wrappers. It reuses `dead-abstraction.maxWrapperLines` and skips
+`override` and `@Composable` wrappers.
+
+Good fixes: inline wrappers that add no durable boundary, or add the missing behavior that
+justifies the abstraction.
+
+### `kotlin-todo-comment`
+
+Flags TODO/FIXME/HACK-style markers in Kotlin line comments, block comments, and KDoc. It
+uses the same `todoComment` configuration as the TS/JS and Python TODO rules.
+
+Good fixes: track the work, add a removal condition, or resolve the marker before more
+code depends on it.
+
 ## `barrel-file`
 
 Flags large re-export-only `index` or `barrel` files.

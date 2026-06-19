@@ -1,9 +1,9 @@
 # DebtLens Roadmap
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, and Python today,
-with additional languages (Vue, Svelte, Swift, Kotlin, Ruby, …) planned as future language
-packs. React was the first framework pack; React Native, Next.js, Expo, Node, Python, and
-plain TS/JS projects are current supported targets, not the product identity. See
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, and Kotlin today,
+with additional languages (Vue, Svelte, Swift, Ruby, …) planned as language packs.
+React was the first framework pack; React Native, Next.js, Expo, Node, Python, Kotlin,
+and plain TS/JS projects are current supported targets, not the product identity. See
 [`docs/rule-packs.md`](./docs/rule-packs.md) and [`docs/pack-chooser.md`](./docs/pack-chooser.md)
 for the current support matrix, future languages, and contribution paths.
 
@@ -43,6 +43,7 @@ for the current support matrix, future languages, and contribution paths.
 - Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`) — **partially shipped in v0.3**.
 - Vue/Svelte detectors where applicable.
 - **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO rules; same `ScanResult` and SARIF contract as TS/JS.
+- **Kotlin core pack** — duplicate/large-function/dead-abstraction/TODO rules; same `ScanResult` and SARIF contract as TS/JS.
 - Configurable domain vocabulary for naming drift.
 - Plugin API for third-party rules ([#26](https://github.com/ColumbusLabs/DebtLens/issues/26)).
 - Maintainer-oriented packs: `ai-assisted`, `oss-maintainer`.
@@ -50,7 +51,7 @@ for the current support matrix, future languages, and contribution paths.
 ## v0.5 — Additional language packs
 
 - **Swift** — core maintainability rules plus optional SwiftUI/UIKit packs (large views, state sprawl, thin wrappers).
-- **Kotlin** — core rules plus optional Jetpack Compose pack (if demand and parser path are clear).
+- **Jetpack Compose** — optional Kotlin UI pack once core Kotlin signal is calibrated.
 - Language packs reuse baselines, `--changed`, reporters, and CI; only AST parsing and detectors are language-specific.
 - Documented process for proposing and shipping a new language pack.
 

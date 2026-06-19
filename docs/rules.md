@@ -456,6 +456,12 @@ Default thresholds:
 - `duplicated-literal.minLength`: 6
 - `duplicated-literal.minCount`: 3
 
+Config:
+
+- `duplicatedLiteral.ignoreStrings`: exact string literal values to ignore. The `next` pack
+  includes `use client` and `use server` so App Router directives do not show up as
+  duplicated domain literals.
+
 Why it matters: repeated domain literals drift when one copy changes and the others do not.
 
 Good fixes:
@@ -468,7 +474,8 @@ When this is a false positive:
 
 - the repeated value is incidental rather than one shared concept
 - repetition stays inside one file
-- the value is a common framework literal
+- the value is a common framework literal; add it to `duplicatedLiteral.ignoreStrings`
+  when it is expected in your project
 
 Confidence: **0.74**. Cross-file repetition is useful evidence, but human review decides whether the concept is actually shared.
 

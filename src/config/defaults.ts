@@ -77,6 +77,9 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
   propDrilling: {
     ignoreComponents: [],
   },
+  duplicatedLiteral: {
+    ignoreStrings: [],
+  },
   todoComment: {
     markers: [],
     replaceDefaults: false,

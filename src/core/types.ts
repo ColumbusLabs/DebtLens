@@ -60,6 +60,11 @@ export interface DebtLensConfig {
   propDrilling?: {
     ignoreComponents?: string[];
   };
+  /** Duplicated-literal rule configuration. */
+  duplicatedLiteral?: {
+    /** Exact string literal values to ignore. */
+    ignoreStrings?: string[];
+  };
   /** Naming-drift rule configuration. */
   namingDrift?: {
     /** When true, skip built-in concept groups; only user `vocabulary` applies. */
@@ -109,6 +114,8 @@ export interface ScanOptions {
   fileContents?: Record<string, string>;
   /** Prop-drilling rule configuration. */
   propDrillingIgnoreComponents?: string[];
+  /** Exact string literal values ignored by the duplicated-literal rule. */
+  duplicatedLiteralIgnoreStrings?: string[];
   /** Todo-comment rule configuration. */
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
@@ -298,6 +305,7 @@ export interface CacheKeyInput {
   vocabulary?: Record<string, string[]>;
   namingDriftDisableBuiltInVocabulary?: boolean;
   propDrillingIgnoreComponents?: string[];
+  duplicatedLiteralIgnoreStrings?: string[];
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
   todoCommentMarkers?: Array<{ regex: string; severity: Severity; label: string }>;
@@ -330,6 +338,7 @@ export function toCacheKeyPayload(
     vocabulary: options.vocabulary,
     namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
     propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
+    duplicatedLiteralIgnoreStrings: options.duplicatedLiteralIgnoreStrings,
     todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
     todoCommentDisableDefaults: options.todoCommentDisableDefaults,
     todoCommentMarkers: options.todoCommentMarkers?.map((marker) => ({

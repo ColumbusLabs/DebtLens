@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
+import { mergeConfig } from "../../src/config/mergeConfig.js";
 import { scan } from "../../src/core/scan.js";
 
 describe("scan integration", () => {
@@ -63,6 +64,41 @@ describe("scan integration", () => {
       assert.equal(defaultResult.summary.totalIssues, 2);
       assert.equal(filteredResult.summary.totalIssues, 1);
       assert.deepEqual(filteredResult.issues.map((issue) => issue.file), ["src/kept.ts"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("applies Next pack duplicated-literal ignores during a scan", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-next-literals-"));
+    try {
+      mkdirSync(join(dir, "app", "dashboard"), { recursive: true });
+      mkdirSync(join(dir, "app", "settings"), { recursive: true });
+      mkdirSync(join(dir, "app", "reports"), { recursive: true });
+      writeFileSync(join(dir, "app", "dashboard", "ClientOne.tsx"), `"use client";
+export function ClientOne() {
+  return <button>One</button>;
+}
+`);
+      writeFileSync(join(dir, "app", "settings", "ClientTwo.tsx"), `"use client";
+export function ClientTwo() {
+  return <button>Two</button>;
+}
+`);
+      writeFileSync(join(dir, "app", "reports", "ClientThree.tsx"), `"use client";
+export function ClientThree() {
+  return <button>Three</button>;
+}
+`);
+
+      const result = await scan(mergeConfig(".", { pack: "next" }, {
+        cwd: dir,
+        rules: ["duplicated-literal"],
+      }));
+
+      assert.equal(result.summary.filesScanned, 3);
+      assert.equal(result.summary.rulesRun, 1);
+      assert.equal(result.summary.totalIssues, 0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

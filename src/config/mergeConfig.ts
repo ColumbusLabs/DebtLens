@@ -51,6 +51,11 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
       ...(defaultConfig.propDrilling?.ignoreComponents ?? []),
       ...(fileConfig.propDrilling?.ignoreComponents ?? []),
     ],
+    duplicatedLiteralIgnoreStrings: unique([
+      ...(defaultConfig.duplicatedLiteral?.ignoreStrings ?? []),
+      ...packs.flatMap((pack) => pack.duplicatedLiteral?.ignoreStrings ?? []),
+      ...(fileConfig.duplicatedLiteral?.ignoreStrings ?? []),
+    ]),
     todoCommentReplaceDefaults: fileConfig.todoComment?.replaceDefaults ?? defaultConfig.todoComment.replaceDefaults,
     todoCommentDisableDefaults: fileConfig.todoComment?.disableDefaults ?? defaultConfig.todoComment.disableDefaults,
     todoCommentMarkers: fileConfig.todoComment?.markers?.length

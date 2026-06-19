@@ -81,10 +81,16 @@ describe("config JSON schema", () => {
     const built = buildConfigSchema() as {
       properties: {
         todoComment?: { type: string };
+        duplicatedLiteral?: {
+          type: string;
+          properties: { ignoreStrings?: { type: string; items: { type: string } } };
+        };
         pack?: { anyOf: Array<{ enum?: string[]; pattern?: string }> };
       };
     };
     assert.equal(built.properties.todoComment?.type, "object");
+    assert.equal(built.properties.duplicatedLiteral?.type, "object");
+    assert.equal(built.properties.duplicatedLiteral?.properties.ignoreStrings?.type, "array");
     assert.deepEqual(built.properties.pack?.anyOf[0]?.enum, [
       "core",
       "react",

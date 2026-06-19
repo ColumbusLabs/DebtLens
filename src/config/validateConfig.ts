@@ -18,6 +18,7 @@ const knownRootKeys = new Set([
   "ruleSeverities",
   "ruleConfidenceFloors",
   "propDrilling",
+  "duplicatedLiteral",
   "todoComment",
   "namingDrift",
   "failOn",
@@ -89,6 +90,7 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
   validateSeverityRecord(errors, "ruleSeverities", typed.ruleSeverities);
   validateConfidenceRecord(errors, "ruleConfidenceFloors", typed.ruleConfidenceFloors);
   validatePropDrilling(errors, typed.propDrilling);
+  validateDuplicatedLiteral(errors, typed.duplicatedLiteral);
   validateNamingDrift(errors, typed.namingDrift);
   validateTodoComment(errors, typed.todoComment);
 
@@ -173,6 +175,16 @@ function validatePropDrilling(errors: string[], value: unknown): void {
   }
   validateAllowedKeys(errors, "propDrilling", value, ["ignoreComponents"]);
   validateStringArray(errors, "propDrilling.ignoreComponents", value.ignoreComponents);
+}
+
+function validateDuplicatedLiteral(errors: string[], value: unknown): void {
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    errors.push("duplicatedLiteral must be an object");
+    return;
+  }
+  validateAllowedKeys(errors, "duplicatedLiteral", value, ["ignoreStrings"]);
+  validateStringArray(errors, "duplicatedLiteral.ignoreStrings", value.ignoreStrings);
 }
 
 function validateNamingDrift(errors: string[], value: unknown): void {

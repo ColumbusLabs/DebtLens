@@ -130,9 +130,30 @@ describe("step summary reporter", () => {
   });
 
   it("renders a trend when a valid previous result is provided", () => {
-    const previous = makeResult([]);
+    const previous = makeResult([{
+      id: "shared",
+      fingerprint: "shared",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "low",
+      confidence: 0.5,
+      message: "Finding",
+      file: "file.ts",
+      tags: [],
+    }]);
     const current = makeResult([{
-      id: "1",
+      id: "shared",
+      fingerprint: "shared",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "high",
+      confidence: 0.5,
+      message: "Finding",
+      file: "file.ts",
+      tags: [],
+    }, {
+      id: "new",
+      fingerprint: "new",
       ruleId: "todo-comment",
       ruleName: "Todo comment",
       severity: "low",
@@ -145,6 +166,45 @@ describe("step summary reporter", () => {
     const output = renderStepSummary(current, { previousResult: previous });
 
     assert.match(output, /### Trend/);
-    assert.match(output, /\| 0 \| 0 \| \+1 \| 0 \| \+1 \|/);
+    assert.match(output, /New: \*\*1\*\* .* Resolved: \*\*0\*\* .* Changed: \*\*1\*\* .* Severity regressions: \*\*1\*\* .* Total: \*\*\+1\*\*/);
+    assert.match(output, /\| Severity \| Previous \| Current \| Delta \|/);
+    assert.match(output, /\| High \| 0 \| 1 \| \+1 \|/);
+    assert.match(output, /\| Low \| 1 \| 1 \| 0 \|/);
+  });
+
+  it("renders a summary-only trend with unavailable exact metrics", () => {
+    const previous = {
+      summary: {
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 1, medium: 0, high: 0 },
+        byRule: { "todo-comment": 1 },
+      },
+    };
+    const current = makeResult([{
+      id: "1",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "high",
+      confidence: 0.5,
+      message: "Finding",
+      file: "file.ts",
+      tags: [],
+    }]);
+
+    const output = renderStepSummary(current, { previousResult: previous });
+
+    assert.match(output, /New: \*\*unavailable\*\* .* Resolved: \*\*unavailable\*\*/);
+    assert.match(output, /\| High \| 0 \| 1 \| \+1 \|/);
+  });
+
+  it("renders trend warnings in the step summary", () => {
+    const previous = makeResult([]);
+    const current = makeResult([]);
+    current.options = { ...current.options, target: "packages/app" };
+
+    const output = renderStepSummary(current, { previousResult: previous });
+
+    assert.match(output, /Trend warnings:/);
+    assert.match(output, /scan options differ \(target\)/);
   });
 });

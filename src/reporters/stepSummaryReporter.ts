@@ -1,3 +1,4 @@
+import { compareScanResults } from "../core/scanComparison.js";
 import type { DebtIssue, ScanResult } from "../core/types.js";
 import {
   formatSuppressionAuditSummary,
@@ -6,7 +7,7 @@ import {
   summarizeSuppressionDirectives,
 } from "./suppressionAudit.js";
 
-export function renderStepSummary(result: ScanResult, options: { previousResult?: ScanResult } = {}): string {
+export function renderStepSummary(result: ScanResult, options: { previousResult?: unknown } = {}): string {
   const { summary } = result;
   const lines: string[] = [
     "## DebtLens",
@@ -19,15 +20,7 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
   ];
 
   if (options.previousResult) {
-    const previous = options.previousResult.summary;
-    lines.push(
-      "",
-      "### Trend",
-      "",
-      "| High | Medium | Low | Info | Total |",
-      "| ---: | ---: | ---: | ---: | ---: |",
-      `| ${formatDelta(summary.bySeverity.high - previous.bySeverity.high)} | ${formatDelta(summary.bySeverity.medium - previous.bySeverity.medium)} | ${formatDelta(summary.bySeverity.low - previous.bySeverity.low)} | ${formatDelta(summary.bySeverity.info - previous.bySeverity.info)} | ${formatDelta(summary.totalIssues - previous.totalIssues)} |`,
-    );
+    renderTrend(lines, result, options.previousResult);
   }
 
   const baselineDelta = summary.deltaFromBaseline;
@@ -61,6 +54,28 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
   return `${lines.join("\n")}\n`;
 }
 
+function renderTrend(lines: string[], result: ScanResult, previousResult: unknown): void {
+  const comparison = compareScanResults(previousResult, result);
+  lines.push(
+    "",
+    "### Trend",
+    "",
+    `New: **${formatMetric(comparison.delta.new)}** · Resolved: **${formatMetric(comparison.delta.resolved)}** · Changed: **${formatMetric(comparison.delta.changed)}** · Severity regressions: **${formatMetric(comparison.delta.severityRegressions)}** · Total: **${formatDelta(comparison.delta.total)}**`,
+    "",
+    "| Severity | Previous | Current | Delta |",
+    "| --- | ---: | ---: | ---: |",
+  );
+  for (const entry of comparison.delta.bySeverity) {
+    lines.push(`| ${capitalize(entry.severity)} | ${entry.previous} | ${entry.current} | ${formatDelta(entry.delta)} |`);
+  }
+  if (comparison.warnings.length > 0) {
+    lines.push("", "Trend warnings:", "");
+    for (const warning of comparison.warnings) {
+      lines.push(`- ${warning}`);
+    }
+  }
+}
+
 function renderSuppressionAudit(lines: string[], result: ScanResult): void {
   const directives = result.suppressionDirectives ?? [];
   if (directives.length === 0) return;
@@ -85,6 +100,14 @@ function renderSuppressionAudit(lines: string[], result: ScanResult): void {
 
 function formatDelta(value: number): string {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function formatMetric(value: number | null): string {
+  return value === null ? "unavailable" : String(value);
+}
+
+function capitalize(value: string): string {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
 function topIssues(issues: DebtIssue[], limit: number): DebtIssue[] {

@@ -50,7 +50,7 @@ Future reporters should use the same `ScanResult` object so downstream integrati
 https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json
 ```
 
-In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines. The fingerprint excludes raw line numbers so findings remain stable when code moves. Inline suppressions are preserved in a top-level audit log instead of being represented only as aggregate counts, baseline comparisons populate `summary.deltaFromBaseline`, and multi-rule hotspots are exposed through `summary.correlations`.
+In schema v1, issue `id` equals the line-stable `fingerprint` used by baselines. The fingerprint excludes raw line numbers so findings remain stable when code moves. Accepted inline suppressions are preserved in a top-level audit log instead of being represented only as aggregate counts. `--audit-suppressions` adds directive-level `suppressionDirectives` entries for used, unused, and not-evaluated inline comments, baseline comparisons populate `summary.deltaFromBaseline`, and multi-rule hotspots are exposed through `summary.correlations`.
 
 Reporter-specific views share aggregate helpers for severity counts, file/rule grouping, correlations, and heatmaps so CLI output, PR comments, Markdown, HTML, and JSON stay aligned.
 

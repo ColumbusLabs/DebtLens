@@ -201,6 +201,7 @@ Options:
 --parallel                     run detectors concurrently after source loading
 --batch-size <count>           load source files in bounded batches
 --blame-age                    add introducedDaysAgo metadata to JSON issues via git blame
+--audit-suppressions           include used and unused inline suppression directives
 --group-by <group>             terminal grouping: severity, rule, or file
 --sarif-compact                SARIF only: emit only rules referenced by findings
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
@@ -295,7 +296,7 @@ When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns tha
 
 `debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
 
-Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
+Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. Pass `--audit-suppressions` to also export `suppressionDirectives`, a directive-level audit of used, unused, and not-evaluated inline suppressions with file, line, rule, reason, hidden-finding count, and recommended action. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
 
 Pass `--blame-age` to enrich JSON issues with optional `introducedDaysAgo` metadata from
 `git blame`. This is best-effort: outside git repositories, uncommitted lines, and staged
@@ -325,6 +326,15 @@ Rules:
 - Only the matching rule (and line, for next-line) is suppressed; other rules on the same line still report.
 
 Terminal output includes inline suppression counts in the filter stats line (for example, `1 inline suppressed`). JSON reports expose the same count under `summary.filterStats.suppressedByInline`.
+
+Use `--audit-suppressions` to find stale or broad directives:
+
+```bash
+debtlens scan . --audit-suppressions --format markdown
+debtlens scan . --audit-suppressions --format json
+```
+
+Audit output separates file-wide and next-line suppressions, marks directives as `used`, `unused`, or `not-evaluated`, and recommends whether to remove stale suppressions, narrow broad file-wide exceptions, or rerun the audit with the relevant rule enabled.
 
 `debtlens suppress` prints a ready-to-paste directive so you don't have to remember the syntax:
 
@@ -505,6 +515,7 @@ Terminal output is designed for local development. JSON is designed for integrat
 
 ```bash
 debtlens scan --format json
+debtlens scan --audit-suppressions --format markdown
 debtlens scan --format markdown --markdown-heatmap 10 --output reports/debtlens.md
 debtlens scan --format pr-comment --output debtlens-pr-comment.md
 debtlens scan --format sarif --sarif-compact --output debtlens.sarif
@@ -547,7 +558,7 @@ jobs:
           sarif_file: debtlens.sarif
 ```
 
-Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
+Scan/report inputs: `target`, `min-severity`, `rules`, `pack`, `fail-on`, `fail-on-confidence`, `fail-on-regression`, `format`, `output`, `changed`, `diff-base`, `package`, `profile`, `cache`, `cache-path`, `parallel`, `batch-size`, `blame-age`, `audit-suppressions`, `respect-gitignore`, `baseline`, `config`, `write-baseline`, `thresholds`, `max-files`, `working-directory`, `quiet`, `group-by`, `sarif-compact`, `markdown-heatmap`, `step-summary`, `comment`, and `comment-delta-only`. Action-only orchestration inputs: `previous-report`, `json-output`, `upload-json-artifact`, `json-artifact-name`, and `json-artifact-retention-days`. `write-baseline` and `baseline` are mutually exclusive. The Action runs one canonical JSON scan, renders all requested outputs from that ScanResult, can upload the JSON artifact when `upload-json-artifact` is enabled, and then replays the scan exit code so comments/artifacts still appear on gated failures.
 
 Set `step-summary: true` to append a compact Markdown rollup to the job's GitHub Actions step summary (useful alongside SARIF or terminal output):
 

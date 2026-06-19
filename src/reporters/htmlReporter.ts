@@ -1,6 +1,12 @@
 import { buildDebtHeatmap } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import {
+  formatSuppressionAuditSummary,
+  formatSuppressionDirectiveLine,
+  formatSuppressionKind,
+  summarizeSuppressionDirectives,
+} from "./suppressionAudit.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -15,6 +21,7 @@ export function renderHtml(result: ScanResult): string {
   const correlations = (result.summary.correlations ?? []).map((entry) => (
     `<tr><td><code>${escapeHtml(entry.file)}</code></td><td>${entry.totalIssues}</td><td>${escapeHtml(entry.rules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`
   )).join("\n");
+  const suppressionAudit = renderSuppressionAudit(result);
 
   return `<!doctype html>
 <html lang="en">
@@ -45,6 +52,7 @@ export function renderHtml(result: ScanResult): string {
     <div class="metric"><span>Total</span><strong>${result.summary.totalIssues}</strong></div>
     ${severityOrder.map((severity) => `<div class="metric"><span>${capitalize(severity)}</span><strong>${result.summary.bySeverity[severity]}</strong></div>`).join("\n    ")}
   </section>
+  ${suppressionAudit}
   <h2>Findings</h2>
   ${result.issues.length === 0 ? `<div class="empty">No maintainability debt found at the configured severity level.</div>` : `<table>
     <thead><tr><th>Severity</th><th>Rule</th><th>Location</th><th>Message</th><th>Confidence</th></tr></thead>
@@ -70,6 +78,24 @@ ${correlations}
 </body>
 </html>
 `;
+}
+
+function renderSuppressionAudit(result: ScanResult): string {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return "";
+
+  const rows = directives.map((directive) => (
+    `<tr><td>${escapeHtml(directive.status)}</td><td>${escapeHtml(formatSuppressionKind(directive.kind))}</td><td><code>${escapeHtml(formatSuppressionDirectiveLine(directive))}</code></td><td><code>${escapeHtml(directive.ruleId)}</code></td><td>${directive.suppressedIssueCount}</td><td>${escapeHtml(directive.reason)}</td><td>${escapeHtml(directive.recommendedAction)}</td></tr>`
+  )).join("\n");
+
+  return `<h2>Suppression Audit</h2>
+  <p>${escapeHtml(formatSuppressionAuditSummary(summarizeSuppressionDirectives(directives)))}</p>
+  <table>
+    <thead><tr><th>Status</th><th>Kind</th><th>Location</th><th>Rule</th><th>Hidden findings</th><th>Reason</th><th>Recommended action</th></tr></thead>
+    <tbody>
+${rows}
+    </tbody>
+  </table>`;
 }
 
 function escapeHtml(value: string): string {

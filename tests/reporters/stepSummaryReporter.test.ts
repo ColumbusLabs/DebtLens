@@ -34,6 +34,38 @@ describe("step summary reporter", () => {
     assert.match(output, /No maintainability debt found/);
   });
 
+  it("renders suppression audit counts and unused actions", () => {
+    const result = makeResult([]);
+    result.suppressionDirectives = [{
+      ruleId: "todo-comment",
+      file: "src/Widget.ts",
+      kind: "next-line",
+      reason: "stale exception",
+      directiveLine: 4,
+      targetLine: 5,
+      status: "unused",
+      suppressedIssueCount: 0,
+      recommendedAction: "Remove this suppression if the finding no longer exists.",
+    }, {
+      ruleId: "todo-comment",
+      file: "src/Legacy.ts",
+      kind: "file",
+      reason: "legacy rollout debt",
+      directiveLine: 1,
+      status: "used",
+      suppressedIssueCount: 2,
+      recommendedAction: "Review whether this file-wide suppression can be narrowed to specific next-line suppressions.",
+    }];
+
+    const output = renderStepSummary(result);
+
+    assert.match(output, /### Suppression Audit/);
+    assert.match(output, /2 directives \| 1 unused \| 0 not evaluated \| 1 file-wide \| 1 next-line \| 2 hidden findings/);
+    assert.match(output, /`src\/Widget\.ts:4` \*\*todo-comment\*\* \(next-line, unused\) - Reason: stale exception\. Action: Remove this suppression/);
+    assert.match(output, /`src\/Legacy\.ts:1` \*\*todo-comment\*\* \(file-wide, used\) - Reason: legacy rollout debt\. Action: Review whether this file-wide suppression can be narrowed/);
+    assert.match(output, /No maintainability debt found/);
+  });
+
   it("lists up to five findings sorted by severity then confidence", () => {
     const issues: DebtIssue[] = [
       {

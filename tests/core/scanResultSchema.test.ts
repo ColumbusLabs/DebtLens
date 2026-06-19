@@ -17,6 +17,7 @@ describe("ScanResult JSON schema", () => {
         schemaVersion: { const: number };
         issues: { items: { required: string[] } };
         suppressions: { items: { required: string[] } };
+        suppressionDirectives: { items: { required: string[] } };
         summary: {
           properties: {
             deltaFromBaseline?: { required: string[] };
@@ -32,6 +33,8 @@ describe("ScanResult JSON schema", () => {
     assert.equal(schema.properties.schemaVersion.const, 1);
     assert.ok(schema.properties.issues.items.required.includes("fingerprint"));
     assert.ok(schema.properties.suppressions.items.required.includes("reason"));
+    assert.ok(schema.properties.suppressionDirectives.items.required.includes("recommendedAction"));
+    assert.ok(schema.properties.suppressionDirectives.items.required.includes("suppressedIssueCount"));
     assert.ok(schema.properties.summary.properties.deltaFromBaseline?.required.includes("totalDelta"));
     assert.ok(schema.properties.summary.properties.correlations?.items.required.includes("rules"));
     assert.ok(schema.properties.summary.properties.duplicateClusters?.items.required.includes("locations"));

@@ -1,4 +1,10 @@
 import type { DebtIssue, ScanResult } from "../core/types.js";
+import {
+  formatSuppressionAuditSummary,
+  formatSuppressionDirectiveLine,
+  formatSuppressionKind,
+  summarizeSuppressionDirectives,
+} from "./suppressionAudit.js";
 
 export function renderStepSummary(result: ScanResult, options: { previousResult?: ScanResult } = {}): string {
   const { summary } = result;
@@ -34,6 +40,8 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
     );
   }
 
+  renderSuppressionAudit(lines, result);
+
   if (result.issues.length === 0) {
     lines.push("", "No maintainability debt found at the configured severity level.");
     return `${lines.join("\n")}\n`;
@@ -51,6 +59,28 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderSuppressionAudit(lines: string[], result: ScanResult): void {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return;
+
+  const actionItems = directives.filter((directive) => directive.status !== "used" || directive.kind === "file");
+  lines.push(
+    "",
+    "### Suppression Audit",
+    "",
+    formatSuppressionAuditSummary(summarizeSuppressionDirectives(directives)),
+  );
+  if (actionItems.length === 0) return;
+
+  lines.push("", "Suppression actions:", "");
+  for (const directive of actionItems.slice(0, 5)) {
+    lines.push(`- \`${formatSuppressionDirectiveLine(directive)}\` **${directive.ruleId}** (${formatSuppressionKind(directive.kind)}, ${directive.status}) - Reason: ${directive.reason}. Action: ${directive.recommendedAction}`);
+  }
+  if (actionItems.length > 5) {
+    lines.push("", `_...and ${actionItems.length - 5} more suppression action(s)._`);
+  }
 }
 
 function formatDelta(value: number): string {

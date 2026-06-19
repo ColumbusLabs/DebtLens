@@ -70,6 +70,27 @@ describe("renderTerminal", () => {
     assert.match(out, /Filtered: 2 baselined \| 3 below min severity/);
   });
 
+  it("renders suppression audit summaries and details", () => {
+    const out = renderTerminal({
+      ...makeResult([]),
+      suppressionDirectives: [{
+        ruleId: "todo-comment",
+        file: "src/Widget.ts",
+        kind: "next-line",
+        reason: "stale exception",
+        directiveLine: 4,
+        targetLine: 5,
+        status: "unused",
+        suppressedIssueCount: 0,
+        recommendedAction: "Remove this suppression if the finding no longer exists.",
+      }],
+    }, { color: false });
+
+    assert.match(out, /Suppression audit: 1 directive \| 1 unused \| 0 not evaluated \| 0 file-wide \| 1 next-line \| 0 hidden findings/);
+    assert.match(out, /unused next-line src\/Widget\.ts:4 \[todo-comment\] -> target line 5/);
+    assert.match(out, /action: Remove this suppression/);
+  });
+
   it("can group findings by rule or file", () => {
     const second = { ...issue, id: "dl_2", ruleId: "state-sprawl", ruleName: "State sprawl", file: "src/State.tsx" };
 

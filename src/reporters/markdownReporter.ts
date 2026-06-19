@@ -3,6 +3,12 @@ import type { ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
 import { escapeMarkdownTableCell } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
+import {
+  formatSuppressionAuditSummary,
+  formatSuppressionDirectiveLine,
+  formatSuppressionKind,
+  summarizeSuppressionDirectives,
+} from "./suppressionAudit.js";
 
 const severityOrder: Severity[] = ["high", "medium", "low", "info"];
 
@@ -26,6 +32,8 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   if (filterStats) {
     lines.push(`- Filtered: **${filterStats}**`);
   }
+
+  renderSuppressionAudit(lines, result);
 
   if (result.issues.length === 0) {
     lines.push("");
@@ -107,6 +115,31 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function renderSuppressionAudit(lines: string[], result: ScanResult): void {
+  const directives = result.suppressionDirectives ?? [];
+  if (directives.length === 0) return;
+
+  const summary = summarizeSuppressionDirectives(directives);
+  lines.push("");
+  lines.push("## Suppression audit");
+  lines.push("");
+  lines.push(formatSuppressionAuditSummary(summary));
+  lines.push("");
+  lines.push("| Status | Kind | Location | Rule | Hidden findings | Reason | Recommended action |");
+  lines.push("| --- | --- | --- | --- | ---: | --- | --- |");
+  for (const directive of directives) {
+    lines.push([
+      directive.status,
+      formatSuppressionKind(directive.kind),
+      `\`${escapeMarkdownTableCell(formatSuppressionDirectiveLine(directive))}\``,
+      `\`${escapeMarkdownTableCell(directive.ruleId)}\``,
+      String(directive.suppressedIssueCount),
+      escapeMarkdownTableCell(directive.reason),
+      escapeMarkdownTableCell(directive.recommendedAction),
+    ].join(" | ").replace(/^/, "| ").replace(/$/, " |"));
+  }
 }
 
 function capitalize(value: string): string {

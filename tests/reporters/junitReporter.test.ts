@@ -23,6 +23,29 @@ describe("junit reporter", () => {
     assert.match(xml, /line="2"/);
     assert.match(xml, /Avoid &lt;TODO&gt; &amp; notes/);
   });
+
+  it("renders suppression audits as skipped testcases", () => {
+    const result = makeResult([]);
+    result.suppressionDirectives = [{
+      ruleId: "todo-comment",
+      file: "src/<Widget>.ts",
+      kind: "next-line",
+      reason: "stale <exception>",
+      directiveLine: 4,
+      targetLine: 5,
+      status: "unused",
+      suppressedIssueCount: 0,
+      recommendedAction: "Remove this suppression if the finding no longer exists.",
+    }];
+
+    const xml = renderJunit(result);
+
+    assert.match(xml, /tests="1" failures="0" skipped="1"/);
+    assert.match(xml, /<testsuite name="DebtLens suppression audit" tests="1" failures="0" skipped="1">/);
+    assert.match(xml, /<skipped message="\[todo-comment\] Remove this suppression if the finding no longer exists\."/);
+    assert.match(xml, /src\/&lt;Widget&gt;\.ts:4/);
+    assert.match(xml, /Reason: stale &lt;exception&gt;/);
+  });
 });
 
 function makeResult(issues: DebtIssue[]): ScanResult {

@@ -1,12 +1,19 @@
-import type { DebtIssue, ScanResult } from "../core/types.js";
+import type { DebtIssue, ScanResult, SuppressionDirectiveAudit } from "../core/types.js";
 
 export function renderJunit(result: ScanResult): string {
   const cases = result.issues.map((issue) => renderTestCase(issue)).join("\n");
+  const suppressionCases = (result.suppressionDirectives ?? []).map(renderSuppressionTestCase).join("\n");
+  const suppressionCount = result.suppressionDirectives?.length ?? 0;
+  const totalTests = result.issues.length + suppressionCount;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="DebtLens" tests="${result.issues.length}" failures="${result.issues.length}">
+<testsuites name="DebtLens" tests="${totalTests}" failures="${result.issues.length}" skipped="${suppressionCount}">
   <testsuite name="DebtLens findings" tests="${result.issues.length}" failures="${result.issues.length}">
 ${cases}
   </testsuite>
+${suppressionCount > 0 ? `  <testsuite name="DebtLens suppression audit" tests="${suppressionCount}" failures="0" skipped="${suppressionCount}">
+${suppressionCases}
+  </testsuite>
+` : ""}
 </testsuites>
 `;
 }
@@ -31,6 +38,26 @@ function renderFailureBody(issue: DebtIssue, location: string): string {
   if (issue.suggestion) lines.push(`Suggestion: ${issue.suggestion}`);
   if (issue.evidence?.length) lines.push(`Evidence: ${issue.evidence.join("; ")}`);
   return lines.join("\n");
+}
+
+function renderSuppressionTestCase(directive: SuppressionDirectiveAudit): string {
+  const classname = `debtlens.suppression.${directive.kind}`;
+  const location = `${directive.file}:${directive.directiveLine}`;
+  return `    <testcase classname="${escapeXmlAttribute(classname)}" name="${escapeXmlAttribute(`${directive.status} ${directive.ruleId} ${location}`)}" file="${escapeXmlAttribute(directive.file)}" line="${directive.directiveLine}">
+      <skipped message="${escapeXmlAttribute(`[${directive.ruleId}] ${directive.recommendedAction}`)}">${escapeXmlText(renderSuppressionBody(directive, location))}</skipped>
+    </testcase>`;
+}
+
+function renderSuppressionBody(directive: SuppressionDirectiveAudit, location: string): string {
+  return [
+    `Suppression directive (${directive.ruleId})`,
+    `Location: ${location}`,
+    `Kind: ${directive.kind}`,
+    `Status: ${directive.status}`,
+    `Reason: ${directive.reason}`,
+    `Hidden findings: ${directive.suppressedIssueCount}`,
+    `Recommended action: ${directive.recommendedAction}`,
+  ].join("\n");
 }
 
 function escapeXmlAttribute(value: string): string {

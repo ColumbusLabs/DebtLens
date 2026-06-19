@@ -38,6 +38,8 @@ Inline suppressions use comment directives:
 
 The reason after `--` is required. Unknown rule ids and missing reasons produce warnings and do not suppress. Suppressions run inside `scan()` before baseline or `--diff-base` filtering, so baselines still track only the issues that remain after inline suppressions. JSON output includes accepted suppressions in a root `suppressions` audit array with the rule, file, directive line, reason, and suppressed issue.
 
+Use `debtlens scan --audit-suppressions` to emit a directive-level audit in `suppressionDirectives`. It includes used, unused, and not-evaluated directives, separates file-wide suppressions from next-line suppressions, reports hidden-finding counts, and recommends whether to remove stale suppressions, narrow broad file-wide exceptions, or rerun the audit with an unselected rule enabled.
+
 ## `large-component`
 
 Flags React-style PascalCase functions, `memo`/`forwardRef` wrappers, and class components

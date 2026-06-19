@@ -30,6 +30,28 @@ describe("html reporter", () => {
 
     assert.match(html, /No maintainability debt found/);
   });
+
+  it("renders escaped suppression audits", () => {
+    const result = makeResult([]);
+    result.suppressionDirectives = [{
+      ruleId: "todo-comment",
+      file: "src/<Widget>.ts",
+      kind: "next-line",
+      reason: "stale <exception>",
+      directiveLine: 4,
+      targetLine: 5,
+      status: "unused",
+      suppressedIssueCount: 0,
+      recommendedAction: "Remove this suppression if the finding no longer exists.",
+    }];
+
+    const html = renderHtml(result);
+
+    assert.match(html, /Suppression Audit/);
+    assert.match(html, /1 directive \| 1 unused \| 0 not evaluated \| 0 file-wide \| 1 next-line \| 0 hidden findings/);
+    assert.match(html, /src\/&lt;Widget&gt;\.ts:4/);
+    assert.match(html, /stale &lt;exception&gt;/);
+  });
 });
 
 function makeResult(issues: DebtIssue[]): ScanResult {

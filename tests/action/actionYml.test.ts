@@ -16,6 +16,7 @@ describe("GitHub Action metadata", () => {
       "parallel",
       "batch-size",
       "blame-age",
+      "audit-suppressions",
       "fail-on-regression",
       "json-output",
       "upload-json-artifact",
@@ -47,6 +48,8 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /args\+=\(--batch-size "\$DL_BATCH_SIZE"\)/);
     assert.match(actionYml, /DL_BLAME_AGE: \$\{\{ inputs\.blame-age \}\}/);
     assert.match(actionYml, /args\+=\(--blame-age\)/);
+    assert.match(actionYml, /DL_AUDIT_SUPPRESSIONS: \$\{\{ inputs\.audit-suppressions \}\}/);
+    assert.match(actionYml, /args\+=\(--audit-suppressions\)/);
   });
 
   it("documents supported packs and bootstraps tagged release assets before source fallback", () => {

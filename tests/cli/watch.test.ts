@@ -16,6 +16,7 @@ describe("debtlens watch", () => {
       format: "json",
       quiet: true,
       blameAge: true,
+      auditSuppressions: true,
       debounce: 10,
     });
 
@@ -29,6 +30,7 @@ describe("debtlens watch", () => {
       "--cwd",
       repoRoot,
       "--quiet",
+      "--audit-suppressions",
       "--blame-age",
     ]);
   });

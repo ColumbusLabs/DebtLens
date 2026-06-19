@@ -490,6 +490,7 @@ describe("debtlens scan inline suppressions", () => {
       assert.equal(suppressed.suppressions[0].targetLine, 2);
       assert.equal(suppressed.suppressions[0].issue.ruleId, "todo-comment");
       assert.equal(typeof suppressed.suppressions[0].issue.fingerprint, "string");
+      assert.equal(suppressed.suppressionDirectives, undefined);
     });
   });
 
@@ -535,6 +536,45 @@ describe("debtlens scan inline suppressions", () => {
 
       assert.equal(parsed.summary.totalIssues, 0);
       assert.equal(parsed.summary.filterStats?.suppressedByInline, 2);
+    });
+  });
+
+  it("audits used and unused suppression directives when requested", () => {
+    withTempProject((dir) => {
+      writeFileSync(
+        join(dir, "src", "Widget.ts"),
+        "// debtlens-disable-file todo-comment -- legacy rollout debt\n// TODO one\n// TODO two\n",
+      );
+      writeFileSync(
+        join(dir, "src", "Stale.ts"),
+        "// debtlens-disable-next-line todo-comment -- stale exception\nconst ok = true;\n",
+      );
+      writeFileSync(
+        join(dir, "src", "NotRun.ts"),
+        "// debtlens-disable-next-line naming-drift -- domain term\nconst ok = true;\n",
+      );
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--audit-suppressions", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.equal(parsed.summary.filterStats?.suppressedByInline, 2);
+      assert.equal(parsed.suppressions.length, 2);
+      const fileWide = parsed.suppressionDirectives.find((directive: { file: string }) => directive.file.endsWith("Widget.ts"));
+      const unused = parsed.suppressionDirectives.find((directive: { file: string }) => directive.file.endsWith("Stale.ts"));
+      const notEvaluated = parsed.suppressionDirectives.find((directive: { file: string }) => directive.file.endsWith("NotRun.ts"));
+      assert.equal(fileWide.kind, "file");
+      assert.equal(fileWide.status, "used");
+      assert.equal(fileWide.suppressedIssueCount, 2);
+      assert.match(fileWide.recommendedAction, /file-wide suppression can be narrowed/);
+      assert.equal(unused.kind, "next-line");
+      assert.equal(unused.status, "unused");
+      assert.equal(unused.targetLine, 2);
+      assert.equal(unused.reason, "stale exception");
+      assert.match(unused.recommendedAction, /Remove this suppression/);
+      assert.equal(notEvaluated.ruleId, "naming-drift");
+      assert.equal(notEvaluated.status, "not-evaluated");
+      assert.match(notEvaluated.recommendedAction, /Run this rule/);
     });
   });
 });

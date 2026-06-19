@@ -5,7 +5,7 @@ import type { Detector, ScanOptions, ScanResult } from "./types.js";
 import { toCacheKeyPayload } from "./types.js";
 import { packageVersion } from "../utils/packageInfo.js";
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const MAX_ENTRIES = 20;
 
 interface CacheFileEntry {

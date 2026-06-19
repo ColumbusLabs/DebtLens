@@ -57,6 +57,9 @@ inputs:
   blame-age:
     description: Add introducedDaysAgo metadata to JSON issues using git blame.
     default: "false"
+  audit-suppressions:
+    description: Include used and unused inline suppression directives in scan output.
+    default: "false"
   respect-gitignore:
     description: Skip files ignored by git in addition to configured excludes.
     default: "false"
@@ -153,6 +156,7 @@ runs:
         DL_PARALLEL: ${{ inputs.parallel }}
         DL_BATCH_SIZE: ${{ inputs.batch-size }}
         DL_BLAME_AGE: ${{ inputs.blame-age }}
+        DL_AUDIT_SUPPRESSIONS: ${{ inputs.audit-suppressions }}
         DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
         DL_CONFIG: ${{ inputs.config }}
@@ -221,6 +225,7 @@ runs:
         [ "$DL_PARALLEL" = "true" ] && args+=(--parallel)
         [ -n "$DL_BATCH_SIZE" ] && args+=(--batch-size "$DL_BATCH_SIZE")
         [ "$DL_BLAME_AGE" = "true" ] && args+=(--blame-age)
+        [ "$DL_AUDIT_SUPPRESSIONS" = "true" ] && args+=(--audit-suppressions)
         [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
         [ "$DL_PROFILE" = "true" ] && args+=(--profile)
         [ "$DL_FAIL_ON_REGRESSION" = "true" ] && args+=(--fail-on-regression)

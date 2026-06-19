@@ -76,6 +76,42 @@ describe("scan cache", () => {
     }
   });
 
+  it("keeps suppression audit cache entries separate from normal scans", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-cache-suppressions-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(
+        join(dir, "src", "app.ts"),
+        "// debtlens-disable-next-line todo-comment -- tracked in PROJ-1\n// TODO first pass\n",
+      );
+      const cachePath = join(dir, ".debtlens", "cache.json");
+      const options = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        cache: true,
+        cachePath,
+      };
+
+      const withoutAudit = await scan(options);
+      const withAudit = await scan({ ...options, auditSuppressions: true });
+      const withAuditAgain = await scan({ ...options, auditSuppressions: true });
+
+      assert.equal(withoutAudit.summary.performance?.cache?.hit, false);
+      assert.equal(withoutAudit.suppressionDirectives, undefined);
+      assert.equal(withAudit.summary.performance?.cache?.hit, false);
+      assert.equal(withAudit.suppressionDirectives?.[0]?.status, "used");
+      assert.equal(withAuditAgain.summary.performance?.cache?.hit, true);
+      assert.equal(withAuditAgain.suppressionDirectives?.[0]?.status, "used");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("disables scan caching when plugin detectors are loaded", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-plugin-cache-"));
     try {

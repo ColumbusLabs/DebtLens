@@ -134,4 +134,26 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /No maintainability debt found at the configured severity level\./);
     assert.doesNotMatch(markdown, /Grouped annotations/);
   });
+
+  it("renders suppression audits before the empty state", () => {
+    const result = makeResult([]);
+    result.suppressionDirectives = [{
+      ruleId: "todo-comment",
+      file: "src/Widget.ts",
+      kind: "next-line",
+      reason: "stale exception",
+      directiveLine: 4,
+      targetLine: 5,
+      status: "unused",
+      suppressedIssueCount: 0,
+      recommendedAction: "Remove this suppression if the finding no longer exists.",
+    }];
+
+    const markdown = renderPrComment(result);
+
+    assert.match(markdown, /### Suppression audit/);
+    assert.match(markdown, /1 directive \| 1 unused \| 0 not evaluated \| 0 file-wide \| 1 next-line \| 0 hidden findings/);
+    assert.match(markdown, /\| unused \| next-line \| `src\/Widget\.ts:4` \| `todo-comment` \| 0 \| stale exception \| Remove this suppression/);
+    assert.match(markdown, /No maintainability debt found at the configured severity level\./);
+  });
 });

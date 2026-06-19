@@ -112,6 +112,13 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /DebtLens Adoption Report/);
     assert.match(result.stdout, /Total issues: 1/);
     assert.match(result.stdout, /todo-comment: 1/);
+    assert.match(result.stdout, /Rollout plan:/);
+    assert.match(result.stdout, /1\. Start with a focused dry run/);
+    assert.match(result.stdout, /Recommended first pack: core/);
+    assert.match(result.stdout, /debtlens scan .*--write-baseline debtlens-baseline\.json/);
+    assert.match(result.stdout, /debtlens scan .*--baseline debtlens-baseline\.json .*--fail-on high/);
+    assert.match(result.stdout, /debtlens scan .*--changed origin\/main/);
+    assert.match(result.stdout, /debtlens scan .*--staged .*--fail-on-confidence 0\.8/);
     assert.match(result.stdout, /Dry run — no files written/);
     assert.equal(existsSync(join(dir, CONFIG_FILENAME)), false);
     assert.equal(existsSync(join(dir, DEFAULT_BASELINE_FILENAME)), false);
@@ -124,6 +131,10 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /^# DebtLens Adoption Report/m);
     assert.match(result.stdout, /\| Severity \| Issues \|/);
     assert.match(result.stdout, /\| `todo-comment` \| 1 \|/);
+    assert.match(result.stdout, /^## Rollout Plan/m);
+    assert.match(result.stdout, /1\. \*\*Start with a focused dry run\*\*/);
+    assert.match(result.stdout, /Command: `debtlens adopt .*--format markdown`/);
+    assert.match(result.stdout, /Rationale: .*Recommended first pack: core/);
   });
 
   it("prints threshold suggestions when adoption findings exceed defaults", () => {
@@ -140,8 +151,11 @@ describe("debtlens adopt", () => {
 
     assert.equal(pkgA.status, 0);
     assert.match(pkgA.stdout, /Total issues: 1/);
+    assert.match(pkgA.stdout, /Start with a package-scoped dry run/);
+    assert.match(pkgA.stdout, /--package pkg-a/);
     assert.equal(pkgB.status, 0);
     assert.match(pkgB.stdout, /Total issues: 0/);
+    assert.match(pkgB.stdout, /Skip the baseline unless legacy debt appears/);
   });
 
   it("writes config and baseline when requested", () => {

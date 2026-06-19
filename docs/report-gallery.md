@@ -19,6 +19,8 @@ result so counts, filters, baselines, suppressions, and source links stay aligne
 When `hotspots` is enabled, reports can include optional git-derived hotspot
 prioritization; churn windows require checkout history, such as a full checkout in CI,
 and default scans skip that work.
+When `ownership` is enabled, reports can include optional CODEOWNERS-based owner
+summaries and unowned high-debt callouts so teams can route cleanup work.
 PR comments use pull request head SHAs for source links when available, warn instead of
 failing on missing comment permissions by default, and can summarize omitted findings
 when `comment-max-findings` or `comment-max-bytes` caps are reached.

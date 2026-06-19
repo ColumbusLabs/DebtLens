@@ -18,6 +18,7 @@ export function renderHtml(result: ScanResult): string {
     limit: 5,
   });
   const hotspots = result.summary.hotspots?.ranking ?? [];
+  const ownership = result.summary.ownership;
   const findings = result.issues.map((issue) => {
     const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
     return `<tr><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(issue.ruleName)}</td><td><code>${escapeHtml(location)}</code></td><td>${escapeHtml(issue.message)}</td><td>${Math.round(issue.confidence * 100)}%</td></tr>`;
@@ -66,6 +67,21 @@ export function renderHtml(result: ScanResult): string {
 ${hotspots.map((hotspot) => `<tr><td><code>${escapeHtml(hotspot.file)}</code></td><td>${hotspot.score}</td><td>${hotspot.churn.commits} commit${hotspot.churn.commits === 1 ? "" : "s"}, ${hotspot.churn.changedLines} changed line${hotspot.churn.changedLines === 1 ? "" : "s"}</td><td>${escapeHtml(hotspot.reasons.join("; "))}</td><td>${escapeHtml(hotspot.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`).join("\n")}
     </tbody>
   </table>` : ""}
+  ${ownership ? `<h2>Ownership Handoffs</h2>
+  <p>CODEOWNERS source: <code>${escapeHtml(ownership.codeownersPath)}</code>.</p>
+  ${ownership.ownerSummaries.length ? `<table>
+    <thead><tr><th>Owner</th><th>Files</th><th>Issues</th><th>Top files</th></tr></thead>
+    <tbody>
+${ownership.ownerSummaries.map((owner) => `<tr><td>${escapeHtml(owner.owner)}</td><td>${owner.files}</td><td>${owner.totalIssues}</td><td>${escapeHtml(owner.topFiles.map((file) => `${file.file} (${file.totalIssues})`).join(", "))}</td></tr>`).join("\n")}
+    </tbody>
+  </table>` : ""}
+  ${ownership.unownedHotspots.length ? `<h3>Unowned High-Debt Files</h3>
+  <table>
+    <thead><tr><th>File</th><th>Score</th><th>Why</th><th>Top rules</th></tr></thead>
+    <tbody>
+${ownership.unownedHotspots.map((target) => `<tr><td><code>${escapeHtml(target.file)}</code></td><td>${target.score}</td><td>${escapeHtml(target.reasons.join("; "))}</td><td>${escapeHtml(target.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`).join("\n")}
+    </tbody>
+  </table>` : ""}` : ""}
   ${fixTargets.length ? `<h2>Fix These First</h2>
   <table>
     <thead><tr><th>File</th><th>Issues</th><th>Why</th><th>Top rules</th></tr></thead>

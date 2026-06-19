@@ -184,6 +184,40 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /`src\/Parent\.tsx` - score 27\.4, 3 commits, 24 changed lines/);
   });
 
+  it("renders optional CODEOWNERS ownership handoffs", () => {
+    const result = makeResult([propIssue]);
+    result.summary.ownership = {
+      source: "codeowners",
+      codeownersPath: ".github/CODEOWNERS",
+      files: [],
+      ownerSummaries: [{
+        owner: "@frontend/team",
+        files: 1,
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        topFiles: [{ file: "src/Parent.tsx", totalIssues: 1, score: 21 }],
+      }],
+      handoffs: [],
+      unownedHotspots: [{
+        file: "src/Orphan.ts",
+        repositoryPath: "src/Orphan.ts",
+        owners: [],
+        totalIssues: 2,
+        distinctRules: 2,
+        bySeverity: { info: 0, low: 1, medium: 1, high: 0 },
+        score: 20,
+        reasons: ["1 medium-severity finding"],
+        topRules: [{ ruleId: "todo-comment", count: 1 }],
+      }],
+    };
+
+    const markdown = renderPrComment(result);
+
+    assert.match(markdown, /### Ownership handoffs/);
+    assert.match(markdown, /@frontend\/team: 1 finding across 1 file; top files: src\/Parent\.tsx \(1\)/);
+    assert.match(markdown, /Unowned high-debt files: src\/Orphan\.ts \(2\)/);
+  });
+
   it("caps detailed findings and summarizes omitted findings with a full report link", () => {
     const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
       maxFindings: 1,

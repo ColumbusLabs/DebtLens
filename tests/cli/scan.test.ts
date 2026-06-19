@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -1070,6 +1070,147 @@ describe("debtlens scan git modes", () => {
       assert.match(result.stderr, /--hotspots ignored \(not a git repository\)/);
       assert.equal(parsed.summary.totalIssues, 1);
       assert.equal(parsed.summary.hotspots, undefined);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("adds optional CODEOWNERS ownership summaries to JSON scans", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-ownership-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, ".github"));
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, ".github", "CODEOWNERS"), "src/owned.ts @app/frontend\n");
+      writeFileSync(join(dir, "src", "owned.ts"), "// TODO owned\nexport const owned = 1;\n");
+      writeFileSync(join(dir, "src", "orphan.ts"), "// TODO orphan\nexport const orphan = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--ownership", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.ownership.source, "codeowners");
+      assert.match(parsed.summary.ownership.codeownersPath, /\.github\/CODEOWNERS$/);
+      assert.deepEqual(parsed.summary.ownership.files.find((file: { file: string }) => file.file === "src/owned.ts").owners, ["@app/frontend"]);
+      assert.equal(parsed.summary.ownership.ownerSummaries[0].owner, "@app/frontend");
+      assert.deepEqual(parsed.summary.ownership.unownedHotspots.map((file: { file: string }) => file.file), ["src/orphan.ts"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("discovers repository-root CODEOWNERS when scanning from a package directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-ownership-package-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, ".github"));
+      mkdirSync(join(dir, "packages", "ui", "src"), { recursive: true });
+      writeFileSync(join(dir, ".github", "CODEOWNERS"), "packages/ui/src/owned.ts @ui\n");
+      writeFileSync(join(dir, "packages", "ui", "src", "owned.ts"), "// TODO package owner\nexport const owned = 1;\n");
+
+      const packageDir = join(dir, "packages", "ui");
+      const result = runScan([".", "--cwd", packageDir, "--rules", "todo-comment", "--ownership", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(result.stderr, "");
+      assert.equal(parsed.summary.ownership.codeownersPath, join(realpathSync(dir), ".github", "CODEOWNERS"));
+      assert.deepEqual(parsed.summary.ownership.files.map((file: { file: string; repositoryPath: string; owners: string[] }) => [
+        file.file,
+        file.repositoryPath,
+        file.owners,
+      ]), [["src/owned.ts", "packages/ui/src/owned.ts", ["@ui"]]]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps repository-relative matching for explicit CODEOWNERS from a package directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-ownership-explicit-package-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, ".github"));
+      mkdirSync(join(dir, "packages", "ui", "src"), { recursive: true });
+      writeFileSync(join(dir, ".github", "CODEOWNERS"), "packages/ui/src/owned.ts @ui\n");
+      writeFileSync(join(dir, "packages", "ui", "src", "owned.ts"), "// TODO package explicit owner\nexport const owned = 1;\n");
+
+      const packageDir = join(dir, "packages", "ui");
+      const result = runScan([
+        ".",
+        "--cwd",
+        packageDir,
+        "--rules",
+        "todo-comment",
+        "--codeowners",
+        "../../.github/CODEOWNERS",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(result.stderr, "");
+      assert.deepEqual(parsed.summary.ownership.files.map((file: { file: string; repositoryPath: string; owners: string[] }) => [
+        file.file,
+        file.repositoryPath,
+        file.owners,
+      ]), [["src/owned.ts", "packages/ui/src/owned.ts", ["@ui"]]]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("supports explicit CODEOWNERS paths outside git repositories", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-codeowners-explicit-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "OWNERS"), "src/* dev@example.com\n");
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO explicit owner\nexport const value = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--codeowners", "OWNERS", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(result.stderr, "");
+      assert.equal(parsed.summary.ownership.ownerSummaries[0].owner, "dev@example.com");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps missing CODEOWNERS warning-free unless ownership is requested", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-codeowners-missing-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO missing owner\nexport const value = 1;\n");
+
+      const defaultResult = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--format", "json"]);
+      const requestedResult = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--ownership", "--format", "json"]);
+      const parsed = JSON.parse(defaultResult.stdout);
+
+      assert.equal(defaultResult.status, 0);
+      assert.equal(defaultResult.stderr, "");
+      assert.equal(parsed.summary.ownership, undefined);
+      assert.equal(requestedResult.status, 0);
+      assert.match(requestedResult.stderr, /--ownership ignored \(CODEOWNERS not found\)/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("warns for requested ownership with missing CODEOWNERS even when there are no findings", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-codeowners-clean-missing-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "export const value = 1;\n");
+
+      const result = runScan([".", "--cwd", dir, "--rules", "todo-comment", "--ownership", "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.match(result.stderr, /--ownership ignored \(CODEOWNERS not found\)/);
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.equal(parsed.summary.ownership, undefined);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

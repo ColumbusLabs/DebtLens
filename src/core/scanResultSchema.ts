@@ -132,6 +132,73 @@ export function buildScanResultSchema(): Record<string, unknown> {
       },
     },
   };
+  const ownershipFileSummary = {
+    type: "object",
+    additionalProperties: false,
+    required: ["file", "repositoryPath", "owners", "totalIssues", "bySeverity"],
+    properties: {
+      file: { type: "string" },
+      repositoryPath: { type: "string" },
+      owners: { type: "array", items: { type: "string" } },
+      totalIssues: { type: "integer", minimum: 1 },
+      bySeverity: severityCountObject(),
+      matchedPattern: { type: "string" },
+      matchedLine: { type: "integer", minimum: 1 },
+    },
+  };
+  const ownershipHandoff = {
+    type: "object",
+    additionalProperties: false,
+    required: ["file", "repositoryPath", "owners", "totalIssues", "distinctRules", "bySeverity", "score", "reasons", "topRules"],
+    properties: {
+      file: { type: "string" },
+      repositoryPath: { type: "string" },
+      owners: { type: "array", items: { type: "string" } },
+      totalIssues: { type: "integer", minimum: 1 },
+      distinctRules: { type: "integer", minimum: 1 },
+      bySeverity: severityCountObject(),
+      score: { type: "number", minimum: 0 },
+      reasons: { type: "array", items: { type: "string" } },
+      topRules: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["ruleId", "count"],
+          properties: {
+            ruleId: { type: "string" },
+            count: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+      matchedPattern: { type: "string" },
+      matchedLine: { type: "integer", minimum: 1 },
+    },
+  };
+  const ownershipOwnerSummary = {
+    type: "object",
+    additionalProperties: false,
+    required: ["owner", "files", "totalIssues", "bySeverity", "topFiles"],
+    properties: {
+      owner: { type: "string" },
+      files: { type: "integer", minimum: 1 },
+      totalIssues: { type: "integer", minimum: 1 },
+      bySeverity: severityCountObject(),
+      topFiles: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["file", "totalIssues", "score"],
+          properties: {
+            file: { type: "string" },
+            totalIssues: { type: "integer", minimum: 1 },
+            score: { type: "number", minimum: 0 },
+          },
+        },
+      },
+    },
+  };
 
   return {
     $schema: "http://json-schema.org/draft-07/schema#",
@@ -257,6 +324,20 @@ export function buildScanResultSchema(): Record<string, unknown> {
                 },
               },
               ranking: { type: "array", items: hotspot },
+            },
+          },
+          ownership: {
+            type: "object",
+            additionalProperties: false,
+            required: ["source", "codeownersPath", "files", "ownerSummaries", "handoffs", "unownedHotspots"],
+            properties: {
+              source: { const: "codeowners" },
+              codeownersPath: { type: "string" },
+              files: { type: "array", items: ownershipFileSummary },
+              ownerSummaries: { type: "array", items: ownershipOwnerSummary },
+              handoffs: { type: "array", items: ownershipHandoff },
+              unownedHotspots: { type: "array", items: ownershipHandoff },
+              warnings: { type: "array", items: { type: "string" } },
             },
           },
           profile: {

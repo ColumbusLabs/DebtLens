@@ -81,6 +81,8 @@ describe("debtlens mcp", () => {
     assert.ok(scanTool.inputSchema.properties.hotspots);
     assert.ok(scanTool.inputSchema.properties.churnDays);
     assert.ok(scanTool.inputSchema.properties.churnRange);
+    assert.ok(scanTool.inputSchema.properties.ownership);
+    assert.ok(scanTool.inputSchema.properties.codeowners);
   });
 
   it("calls the rules tool through the CLI", () => {
@@ -156,6 +158,35 @@ describe("debtlens mcp", () => {
       assert.equal(parsed.summary.hotspots.window.days, 30);
       assert.equal(parsed.summary.hotspots.ranking[0].file, "src/app.ts");
       assert.ok(parsed.summary.hotspots.ranking[0].churn.commits >= 2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("passes ownership scan options through MCP scan calls", () => {
+    const root = mkdtempSync(join(tmpdir(), "debtlens-mcp-ownership-"));
+    try {
+      mkdirSync(join(root, "src"));
+      writeFileSync(join(root, "OWNERS"), "src/* @app/frontend\n");
+      writeFileSync(join(root, "src", "app.ts"), "// TODO mcp owner\nexport const value = 1;\n");
+
+      const result = runMcp(request(32, "tools/call", {
+        name: "scan",
+        arguments: {
+          cwd: root,
+          target: ".",
+          rules: "todo-comment",
+          format: "json",
+          ownership: true,
+          codeowners: "OWNERS",
+        },
+      }));
+      const response = JSON.parse(result.stdout.trim());
+      const parsed = JSON.parse(response.result.content[0].text);
+
+      assert.equal(result.status, 0);
+      assert.equal(response.result.isError, false);
+      assert.equal(parsed.summary.ownership.ownerSummaries[0].owner, "@app/frontend");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

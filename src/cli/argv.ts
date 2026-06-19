@@ -32,6 +32,8 @@ export const SCAN_ARG_FLAGS = [
   "--hotspots",
   "--churn-days",
   "--churn-range",
+  "--ownership",
+  "--codeowners",
   "--group-by",
   "--sarif-compact",
   "--sarif-category",
@@ -74,6 +76,8 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addOptionalValue(args, "--hotspots", rawOptions.hotspots);
   addValue(args, "--churn-days", rawOptions.churnDays);
   addString(args, "--churn-range", rawOptions.churnRange);
+  addBoolean(args, "--ownership", rawOptions.ownership);
+  addString(args, "--codeowners", rawOptions.codeowners);
   addString(args, "--group-by", rawOptions.groupBy);
   addBoolean(args, "--sarif-compact", rawOptions.sarifCompact);
   addString(args, "--sarif-category", rawOptions.sarifCategory);

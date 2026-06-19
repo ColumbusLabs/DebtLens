@@ -43,6 +43,8 @@ export function registerWatchCommand(program: Command): void {
     .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
     .option("--churn-days <count>", "with --hotspots, look back this many days", parseInteger)
     .option("--churn-range <range>", "with --hotspots, use this git revision range instead of --churn-days")
+    .option("--ownership", "attach CODEOWNERS-based ownership summaries to reports")
+    .option("--codeowners <path>", "with --ownership, read ownership rules from this CODEOWNERS file")
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
     .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
     .option("--sarif-category <category>", "with --format sarif, set runs[].automationDetails.id for separated code scanning runs")

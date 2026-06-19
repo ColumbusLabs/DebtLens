@@ -28,7 +28,7 @@ describe("provider CI docs", () => {
   });
 
   it("documents optional git-derived hotspot prioritization for GitHub Action scans", () => {
-    assert.match(readme, /`blame-age`, `hotspots`, `churn-days`, `churn-range`, `audit-suppressions`/);
+    assert.match(readme, /`blame-age`, `hotspots`, `churn-days`, `churn-range`, `ownership`, `codeowners`, `audit-suppressions`/);
     assert.match(readme, /fetch-depth: 0\s+# needed for --changed and optional hotspot churn/);
     assert.match(readme, /optional, git-derived hotspot data/);
     assert.match(readme, /use `actions\/checkout` with `fetch-depth: 0` for full history/);
@@ -36,6 +36,14 @@ describe("provider CI docs", () => {
     assert.match(readme, /does not pass hotspot inputs to `write-baseline` mode/);
     assert.match(reportGalleryDocs, /optional git-derived hotspot\s+prioritization/);
     assert.match(reportGalleryDocs, /full checkout in CI/);
+  });
+
+  it("documents optional CODEOWNERS ownership routing for reports", () => {
+    assert.match(readme, /`ownership`, `codeowners`, `audit-suppressions`/);
+    assert.match(readme, /optional CODEOWNERS-based owner summaries/);
+    assert.match(readme, /unowned high-debt callouts/);
+    assert.match(readme, /does not pass ownership inputs to `write-baseline` mode/);
+    assert.match(reportGalleryDocs, /CODEOWNERS-based owner\s+summaries/);
   });
 
   it("documents GitLab Code Quality baseline and new-code gates", () => {

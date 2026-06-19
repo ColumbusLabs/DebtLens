@@ -3,6 +3,7 @@ import { createIssue } from "../../utils/createIssue.js";
 import { extractPythonModule } from "./parse.js";
 
 const HTTP_ROUTE_METHODS = new Set(["get", "post", "put", "patch", "delete", "head", "options"]);
+const MAX_DJANGO_URL_CALL_LINES = 20;
 
 interface PythonRouteRegistration {
   method: string;
@@ -168,18 +169,41 @@ function collectDjangoUrlPatterns(content: string, ignoredLines: Set<number>): P
 
   for (let index = 0; index < lines.length; index += 1) {
     if (ignoredLines.has(index + 1)) continue;
-    const line = lines[index] ?? "";
-    const match = line.match(/^\s*(path|re_path)\s*\(\s*(?:[rubfRUBF]*)?(["'])(.*?)\2/);
-    if (!match) continue;
-    routes.push({
-      method: match[1] === "re_path" ? "DJANGO_RE_PATH" : "DJANGO_PATH",
-      path: normalizeDisplayPath(match[3] ?? "<configured route>"),
-      line: index + 1,
-      source: "django-urlconf",
-    });
+    const route = describeDjangoUrlCall(lines, index, ignoredLines);
+    if (route) routes.push(route);
   }
 
   return routes;
+}
+
+function describeDjangoUrlCall(
+  lines: string[],
+  startIndex: number,
+  ignoredLines: Set<number>,
+): PythonRouteRegistration | undefined {
+  const startLine = lines[startIndex] ?? "";
+  const startMatch = startLine.match(/^\s*(path|re_path)\s*\(/);
+  if (!startMatch) return undefined;
+
+  const endIndex = Math.min(lines.length, startIndex + MAX_DJANGO_URL_CALL_LINES);
+  const chunkLines: string[] = [];
+
+  for (let index = startIndex; index < endIndex; index += 1) {
+    if (ignoredLines.has(index + 1)) break;
+    if (index > startIndex && /^\s*(path|re_path)\s*\(/.test(lines[index] ?? "")) break;
+    chunkLines.push(lines[index] ?? "");
+
+    const match = chunkLines.join("\n").match(/^\s*(path|re_path)\s*\(\s*(?:[rubfRUBF]*)?(["'])([^"']*)\2/);
+    if (!match) continue;
+    return {
+      method: match[1] === "re_path" ? "DJANGO_RE_PATH" : "DJANGO_PATH",
+      path: normalizeDisplayPath(match[3] ?? "<configured route>"),
+      line: startIndex + 1,
+      source: "django-urlconf",
+    };
+  }
+
+  return undefined;
 }
 
 function hasDjangoUrlEvidence(

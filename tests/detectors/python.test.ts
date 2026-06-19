@@ -545,6 +545,40 @@ urlpatterns = [
     assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_RE_PATH ^accounts/")));
   });
 
+  it("counts multiline Django URLConf route registrations", async () => {
+    const issues = await runDetector(pythonRouteSprawlDetector, {
+      "src/urls.py": `
+from django.urls import path, re_path
+from . import views
+
+urlpatterns = [
+    path(
+        "accounts/",
+        views.accounts,
+    ),
+    path(
+        "accounts/create/",
+        views.create_account,
+    ),
+    path(
+        "accounts/<uuid:account_id>/",
+        views.account_detail,
+    ),
+    re_path(
+        r"^accounts/(?P<account_id>[^/]+)/archive/$",
+        views.archive_account,
+    ),
+]
+`,
+    }, {
+      thresholds: { "python-route-sprawl.maxRoutes": 4 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_PATH accounts/")));
+    assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("DJANGO_RE_PATH ^accounts/")));
+  });
+
   it("does not count Django URL examples inside multiline strings", async () => {
     const issues = await runDetector(pythonRouteSprawlDetector, {
       "src/urls.py": `

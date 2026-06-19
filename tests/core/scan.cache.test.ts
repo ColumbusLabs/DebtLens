@@ -112,6 +112,47 @@ describe("scan cache", () => {
     }
   });
 
+  it("keeps duplicated-literal ignore config separate in the scan cache", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-cache-literals-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "billing.ts"), `export const one = "payment-overdue";\n`);
+      writeFileSync(join(dir, "src", "notifications.ts"), `export const two = "payment-overdue";\n`);
+      writeFileSync(join(dir, "src", "reports.ts"), `export const three = "payment-overdue";\n`);
+      const cachePath = join(dir, ".debtlens", "cache.json");
+      const options = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["duplicated-literal"],
+        thresholds: defaultConfig.thresholds,
+        cache: true,
+        cachePath,
+      };
+
+      const withoutIgnore = await scan(options);
+      const withIgnore = await scan({
+        ...options,
+        duplicatedLiteralIgnoreStrings: ["payment-overdue"],
+      });
+      const withIgnoreAgain = await scan({
+        ...options,
+        duplicatedLiteralIgnoreStrings: ["payment-overdue"],
+      });
+
+      assert.equal(withoutIgnore.summary.totalIssues, 1);
+      assert.equal(withoutIgnore.summary.performance?.cache?.hit, false);
+      assert.equal(withIgnore.summary.totalIssues, 0);
+      assert.equal(withIgnore.summary.performance?.cache?.hit, false);
+      assert.equal(withIgnoreAgain.summary.totalIssues, 0);
+      assert.equal(withIgnoreAgain.summary.performance?.cache?.hit, true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("disables scan caching when plugin detectors are loaded", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-plugin-cache-"));
     try {

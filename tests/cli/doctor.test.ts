@@ -87,6 +87,20 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /todoComment\.markers\[0\]\.pattern must be a string/);
   });
 
+  it("accepts duplicated-literal ignore config", () => {
+    const configPath = join(dir, "debtlens.config.json");
+    writeFileSync(configPath, JSON.stringify({
+      duplicatedLiteral: {
+        ignoreStrings: ["use client"],
+      },
+    }), "utf8");
+
+    const result = runDoctor([".", "--cwd", dir]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Config schema: valid/);
+  });
+
   it("reports plugin config dependency errors in the doctor output", () => {
     writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
       plugins: ["./plugin.mjs"],

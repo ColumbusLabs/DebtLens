@@ -305,6 +305,7 @@ export interface CacheKeyInput {
   vocabulary?: Record<string, string[]>;
   namingDriftDisableBuiltInVocabulary?: boolean;
   propDrillingIgnoreComponents?: string[];
+  duplicatedLiteralIgnoreStrings?: string[];
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
   todoCommentMarkers?: Array<{ regex: string; severity: Severity; label: string }>;
@@ -337,6 +338,7 @@ export function toCacheKeyPayload(
     vocabulary: options.vocabulary,
     namingDriftDisableBuiltInVocabulary: options.namingDriftDisableBuiltInVocabulary,
     propDrillingIgnoreComponents: options.propDrillingIgnoreComponents,
+    duplicatedLiteralIgnoreStrings: options.duplicatedLiteralIgnoreStrings,
     todoCommentReplaceDefaults: options.todoCommentReplaceDefaults,
     todoCommentDisableDefaults: options.todoCommentDisableDefaults,
     todoCommentMarkers: options.todoCommentMarkers?.map((marker) => ({

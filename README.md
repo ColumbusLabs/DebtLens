@@ -197,7 +197,7 @@ Options:
 --rules <rules>                comma-separated rule ids
 --threshold <thresholds>       comma-separated key=value threshold overrides
 --max-files <count>            maximum files to scan
---format <format>              terminal, json, markdown, pr-comment, sarif, html, or junit
+--format <format>              terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality
 -o, --output <path>            write the report to a file
 --fail-on <severity>           exit 1 when an issue meets this severity
 --fail-on-confidence <0-1>     with --fail-on, require at least this confidence to fail
@@ -250,6 +250,9 @@ debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-
 # Create HTML and JUnit reports for CI artifacts
 debtlens scan --format html --output reports/debtlens.html
 debtlens scan --format junit --junit-fail-on high --output reports/debtlens.junit.xml
+
+# Create a GitLab Code Quality report
+debtlens scan --format gitlab-codequality --output gl-code-quality-report.json
 
 # Package-scoped adoption report in a workspace
 debtlens adopt . --package web --format markdown
@@ -546,7 +549,7 @@ guidance.
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards; findings include stable SARIF `partialFingerprints`, and `--sarif-category` can set `runs[].automationDetails.id` for package or pack-separated uploads. HTML is a self-contained human report. JUnit XML is for CI systems that expect test-style failures; `--junit-fail-on` can keep lower-severity findings visible as skipped testcases while only the selected severity threshold fails the suite. When omitted, every reported finding fails to preserve existing behavior.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards; findings include stable SARIF `partialFingerprints`, and `--sarif-category` can set `runs[].automationDetails.id` for package or pack-separated uploads. HTML is a self-contained human report. JUnit XML is for CI systems that expect test-style failures; `--junit-fail-on` can keep lower-severity findings visible as skipped testcases while only the selected severity threshold fails the suite. When omitted, every reported finding fails to preserve existing behavior. `gitlab-codequality` emits GitLab's Code Quality JSON array with stable fingerprints, repo-relative paths, lines, descriptions, rule names, and mapped severities.
 
 ```bash
 debtlens scan --format json
@@ -557,6 +560,7 @@ debtlens scan --format pr-comment --pr-comment-max-findings 20 --pr-comment-max-
 debtlens scan --format sarif --sarif-compact --sarif-category packages/web --output debtlens.sarif
 debtlens scan --format html --output reports/debtlens.html
 debtlens scan --format junit --junit-fail-on high --output reports/debtlens.junit.xml
+debtlens scan --format gitlab-codequality --output gl-code-quality-report.json
 debtlens scan --group-by rule
 debtlens compare previous.json current.json --format terminal
 debtlens compare previous.json current.json --format markdown

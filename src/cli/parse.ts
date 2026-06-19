@@ -89,8 +89,8 @@ export function parseConfidence(value: string): number {
 }
 
 export function parseFormat(value: string): OutputFormat {
-  if (value === "terminal" || value === "json" || value === "markdown" || value === "pr-comment" || value === "sarif" || value === "html" || value === "junit") return value;
-  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, pr-comment, sarif, html, or junit.`);
+  if (value === "terminal" || value === "json" || value === "markdown" || value === "pr-comment" || value === "sarif" || value === "html" || value === "junit" || value === "gitlab-codequality") return value;
+  throw new Error(`Invalid format "${value}". Expected terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality.`);
 }
 
 export function parseGroupBy(value: string): TerminalGroupBy {

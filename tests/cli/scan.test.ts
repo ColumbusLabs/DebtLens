@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,9 +12,11 @@ import { packageVersion } from "../../src/utils/packageInfo.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
+const localRequire = createRequire(import.meta.url);
+const tsxLoader = localRequire.resolve("tsx");
 
 function runCli(args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
-  return spawnSync(process.execPath, ["--import", "tsx", cliEntrypoint, ...args], {
+  return spawnSync(process.execPath, ["--import", tsxLoader, cliEntrypoint, ...args], {
     cwd: options.cwd ?? repoRoot,
     encoding: "utf8",
     env: { ...process.env, ...(options.env ?? {}) },
@@ -113,7 +116,42 @@ describe("debtlens scan output formats", () => {
     const result = runScan(["examples/react", "--format", "nope"]);
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, or junit/);
+    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality/);
+  });
+
+  it("emits GitLab Code Quality JSON from CLI flags", () => {
+    const result = runScan(["examples/react", "--rules", "todo-comment", "--format", "gitlab-codequality"]);
+    const parsed = JSON.parse(result.stdout);
+
+    assert.equal(result.status, 0);
+    assert.equal(parsed.length, 1);
+    assert.equal(parsed[0].check_name, "todo-comment");
+    assert.equal(parsed[0].severity, "minor");
+    assert.equal(parsed[0].location.path, "examples/react/src/Dashboard.tsx");
+    assert.equal(parsed[0].location.lines.begin, 22);
+    assert.equal(typeof parsed[0].fingerprint, "string");
+    assert.match(parsed[0].description, /todo marker/);
+  });
+
+  it("emits GitLab Code Quality repository-relative paths when --cwd is external", () => {
+    const externalCwd = mkdtempSync(join(tmpdir(), "debtlens-cli-cwd-"));
+    try {
+      const result = runScan([
+        "examples/react",
+        "--cwd",
+        repoRoot,
+        "--rules",
+        "todo-comment",
+        "--format",
+        "gitlab-codequality",
+      ], { cwd: externalCwd });
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed[0].location.path, "examples/react/src/Dashboard.tsx");
+    } finally {
+      rmSync(externalCwd, { recursive: true, force: true });
+    }
   });
 
   it("passes the JUnit failure threshold from CLI flags", () => {

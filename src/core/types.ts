@@ -1,7 +1,7 @@
 import type { Project, SourceFile } from "ts-morph";
 
 export type Severity = "info" | "low" | "medium" | "high";
-export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit";
+export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit" | "gitlab-codequality";
 export type TerminalGroupBy = "severity" | "rule" | "file";
 
 export interface IssueLocation {

@@ -171,6 +171,36 @@ describe("Action reporting scripts", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("emits escaped Azure Pipelines log issues with absolute source paths", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-azure-issues-"));
+    try {
+      const externalCwd = join(dir, "external-cwd");
+      mkdirSync(externalCwd, { recursive: true });
+      const reportPath = join(dir, "report.json");
+      const report = makeReport();
+      report.options.target = join(repoRoot, "examples", "react");
+      writeFileSync(reportPath, JSON.stringify(report), "utf8");
+
+      const result = spawnSync(process.execPath, [join(repoRoot, "scripts", "emit-azure-log-issues.mjs"), reportPath], {
+        cwd: externalCwd,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          BUILD_SOURCESDIRECTORY: "/agent/_work/1/s",
+          DEBTLENS_AZURE_MAX_COUNT: "2",
+          DEBTLENS_AZURE_ERROR_ON: "high",
+        },
+      });
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /##vso\[task\.logissue type=error;sourcepath=\/agent\/_work\/1\/s\/examples\/react\/src\/High,One\.tsx;linenumber=4;code=prop-drilling;\]High issue%0Awith newline \(prop-drilling\)/);
+      assert.match(result.stdout, /##vso\[task\.logissue type=warning;sourcepath=\/agent\/_work\/1\/s\/examples\/react\/src\/Todo\.ts;linenumber=8;code=todo-comment;\]Low issue \(todo-comment\)/);
+      assert.match(result.stdout, /##\[warning\]DebtLens Azure annotations capped: 1 finding\(s\) omitted/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 function makeReport() {

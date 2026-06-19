@@ -22,7 +22,7 @@ inputs:
     description: With fail-on, require at least this confidence (0-1) to exit with code 1.
     default: ""
   format:
-    description: Output format (terminal, json, markdown, pr-comment, sarif, html, junit).
+    description: Output format (terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality).
     default: terminal
   output:
     description: Write the report to this file instead of stdout.

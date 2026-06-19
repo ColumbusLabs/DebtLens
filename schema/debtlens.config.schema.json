@@ -90,6 +90,8 @@
               "api-surface-sprawl",
               "story-only-component",
               "python-todo-comment",
+              "python-large-function",
+              "python-complex-control-flow",
               "python-duplicate-logic",
               "python-dead-abstraction",
               "kotlin-todo-comment",
@@ -503,6 +505,22 @@
             "high"
           ]
         },
+        "python-large-function": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "python-complex-control-flow": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "python-duplicate-logic": {
           "enum": [
             "info",
@@ -712,6 +730,16 @@
           "maximum": 1
         },
         "python-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-large-function": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-complex-control-flow": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

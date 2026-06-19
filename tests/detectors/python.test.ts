@@ -5,8 +5,10 @@ import { defaultConfig } from "../../src/config/defaults.js";
 import { getRulePack } from "../../src/config/packs.js";
 import { scan } from "../../src/core/scan.js";
 import {
+  pythonComplexControlFlowDetector,
   pythonDeadAbstractionDetector,
   pythonDuplicateLogicDetector,
+  pythonLargeFunctionDetector,
   pythonTodoCommentDetector,
 } from "../../src/detectors/python/index.js";
 import { renderReport } from "../../src/reporters/index.js";
@@ -33,6 +35,8 @@ describe("python language pack", () => {
     assert.equal(result.summary.filesScanned, 1);
     assert.equal(result.summary.byRule["python-todo-comment"], 1);
     assert.equal(result.summary.byRule["python-duplicate-logic"], 1);
+    assert.equal(result.summary.byRule["python-large-function"], 1);
+    assert.equal(result.summary.byRule["python-complex-control-flow"], 1);
     assert.equal(result.summary.byRule["python-dead-abstraction"], 1);
     assert.ok(result.issues.every((issue) => issue.file === "service.py"));
   });
@@ -106,6 +110,120 @@ async def load_items(session):
     assert.equal(issues.length, 2);
     assert.ok(issues.some((issue) => issue.message.includes("list_items")));
     assert.ok(issues.some((issue) => issue.message.includes("load_items")));
+  });
+
+  it("detects large Python functions with stable fingerprints and suggestions", async () => {
+    const issues = await runDetector(pythonLargeFunctionDetector, {
+      "src/service.py": `
+def route_invoice(invoice):
+    status = "review"
+    if invoice.get("paid"):
+        status = "paid"
+    elif invoice.get("failed"):
+        status = "failed"
+    elif invoice.get("pending"):
+        status = "pending"
+    for line in invoice.get("lines", []):
+        if line.get("blocked"):
+            status = "blocked"
+    return status
+`,
+    }, {
+      thresholds: {
+        "large-function.maxLines": 8,
+        "large-function.maxBranches": 4,
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-large-function");
+    assert.ok(issues[0]?.fingerprint);
+    assert.match(issues[0]?.suggestion ?? "", /Split orchestration/);
+    assert.match(issues[0]?.evidence?.[0] ?? "", /route_invoice:/);
+  });
+
+  it("detects complex Python control flow without counting comments or strings", async () => {
+    const issues = await runDetector(pythonComplexControlFlowDetector, {
+      "src/service.py": `
+def classify_invoice(invoice):
+    note = "if for while except case and or"
+    # if for while except case and or
+    if invoice.get("paid"):
+        if invoice.get("late"):
+            return "paid-late"
+        elif invoice.get("vip"):
+            return "paid-vip"
+    for line in invoice.get("lines", []):
+        if line.get("blocked"):
+            return "blocked"
+    return "review"
+`,
+    }, {
+      thresholds: {
+        "complex-control-flow.maxComplexity": 6,
+        "complex-control-flow.maxDepth": 3,
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-complex-control-flow");
+    assert.ok(issues[0]?.fingerprint);
+    assert.match(issues[0]?.message ?? "", /complex Python control flow/);
+    assert.match(issues[0]?.suggestion ?? "", /Extract decision tables/);
+  });
+
+  it("keeps Python complexity quiet for branch words in comments and strings", async () => {
+    const issues = await runDetector(pythonComplexControlFlowDetector, {
+      "src/service.py": `
+def describe_policy():
+    text = """if for while except case and or"""
+    # if for while except case and or
+    return text
+`,
+    }, {
+      thresholds: {
+        "complex-control-flow.maxComplexity": 2,
+        "complex-control-flow.maxDepth": 1,
+      },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("detects complexity rules for multiline Python function signatures", async () => {
+    const files = {
+      "src/service.py": `
+def classify_invoice(
+    invoice,
+    account,
+):
+    if invoice.get("paid"):
+        if account.get("active"):
+            return "paid"
+    for line in invoice.get("lines", []):
+        if line.get("blocked"):
+            return "blocked"
+    return "review"
+`,
+    };
+
+    const largeIssues = await runDetector(pythonLargeFunctionDetector, files, {
+      thresholds: {
+        "large-function.maxLines": 8,
+        "large-function.maxBranches": 3,
+      },
+    });
+    const controlFlowIssues = await runDetector(pythonComplexControlFlowDetector, files, {
+      thresholds: {
+        "complex-control-flow.maxComplexity": 5,
+        "complex-control-flow.maxDepth": 3,
+      },
+    });
+
+    assert.equal(largeIssues.length, 1);
+    assert.equal(largeIssues[0]?.location?.startLine, 2);
+    assert.equal(controlFlowIssues.length, 1);
+    assert.equal(controlFlowIssues[0]?.location?.startLine, 2);
   });
 
   it("does not flag Python wrappers that add behavior", async () => {

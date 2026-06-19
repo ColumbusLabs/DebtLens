@@ -22,6 +22,8 @@ describe("rule packs", () => {
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
     assert.deepEqual(getRulePack("python").rules, [
       "python-duplicate-logic",
+      "python-large-function",
+      "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
     ]);
@@ -128,6 +130,8 @@ describe("rule packs", () => {
 
     assert.deepEqual(options.rules, [
       "python-duplicate-logic",
+      "python-large-function",
+      "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
       "compose-large-composable",

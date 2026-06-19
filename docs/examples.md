@@ -9,7 +9,7 @@ these commands when evaluating output, writing docs, or checking a reporter chan
 | Next.js App Router | `debtlens scan examples/next --pack next --min-severity info` | Server/client boundary and route/data-loader rules. |
 | React Native screen | `debtlens scan examples/react-native --pack react-native --min-severity info` | RN host-forwarding and React-family rules. |
 | Node API | `debtlens scan examples/node-api --pack node --min-severity info` | Route and handler-depth signals for server code. |
-| Python service | `debtlens scan examples/python --pack python --min-severity info` | Python duplicate, thin-wrapper, and TODO rules. |
+| Python service | `debtlens scan examples/python --pack python --min-severity info` | Python duplicate, large-function, control-flow, thin-wrapper, and TODO rules. |
 | Kotlin service | `debtlens scan examples/kotlin --pack kotlin --min-severity info` | Kotlin duplicate, large-function, thin-wrapper, and TODO rules. |
 | Jetpack Compose screen | `debtlens scan examples/compose --pack compose --min-severity info` | Compose large-composable and state-hoisting rules. |
 | Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |

@@ -10,7 +10,8 @@ export interface PythonFunction {
   bodyLines: string[];
 }
 
-const PYTHON_DEF_PATTERN = /^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*:/;
+const PYTHON_DEF_START_PATTERN = /^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/;
+const MAX_FUNCTION_HEADER_LINES = 20;
 
 export function extractPythonFunctions(file: SourceFileInfo): PythonFunction[] {
   const lines = file.content.split(/\r?\n/);
@@ -19,14 +20,13 @@ export function extractPythonFunctions(file: SourceFileInfo): PythonFunction[] {
   for (let index = 0; index < lines.length; index += 1) {
     if (isDecoratorLine(lines[index] ?? "")) continue;
 
-    const line = lines[index] ?? "";
-    const match = line.match(PYTHON_DEF_PATTERN);
-    if (!match) continue;
+    const header = parsePythonFunctionHeader(lines, index);
+    if (!header) continue;
 
-    const indent = match[1]?.length ?? 0;
+    const { headerEndIndex, indent } = header;
     const startLine = index + 1;
-    let endIndex = index;
-    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+    let endIndex = headerEndIndex;
+    for (let cursor = headerEndIndex + 1; cursor < lines.length; cursor += 1) {
       const candidate = lines[cursor] ?? "";
       if (isDecoratorLine(candidate)) continue;
       if (candidate.trim() && indentation(candidate) <= indent) break;
@@ -35,13 +35,13 @@ export function extractPythonFunctions(file: SourceFileInfo): PythonFunction[] {
 
     const textLines = lines.slice(index, endIndex + 1);
     functions.push({
-      name: match[2] ?? "<anonymous>",
-      params: parsePythonParams(match[3] ?? ""),
+      name: header.name,
+      params: parsePythonParams(header.params),
       file,
       startLine,
       endLine: endIndex + 1,
       text: textLines.join("\n"),
-      bodyLines: textLines.slice(1),
+      bodyLines: lines.slice(headerEndIndex + 1, endIndex + 1),
     });
   }
 
@@ -59,6 +59,36 @@ export function parsePythonParams(raw: string): string[] {
 export function splitPythonArgs(raw: string): string[] {
   if (!raw.trim()) return [];
   return raw.split(",").map((arg) => arg.trim()).filter(Boolean);
+}
+
+function parsePythonFunctionHeader(
+  lines: string[],
+  startIndex: number,
+): { name: string; params: string; indent: number; headerEndIndex: number } | undefined {
+  const firstLine = lines[startIndex] ?? "";
+  const startMatch = firstLine.match(PYTHON_DEF_START_PATTERN);
+  if (!startMatch) return undefined;
+
+  const indent = startMatch[1]?.length ?? 0;
+  const name = startMatch[2] ?? "<anonymous>";
+  const headerLines: string[] = [];
+  const maxIndex = Math.min(lines.length - 1, startIndex + MAX_FUNCTION_HEADER_LINES - 1);
+
+  for (let cursor = startIndex; cursor <= maxIndex; cursor += 1) {
+    headerLines.push(lines[cursor] ?? "");
+    const headerText = headerLines.join("\n");
+    const headerMatch = headerText.match(/^\s*(?:async\s+)?def\s+[A-Za-z_]\w*\s*\(([\s\S]*)\)\s*(?:->[\s\S]*)?:\s*(?:#.*)?$/);
+    if (headerMatch) {
+      return {
+        name,
+        params: headerMatch[1] ?? "",
+        indent,
+        headerEndIndex: cursor,
+      };
+    }
+  }
+
+  return undefined;
 }
 
 export function normalizePythonSnippet(text: string): string {

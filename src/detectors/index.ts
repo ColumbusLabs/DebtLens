@@ -18,7 +18,13 @@ import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
 import { namingDriftDetector } from "./namingDrift.js";
 import { propDrillingDetector } from "./propDrilling.js";
-import { pythonDeadAbstractionDetector, pythonDuplicateLogicDetector, pythonTodoCommentDetector } from "./python/index.js";
+import {
+  pythonComplexControlFlowDetector,
+  pythonDeadAbstractionDetector,
+  pythonDuplicateLogicDetector,
+  pythonLargeFunctionDetector,
+  pythonTodoCommentDetector,
+} from "./python/index.js";
 import { rnHostForwardingDetector } from "./rnHostForwarding.js";
 import { routeHandlerSizeDetector } from "./routeHandlerSize.js";
 import { routeSprawlDetector } from "./routeSprawl.js";
@@ -57,6 +63,8 @@ export const allDetectors: Detector[] = [
   apiSurfaceSprawlDetector,
   storyOnlyComponentDetector,
   pythonTodoCommentDetector,
+  pythonLargeFunctionDetector,
+  pythonComplexControlFlowDetector,
   pythonDuplicateLogicDetector,
   pythonDeadAbstractionDetector,
   kotlinTodoCommentDetector,

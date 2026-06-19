@@ -32,4 +32,16 @@ For package-specific adoption reports:
 debtlens adopt . --package web --format markdown
 ```
 
-Baseline issue paths are package-relative when `--package` is used, so keep the package flag consistent between baseline creation and CI enforcement.
+Maintain each package baseline with the same package scan scope:
+
+```bash
+debtlens baseline diff . --package web --baseline debtlens-baseline.web.json
+debtlens baseline update . --package web --baseline debtlens-baseline.web.json
+```
+
+`diff` does not write files, and `update` rewrites the baseline to the current package
+scan result. Legacy baselines are supported. Mutating `prune` refuses `--package` and other
+explicitly scoped CLI scans because DebtLens cannot prove that a narrower scan covers every
+entry in an older baseline. Baseline issue paths are package-relative when `--package` is
+used, so keep the package flag and other scan options consistent between baseline creation,
+CI enforcement, and maintenance.

@@ -9,6 +9,7 @@ export const DEFAULT_BASELINE_FILENAME = "debtlens-baseline.json";
 const BASELINE_VERSION = 1;
 
 export interface Baseline {
+  [key: string]: unknown;
   version: number;
   generatedAt: string;
   /** Map of issue fingerprint -> number of occurrences captured. */
@@ -20,10 +21,51 @@ export interface Baseline {
 }
 
 export interface BaselineIssueSnapshot {
+  [key: string]: unknown;
   ruleId: string;
   file: string;
   severity: Severity;
   count: number;
+}
+
+export interface BaselineFingerprintChange {
+  fingerprint: string;
+  baseline: BaselineIssueSnapshot;
+  current: BaselineIssueSnapshot;
+  occurrenceCount: number;
+  severityRegressed: boolean;
+}
+
+export interface BaselineChangedIssue {
+  fingerprint: string;
+  issue: DebtIssue;
+  baseline: BaselineIssueSnapshot;
+  current: BaselineIssueSnapshot;
+  severityRegressed: boolean;
+}
+
+export interface BaselineDetailedComparison {
+  /** Current findings not covered by the baseline, preserving the existing compareBaseline behavior. */
+  newIssues: DebtIssue[];
+  delta: ScanBaselineDelta;
+  /** All fingerprints in the current scan with occurrence counts. */
+  currentFingerprints: Record<string, number>;
+  /** Baselined fingerprint occurrences that are still present in the current scan. */
+  activeFingerprints: Record<string, number>;
+  /** Current fingerprint occurrences beyond the baseline allowance. */
+  newFingerprints: Record<string, number>;
+  /** Baseline fingerprint occurrences no longer present in the current scan. */
+  resolvedFingerprints: Record<string, number>;
+  /** Alias for resolved baseline occurrences, named for prune/update workflows. */
+  staleFingerprints: Record<string, number>;
+  /** Covered issues whose metadata changed while remaining in the baseline. */
+  changedIssues: BaselineChangedIssue[];
+  /** Baselined fingerprints whose metadata changed while remaining covered by the baseline. */
+  changedFingerprints: Record<string, BaselineFingerprintChange>;
+}
+
+export interface UpdateBaselineOptions {
+  generatedAt?: string | Date;
 }
 
 /**
@@ -35,18 +77,7 @@ export function computeFingerprint(issue: DebtIssue): string {
 }
 
 export function createBaseline(issues: DebtIssue[]): Baseline {
-  const fingerprints: Record<string, number> = {};
-  const snapshots: Record<string, BaselineIssueSnapshot> = {};
-  for (const issue of issues) {
-    const fp = computeFingerprint(issue);
-    fingerprints[fp] = (fingerprints[fp] ?? 0) + 1;
-    snapshots[fp] = {
-      ruleId: issue.ruleId,
-      file: issue.file,
-      severity: issue.severity,
-      count: fingerprints[fp],
-    };
-  }
+  const { fingerprints, snapshots } = buildBaselineState(issues);
   return {
     version: BASELINE_VERSION,
     generatedAt: new Date().toISOString(),
@@ -96,7 +127,23 @@ export function compareBaseline(issues: DebtIssue[], baseline: Baseline): {
   newIssues: DebtIssue[];
   delta: ScanBaselineDelta;
 } {
+  const comparison = compareBaselineDetailed(issues, baseline);
+  return {
+    newIssues: comparison.newIssues,
+    delta: comparison.delta,
+  };
+}
+
+export function compareBaselineDetailed(
+  issues: DebtIssue[],
+  baseline: Baseline,
+): BaselineDetailedComparison {
+  const currentState = buildBaselineState(issues);
   const remaining = new Map<string, number>(Object.entries(baseline.fingerprints));
+  const activeFingerprints: Record<string, number> = {};
+  const newFingerprints: Record<string, number> = {};
+  const changedIssues: BaselineChangedIssue[] = [];
+  const changedFingerprints: Record<string, BaselineFingerprintChange> = {};
   const newIssues: DebtIssue[] = [];
   let changed = 0;
   let severityRegressions = 0;
@@ -106,22 +153,52 @@ export function compareBaseline(issues: DebtIssue[], baseline: Baseline): {
     const budget = remaining.get(fp) ?? 0;
     if (budget > 0) {
       remaining.set(fp, budget - 1);
+      activeFingerprints[fp] = (activeFingerprints[fp] ?? 0) + 1;
       const snapshot = baseline.issues?.[fp];
       if (snapshot && snapshot.severity !== issue.severity) {
         changed += 1;
+        const severityRegressed = severityRank[issue.severity] > severityRank[snapshot.severity];
+        const current = currentState.snapshots[fp] ?? snapshotIssue(issue, currentState.fingerprints[fp] ?? 1);
+        changedIssues.push({
+          fingerprint: fp,
+          issue,
+          baseline: snapshot,
+          current,
+          severityRegressed,
+        });
+        const existing = changedFingerprints[fp];
+        changedFingerprints[fp] = existing
+          ? {
+              ...existing,
+              occurrenceCount: existing.occurrenceCount + 1,
+              severityRegressed: existing.severityRegressed || severityRegressed,
+            }
+          : {
+              fingerprint: fp,
+              baseline: snapshot,
+              current,
+              occurrenceCount: 1,
+              severityRegressed,
+            };
         if (severityRank[issue.severity] > severityRank[snapshot.severity]) {
           severityRegressions += 1;
         }
       }
       continue;
     }
+    newFingerprints[fp] = (newFingerprints[fp] ?? 0) + 1;
     newIssues.push(issue);
+  }
+
+  const staleFingerprints: Record<string, number> = {};
+  for (const [fingerprint, count] of remaining) {
+    if (count > 0) staleFingerprints[fingerprint] = count;
   }
 
   const baselineSummary = baseline.summary ?? summarizeBaselineFingerprints(baseline);
   const hasBaselineSummary = baseline.summary !== undefined;
   const currentSummary = summarizeIssues(issues);
-  const resolved = [...remaining.values()].reduce((sum, count) => sum + Math.max(count, 0), 0);
+  const resolved = Object.values(staleFingerprints).reduce((sum, count) => sum + count, 0);
   return {
     newIssues,
     delta: {
@@ -135,6 +212,41 @@ export function compareBaseline(issues: DebtIssue[], baseline: Baseline): {
       hasBaselineSummary,
       byRule: compareByRule(baselineSummary.byRule, currentSummary.byRule),
     },
+    currentFingerprints: sortRecord(currentState.fingerprints),
+    activeFingerprints: sortRecord(activeFingerprints),
+    newFingerprints: sortRecord(newFingerprints),
+    resolvedFingerprints: sortRecord(staleFingerprints),
+    staleFingerprints: sortRecord(staleFingerprints),
+    changedIssues,
+    changedFingerprints: sortRecord(changedFingerprints),
+  };
+}
+
+export function pruneBaseline(baseline: Baseline, comparison: BaselineDetailedComparison): Baseline {
+  const fingerprints = sortRecord(comparison.activeFingerprints);
+  const prunedIssues = pruneIssueSnapshots(baseline.issues, fingerprints);
+  return {
+    ...baseline,
+    fingerprints,
+    ...(baseline.summary ? { summary: summarizeBaselineFingerprints({ ...baseline, fingerprints, issues: prunedIssues }) } : {}),
+    ...(baseline.issues ? { issues: prunedIssues } : {}),
+  };
+}
+
+export function updateBaseline(
+  issues: DebtIssue[],
+  previousBaseline?: Baseline,
+  options: UpdateBaselineOptions = {},
+): Baseline {
+  const generatedAt = options.generatedAt instanceof Date
+    ? options.generatedAt.toISOString()
+    : options.generatedAt ?? new Date().toISOString();
+  const updated = createBaseline(issues);
+  return {
+    ...previousBaseline,
+    ...updated,
+    version: BASELINE_VERSION,
+    generatedAt,
   };
 }
 
@@ -180,6 +292,58 @@ function summarizeBaselineFingerprints(baseline: Baseline): ScanCountSummary {
   }
 
   return { totalIssues, bySeverity, byRule };
+}
+
+function buildBaselineState(issues: DebtIssue[]): {
+  fingerprints: Record<string, number>;
+  snapshots: Record<string, BaselineIssueSnapshot>;
+} {
+  const fingerprints: Record<string, number> = {};
+  const snapshots: Record<string, BaselineIssueSnapshot> = {};
+  for (const issue of issues) {
+    const fp = computeFingerprint(issue);
+    const count = (fingerprints[fp] ?? 0) + 1;
+    fingerprints[fp] = count;
+    snapshots[fp] = snapshotIssue(issue, count);
+  }
+  return {
+    fingerprints: sortRecord(fingerprints),
+    snapshots: sortRecord(snapshots),
+  };
+}
+
+function snapshotIssue(issue: DebtIssue, count: number): BaselineIssueSnapshot {
+  return {
+    ruleId: issue.ruleId,
+    file: issue.file,
+    severity: issue.severity,
+    count,
+  };
+}
+
+function pruneIssueSnapshots(
+  snapshots: Record<string, BaselineIssueSnapshot> | undefined,
+  fingerprints: Record<string, number>,
+): Record<string, BaselineIssueSnapshot> | undefined {
+  if (!snapshots) return undefined;
+  const pruned: Record<string, BaselineIssueSnapshot> = {};
+  for (const fingerprint of Object.keys(fingerprints).sort()) {
+    const snapshot = snapshots[fingerprint];
+    if (!snapshot) continue;
+    pruned[fingerprint] = {
+      ...snapshot,
+      count: fingerprints[fingerprint] ?? snapshot.count,
+    };
+  }
+  return pruned;
+}
+
+function sortRecord<T>(record: Record<string, T>): Record<string, T> {
+  const sorted: Record<string, T> = {};
+  for (const key of Object.keys(record).sort()) {
+    sorted[key] = record[key];
+  }
+  return sorted;
 }
 
 function compareByRule(

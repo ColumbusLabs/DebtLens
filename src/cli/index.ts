@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { packageVersion } from "../utils/packageInfo.js";
 import { registerAdoptCommand } from "./commands/adopt.js";
+import { registerBaselineCommand } from "./commands/baseline.js";
 import { registerCompletionsCommand } from "./commands/completions.js";
 import { registerDoctorCommand } from "./commands/doctor.js";
 import { registerExplainCommand } from "./commands/explain.js";
@@ -21,6 +22,7 @@ program
   .version(packageVersion);
 
 registerScanCommand(program);
+registerBaselineCommand(program);
 registerDoctorCommand(program);
 registerWatchCommand(program);
 registerPacksCommand(program);

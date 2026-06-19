@@ -3,10 +3,14 @@ import { describe, it } from "node:test";
 import {
   applyBaseline,
   compareBaseline,
+  compareBaselineDetailed,
   computeFingerprint,
   createBaseline,
   filterIssues,
+  pruneBaseline,
+  updateBaseline,
 } from "../../src/core/baseline.js";
+import type { Baseline } from "../../src/core/baseline.js";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
 
 function issue(overrides: Partial<DebtIssue> = {}): DebtIssue {
@@ -120,6 +124,113 @@ describe("compareBaseline", () => {
     assert.equal(comparison.newIssues.length, 0);
     assert.equal(comparison.delta.changed, 1);
     assert.equal(comparison.delta.severityRegressions, 1);
+  });
+});
+
+describe("baseline maintenance helpers", () => {
+  it("reports detailed new, resolved, stale, and changed fingerprint data with occurrence counts", () => {
+    const repeated = issue({ fingerprint: "dl_repeated" });
+    const fresh = issue({
+      fingerprint: "dl_fresh",
+      ruleId: "state-sprawl",
+      severity: "high",
+      file: "src/state.tsx",
+      message: "Screen manages 9 stateful hooks.",
+    });
+    const changedBefore = issue({ fingerprint: "dl_changed", severity: "medium" });
+    const changedAfter = issue({ fingerprint: "dl_changed", severity: "high" });
+    const baseline = createBaseline([repeated, repeated, repeated, changedBefore]);
+
+    const comparison = compareBaselineDetailed([repeated, fresh, fresh, changedAfter], baseline);
+
+    assert.deepEqual(comparison.currentFingerprints, {
+      dl_changed: 1,
+      dl_fresh: 2,
+      dl_repeated: 1,
+    });
+    assert.deepEqual(comparison.newFingerprints, { dl_fresh: 2 });
+    assert.deepEqual(comparison.resolvedFingerprints, { dl_repeated: 2 });
+    assert.deepEqual(comparison.staleFingerprints, { dl_repeated: 2 });
+    assert.equal(comparison.delta.new, 2);
+    assert.equal(comparison.delta.resolved, 2);
+    assert.equal(comparison.delta.changed, 1);
+    assert.equal(comparison.delta.severityRegressions, 1);
+    assert.equal(comparison.changedIssues.length, 1);
+    assert.equal(comparison.changedIssues[0]?.fingerprint, "dl_changed");
+    assert.equal(comparison.changedIssues[0]?.severityRegressed, true);
+    assert.equal(comparison.changedFingerprints.dl_changed?.occurrenceCount, 1);
+  });
+
+  it("prunes resolved occurrences while preserving unknown top-level metadata", () => {
+    const kept = issue({ fingerprint: "dl_kept" });
+    const stale = issue({
+      fingerprint: "dl_stale",
+      ruleId: "todo-comment",
+      severity: "low",
+      file: "src/todo.ts",
+      message: "Comment contains a todo marker.",
+    });
+    const baseline: Baseline = {
+      ...createBaseline([kept, kept, stale]),
+      owner: "platform",
+      labels: ["reviewed"],
+    };
+    const comparison = compareBaselineDetailed([kept], baseline);
+
+    const pruned = pruneBaseline(baseline, comparison);
+
+    assert.deepEqual(pruned.fingerprints, { dl_kept: 1 });
+    assert.equal(pruned.issues?.dl_kept?.count, 1);
+    assert.equal(pruned.issues?.dl_stale, undefined);
+    assert.equal(pruned.summary?.totalIssues, 1);
+    assert.equal(pruned.summary?.byRule["duplicate-logic"], 1);
+    assert.equal(pruned.owner, "platform");
+    assert.deepEqual(pruned.labels, ["reviewed"]);
+  });
+
+  it("prunes legacy baselines without adding summary or issue metadata", () => {
+    const repeated = issue({ fingerprint: "dl_legacy" });
+    const legacy: Baseline = {
+      version: 1,
+      generatedAt: "2026-06-16T00:00:00.000Z",
+      fingerprints: { dl_legacy: 2 },
+    };
+    const comparison = compareBaselineDetailed([repeated], legacy);
+
+    const pruned = pruneBaseline(legacy, comparison);
+
+    assert.deepEqual(comparison.resolvedFingerprints, { dl_legacy: 1 });
+    assert.deepEqual(pruned.fingerprints, { dl_legacy: 1 });
+    assert.equal("summary" in pruned, false);
+    assert.equal("issues" in pruned, false);
+  });
+
+  it("updates a baseline from current issues while preserving previous top-level metadata", () => {
+    const kept = issue({ fingerprint: "dl_kept" });
+    const stale = issue({ fingerprint: "dl_stale", file: "src/stale.ts" });
+    const fresh = issue({
+      fingerprint: "dl_fresh",
+      ruleId: "state-sprawl",
+      severity: "high",
+      file: "src/state.tsx",
+      message: "Screen manages 9 stateful hooks.",
+    });
+    const previous: Baseline = {
+      ...createBaseline([kept, stale]),
+      owner: "platform",
+    };
+
+    const updated = updateBaseline([kept, fresh], previous, {
+      generatedAt: "2026-06-19T12:00:00.000Z",
+    });
+
+    assert.deepEqual(updated.fingerprints, { dl_fresh: 1, dl_kept: 1 });
+    assert.equal(updated.generatedAt, "2026-06-19T12:00:00.000Z");
+    assert.equal(updated.owner, "platform");
+    assert.equal(updated.summary?.totalIssues, 2);
+    assert.equal(updated.summary?.bySeverity.high, 1);
+    assert.equal(updated.issues?.dl_fresh?.ruleId, "state-sprawl");
+    assert.equal(updated.issues?.dl_stale, undefined);
   });
 });
 

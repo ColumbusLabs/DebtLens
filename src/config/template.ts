@@ -1,4 +1,5 @@
 import type { DebtLensConfig } from "../core/types.js";
+import { DEBTLENS_PLUGIN_API_VERSION } from "../plugins/version.js";
 import { getRulePack } from "./packs.js";
 import { SCHEMA_ID } from "./schema.js";
 
@@ -63,19 +64,34 @@ export const configTemplate: DebtLensConfig & { $schema: string } = {
   },
 };
 
-export function renderConfigFile(pack?: string, thresholdOverrides: Record<string, number> = {}): string {
-  if (pack) {
+export function renderConfigFile(
+  pack?: string,
+  thresholdOverrides: Record<string, number> = {},
+  policyPluginPath?: string,
+): string {
+  if (pack || policyPluginPath) {
     const { rules: _rules, ...base } = configTemplate;
-    const rulePack = getRulePack(pack);
+    const rulePack = pack ? getRulePack(pack) : undefined;
     return `${JSON.stringify({
       ...base,
-      pack,
-      thresholds: { ...base.thresholds, ...(rulePack.thresholds ?? {}), ...thresholdOverrides },
+      ...pluginConfig(policyPluginPath),
+      ...(pack ? { pack } : {}),
+      thresholds: { ...base.thresholds, ...(rulePack?.thresholds ?? {}), ...thresholdOverrides },
     }, null, 2)}\n`;
   }
 
   return `${JSON.stringify({
     ...configTemplate,
+    ...pluginConfig(policyPluginPath),
     thresholds: { ...configTemplate.thresholds, ...thresholdOverrides },
   }, null, 2)}\n`;
+}
+
+function pluginConfig(policyPluginPath: string | undefined): Pick<DebtLensConfig, "pluginApiVersion" | "plugins"> {
+  return policyPluginPath
+    ? {
+      pluginApiVersion: DEBTLENS_PLUGIN_API_VERSION,
+      plugins: [policyPluginPath],
+    }
+    : {};
 }

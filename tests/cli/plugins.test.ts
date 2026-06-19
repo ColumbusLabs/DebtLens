@@ -77,6 +77,34 @@ describe("debtlens scan with plugins", () => {
     });
   });
 
+  it("runs plugin detectors from a policy scaffold that omits rules and pack", () => {
+    withPluginProject((dir) => {
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.ok(parsed.summary.rulesRun > 13);
+      assert.ok(parsed.issues.some((issue: { ruleId: string }) => issue.ruleId === "no-console"));
+    });
+  });
+
+  it("runs plugin detectors when a policy config also selects a built-in pack", () => {
+    withPluginProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        pluginApiVersion: 1,
+        plugins: ["./no-console.mjs"],
+        pack: "core",
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.rulesRun, 14);
+      assert.ok(parsed.issues.some((issue: { ruleId: string }) => issue.ruleId === "no-console"));
+    });
+  });
+
   it("selects plugin rules explicitly via --rules", () => {
     withPluginProject((dir) => {
       const result = runScan([".", "--cwd", dir, "--rules", "no-console", "--format", "json"]);

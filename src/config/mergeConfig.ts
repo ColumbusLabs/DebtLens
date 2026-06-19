@@ -11,10 +11,11 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
   const packs = packIds.map((packId) => getRulePack(packId));
 
   const explicitRules = cliOptions.rules?.length ? cliOptions.rules : fileConfig.rules;
+  const pluginRuleIds = cliOptions.pluginDetectors?.map((detector) => detector.id) ?? [];
   const rules = explicitRules?.length
     ? explicitRules
     : packs.length
-      ? unique(packs.flatMap((pack) => pack.rules))
+      ? unique([...packs.flatMap((pack) => pack.rules), ...pluginRuleIds])
       : undefined;
   const shouldIncludePython = packIds.includes("python")
     || rules?.some((ruleId) => ruleId.startsWith("python-")) === true;

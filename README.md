@@ -153,6 +153,7 @@ npx debtlens scan
 ```bash
 debtlens init             # write a starter debtlens.config.json (use --force to overwrite)
 debtlens init --pack core # starter config using the core rule pack preset
+debtlens init --policy @org/debtlens-policy # starter config from a shared policy package
 debtlens init --from-eslint eslint.config.json # print a migration suggestion without writing
 debtlens adopt            # adoption report (dry run; recommends minSeverity)
 debtlens watch examples/react --rules todo-comment # rescan on file changes
@@ -463,6 +464,27 @@ contract in [`docs/plugin-api-rfc.md`](./docs/plugin-api-rfc.md). Plugin paths m
 within the config file's directory tree, rule ids must not collide with built-ins, and
 CI pipelines scanning untrusted repos can set `DEBTLENS_DISABLE_PLUGINS=1` to skip
 plugin loading entirely (see [`SECURITY.md`](./SECURITY.md)).
+
+### Policy packages
+
+Shared organization policies can be scaffolded from an npm package, an installed package
+module path, or a local policy module:
+
+```bash
+debtlens init --policy @org/debtlens-policy
+debtlens init --policy ./node_modules/@org/debtlens-policy/rules/index.mjs
+debtlens init --policy ./node_modules/@org/debtlens-policy/presets/strict.mjs
+debtlens init --policy ./debtlens-policy/index.mjs
+debtlens init --policy ./tools/debtlens-policies/strict.mjs
+```
+
+The generated config pins `pluginApiVersion` and registers the policy module under
+`plugins`. Policy modules are trusted code loaded as plugins, so only enable packages or
+local files maintained by your organization. CI pipelines that scan untrusted pull
+requests can set `DEBTLENS_DISABLE_PLUGINS=1` to skip policy plugin loading while still
+running built-in rules and local non-plugin config. See
+[`docs/policy-packages.md`](./docs/policy-packages.md) for the package layout and rollout
+guidance.
 
 ## Output formats
 

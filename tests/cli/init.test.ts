@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, it } from "node:test";
@@ -8,6 +8,8 @@ import { fileURLToPath } from "node:url";
 import { CONFIG_FILENAME, runInit } from "../../src/cli/init.js";
 import { suggestConfigFromEslint } from "../../src/cli/eslintMigration.js";
 import { configTemplate } from "../../src/config/template.js";
+import { validateConfigShape } from "../../src/config/validateConfig.js";
+import { DEBTLENS_PLUGIN_API_VERSION } from "../../src/plugins/version.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const cliEntrypoint = join(repoRoot, "src", "cli", "index.ts");
@@ -72,6 +74,111 @@ describe("debtlens init", () => {
     assert.equal(parsed.pack, "oss-maintainer");
     assert.equal(parsed.thresholds["api-surface-sprawl.maxExports"], 10);
     assert.equal(parsed.thresholds["weak-test-boundary.allowTypeOnly"], 1);
+  });
+
+  it("writes a valid local policy plugin config when --policy is a relative module path", () => {
+    mkdirSync(join(dir, "policies"));
+    writeFileSync(join(dir, "policies", "custom-policy.mjs"), "export default { rules: [] };\n", "utf8");
+
+    const result = runInit(dir, false, undefined, {}, "./policies/custom-policy.mjs");
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+    const validation = validateConfigShape(parsed);
+
+    assert.equal(parsed.$schema, configTemplate.$schema);
+    assert.equal(parsed.pluginApiVersion, DEBTLENS_PLUGIN_API_VERSION);
+    assert.deepEqual(parsed.plugins, ["./policies/custom-policy.mjs"]);
+    assert.equal(parsed.rules, undefined);
+    assert.equal(validation.valid, true, validation.errors.join("\n"));
+  });
+
+  it("writes a node_modules-relative policy plugin config when --policy is a scoped npm package", () => {
+    mkdirSync(join(dir, "node_modules", "@org", "debtlens-policy", "rules"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "@org", "debtlens-policy", "rules", "index.mjs"), "export default { rules: [] };\n", "utf8");
+
+    const result = spawnSync(process.execPath, [
+      "--import",
+      "tsx",
+      cliEntrypoint,
+      "init",
+      "--cwd",
+      dir,
+      "--policy",
+      "@org/debtlens-policy",
+    ], { encoding: "utf8" });
+    const configPath = join(dir, CONFIG_FILENAME);
+    const parsed = JSON.parse(readFileSync(configPath, "utf8"));
+    const validation = validateConfigShape(parsed);
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Created /);
+    assert.equal(parsed.pluginApiVersion, DEBTLENS_PLUGIN_API_VERSION);
+    assert.deepEqual(parsed.plugins, ["./node_modules/@org/debtlens-policy/rules/index.mjs"]);
+    assert.equal(parsed.rules, undefined);
+    assert.equal(validation.valid, true, validation.errors.join("\n"));
+  });
+
+  it("preserves package subpaths for policy plugin modules", () => {
+    mkdirSync(join(dir, "node_modules", "@org", "debtlens-policy", "presets"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "@org", "debtlens-policy", "presets", "strict.mjs"), "export default { rules: [] };\n", "utf8");
+
+    const result = runInit(dir, false, undefined, {}, "@org/debtlens-policy/presets/strict.mjs");
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+
+    assert.equal(parsed.pluginApiVersion, DEBTLENS_PLUGIN_API_VERSION);
+    assert.deepEqual(parsed.plugins, ["./node_modules/@org/debtlens-policy/presets/strict.mjs"]);
+    assert.equal(parsed.rules, undefined);
+  });
+
+  it("can combine --pack with an unscoped npm package policy", () => {
+    mkdirSync(join(dir, "node_modules", "debtlens-policy", "rules"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "debtlens-policy", "rules", "index.mjs"), "export default { rules: [] };\n", "utf8");
+
+    const result = runInit(dir, false, "oss-maintainer", {}, "debtlens-policy");
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+
+    assert.equal(parsed.pack, "oss-maintainer");
+    assert.equal(parsed.rules, undefined);
+    assert.equal(parsed.pluginApiVersion, DEBTLENS_PLUGIN_API_VERSION);
+    assert.deepEqual(parsed.plugins, ["./node_modules/debtlens-policy/rules/index.mjs"]);
+  });
+
+  it("preserves unscoped package subpaths for policy plugin modules", () => {
+    mkdirSync(join(dir, "node_modules", "debtlens-policy", "presets"), { recursive: true });
+    writeFileSync(join(dir, "node_modules", "debtlens-policy", "presets", "strict.mjs"), "export default { rules: [] };\n", "utf8");
+
+    const result = runInit(dir, false, undefined, {}, "debtlens-policy/presets/strict.mjs");
+    const parsed = JSON.parse(readFileSync(result.path, "utf8"));
+
+    assert.deepEqual(parsed.plugins, ["./node_modules/debtlens-policy/presets/strict.mjs"]);
+  });
+
+  it("rejects local policy paths that resolve outside the config directory", () => {
+    assert.throws(
+      () => runInit(dir, false, undefined, {}, "../policy.mjs"),
+      /resolves outside the config directory/,
+    );
+  });
+
+  it("rejects policy modules that do not resolve to files", () => {
+    mkdirSync(join(dir, "node_modules", "@org", "debtlens-policy", "rules"), { recursive: true });
+
+    assert.throws(
+      () => runInit(dir, false, undefined, {}, "@org/debtlens-policy"),
+      /was not found/,
+    );
+
+    mkdirSync(join(dir, "local-policy"), { recursive: true });
+    assert.throws(
+      () => runInit(dir, false, undefined, {}, "./local-policy"),
+      /must resolve to a file/,
+    );
+  });
+
+  it("rejects URL policy specifiers", () => {
+    assert.throws(
+      () => runInit(dir, false, undefined, {}, "https://example.com/policy.mjs"),
+      /not a URL/,
+    );
   });
 
   it("rejects unknown pack ids", () => {

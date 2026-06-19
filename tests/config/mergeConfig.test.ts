@@ -2,6 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { mergeConfig } from "../../src/config/mergeConfig.js";
 import { defaultConfig } from "../../src/config/defaults.js";
+import type { Detector } from "../../src/core/types.js";
+
+const pluginDetector = {
+  id: "policy-no-console",
+  name: "Policy no console",
+  description: "Flags console use from an organization policy module.",
+  defaultSeverity: "low",
+  tags: ["policy"],
+  detect: () => [],
+} satisfies Detector;
 
 describe("mergeConfig", () => {
   it("merges plugin thresholds after built-in defaults and before user config", () => {
@@ -37,6 +47,26 @@ describe("mergeConfig", () => {
     assert.deepEqual(options.vocabulary?.media, ["movie"]);
     assert.deepEqual(options.vocabulary?.logging, ["log", "trace"]);
     assert.deepEqual(options.vocabulary?.payments, ["invoice"]);
+  });
+
+  it("adds plugin rules to pack-derived rule selection", () => {
+    const options = mergeConfig(".", { pack: "core" }, {
+      cwd: process.cwd(),
+      pluginDetectors: [pluginDetector],
+    });
+
+    assert.ok(options.rules?.includes("duplicate-logic"));
+    assert.ok(options.rules?.includes("policy-no-console"));
+  });
+
+  it("keeps explicit rules exact when plugin detectors are loaded", () => {
+    const options = mergeConfig(".", { pack: "core" }, {
+      cwd: process.cwd(),
+      rules: ["todo-comment"],
+      pluginDetectors: [pluginDetector],
+    });
+
+    assert.deepEqual(options.rules, ["todo-comment"]);
   });
 
   it("passes through valid ruleSeverities and ruleConfidenceFloors", () => {

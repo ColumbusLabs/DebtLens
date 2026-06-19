@@ -4,7 +4,7 @@ import { validateConfigShape } from "../../src/config/validateConfig.js";
 
 describe("validateConfigShape", () => {
   it("accepts comma-separated built-in packs in config", () => {
-    const result = validateConfigShape({ pack: "kotlin,compose" });
+    const result = validateConfigShape({ pack: "vue,svelte,kotlin,compose" });
 
     assert.equal(result.valid, true);
     assert.deepEqual(result.errors, []);

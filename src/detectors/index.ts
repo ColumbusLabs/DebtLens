@@ -32,8 +32,10 @@ import { routeSprawlDetector } from "./routeSprawl.js";
 import { serverClientBoundaryDetector } from "./serverClientBoundary.js";
 import { stateSprawlDetector } from "./stateSprawl.js";
 import { storyOnlyComponentDetector } from "./storyOnlyComponent.js";
+import { svelteDuplicateLogicDetector, svelteLargeScriptDetector, svelteTodoCommentDetector } from "./svelte/index.js";
 import { testDuplicationDetector } from "./testDuplication.js";
 import { todoCommentDetector } from "./todoComment.js";
+import { vueDuplicateLogicDetector, vueLargeScriptDetector, vueTodoCommentDetector } from "./vue/index.js";
 import { weakTestBoundaryDetector } from "./weakTestBoundary.js";
 
 export const allDetectors: Detector[] = [
@@ -69,6 +71,12 @@ export const allDetectors: Detector[] = [
   pythonDuplicateLogicDetector,
   pythonDeadAbstractionDetector,
   pythonRouteSprawlDetector,
+  vueTodoCommentDetector,
+  vueLargeScriptDetector,
+  vueDuplicateLogicDetector,
+  svelteTodoCommentDetector,
+  svelteLargeScriptDetector,
+  svelteDuplicateLogicDetector,
   kotlinTodoCommentDetector,
   kotlinLargeFunctionDetector,
   kotlinDuplicateLogicDetector,

@@ -1,4 +1,5 @@
 import { Project, ScriptTarget, ts } from "ts-morph";
+import { parseSourceFile } from "../../src/core/languages.js";
 import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo, SourceLanguage } from "../../src/core/types.js";
 import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
@@ -30,6 +31,8 @@ export interface RunDetectorOptions {
 function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
   if (override) return override;
   if (relativePath.endsWith(".kt") || relativePath.endsWith(".kts")) return "kotlin";
+  if (relativePath.endsWith(".vue")) return "vue";
+  if (relativePath.endsWith(".svelte")) return "svelte";
   return relativePath.endsWith(".py") ? "python" : "tsjs";
 }
 
@@ -57,14 +60,15 @@ export async function runDetector(
 
   const sourceFiles: SourceFileInfo[] = [];
   for (const [relativePath, content] of Object.entries(files)) {
-    const sourceFile = project.createSourceFile(relativePath, content, { overwrite: true });
-    sourceFiles.push({
-      absolutePath: `/${relativePath}`,
+    const absolutePath = `/${relativePath}`;
+    const language = inferSourceLanguage(relativePath, options.language);
+    sourceFiles.push(parseSourceFile({
+      project,
+      absolutePath,
       relativePath,
       content,
-      language: inferSourceLanguage(relativePath, options.language),
-      sourceFile,
-    });
+      language,
+    }));
   }
 
   const thresholds = options.thresholds ?? {};

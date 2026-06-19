@@ -1,6 +1,6 @@
 # Rule packs
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose
 codebases. React and React Native were the first serious framework targets, but the
 scanner identity is the shared maintainability contract, not a single UI stack.
 
@@ -10,8 +10,8 @@ The product splits into layers:
    reporters, config, CI, and GitHub Action integration.
 2. **Core rules** — detectors that apply to most TS/JS projects regardless of UI framework.
 3. **Framework and language packs** — optional rule groups and tuning for React, React
-   Native, Next.js, Expo, Node APIs, Python, Python web apps, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
-   such as Vue, Svelte, Swift, and Ruby follow the same model.
+   Native, Next.js, Expo, Node APIs, Python, Python web apps, Vue/Svelte SFC scripts, Kotlin, Jetpack Compose, and monorepos. Additional ecosystems
+   such as Swift and Ruby follow the same model.
 
 Today all TS/JS built-in rules run together by default, while non-TS/JS discovery is
 driven by language metadata on built-in packs and detectors. Select a pack in config
@@ -57,6 +57,12 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
 | `python-route-sprawl` | **python-web** | Flask/Blueprint or Django URL modules registering too many routes | Medium |
+| `vue-todo-comment` | **vue** | TODO/FIXME/HACK/temporary comments inside Vue SFC script blocks | Low |
+| `vue-large-script` | **vue** | Oversized Vue SFC scripts or script functions | Medium |
+| `vue-duplicate-logic` | **vue** | Near-duplicate Vue SFC script functions | Medium |
+| `svelte-todo-comment` | **svelte** | TODO/FIXME/HACK/temporary comments inside Svelte component script blocks | Low |
+| `svelte-large-script` | **svelte** | Oversized Svelte component scripts or script functions | Medium |
+| `svelte-duplicate-logic` | **svelte** | Near-duplicate Svelte component script functions | Medium |
 | `kotlin-duplicate-logic` | **kotlin** | Near-duplicate Kotlin functions using normalized function-body similarity | Medium |
 | `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
 | `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
@@ -140,6 +146,35 @@ Use `--pack python-web` for Python web services. It includes the core Python rul
 check. Django URLConf route counting is conservative; class-based view resolution and
 import alias analysis are out of scope.
 
+### Vue pack (shipped today)
+
+The `vue` pack widens discovery to `.vue` files and scans inline `<script>` and
+`<script setup>` blocks by preserving their original `.vue` line positions in a virtual
+TS/JS source file:
+
+- **`vue-todo-comment`**
+- **`vue-large-script`**
+- **`vue-duplicate-logic`**
+
+Use `--pack vue` for Vue single-file components. The MVP intentionally analyzes script
+blocks only: template AST debt, directive complexity, scoped-style issues, and external
+`<script src="...">` files are out of scope. Combine `--pack core,vue` when the same
+scan should include plain `.ts`, `.tsx`, `.js`, or `.jsx` files beside `.vue` components.
+
+### Svelte pack (shipped today)
+
+The `svelte` pack widens discovery to `.svelte` files and scans inline module and
+instance `<script>` blocks with original `.svelte` line mapping:
+
+- **`svelte-todo-comment`**
+- **`svelte-large-script`**
+- **`svelte-duplicate-logic`**
+
+Use `--pack svelte` for component scripts. For SvelteKit projects, combine
+`--pack core,svelte` when you also want TypeScript route modules such as `+page.ts`,
+`+layout.ts`, `+server.ts`, or shared `.ts` helpers. Markup debt, load-function routing
+semantics, and template/control-flow analysis are separate future rules.
+
 ### Kotlin pack (shipped today)
 
 The `kotlin` pack declares Kotlin discovery metadata, which widens discovery to `.kt`
@@ -170,7 +205,7 @@ and Compose UI debt.
 - **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, and test-boundary signals. It is about maintainability review only; it does not claim to detect AI-generated authorship.
 - **`oss-maintainer`** focuses on library health: public API size, barrels, duplicate exports/logic, test-boundary leaks, and deferred TODO debt.
 
-## Planned framework packs
+## Pack status matrix
 
 | Pack | Focus | Status |
 | --- | --- | --- |
@@ -180,6 +215,8 @@ and Compose UI debt.
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
 | `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO debt | **Shipped** |
 | `python-web` | Flask/Blueprint and Django URL route ownership | **Shipped** |
+| `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals | **Shipped** |
+| `svelte` | Svelte component script TODO, large-script, and duplicate-logic signals | **Shipped** |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
@@ -187,20 +224,19 @@ and Compose UI debt.
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
 | `monorepo` | `--package` for single-level npm workspaces (`packages/*`); per-package configs planned | Partial ([#23](https://github.com/ColumbusLabs/DebtLens/issues/23)) |
 
-Vue and Svelte are planned JS framework packs. See [`language-pack-rfc.md`](./language-pack-rfc.md)
-for the Vue parser recommendation and [`ROADMAP.md`](../ROADMAP.md) for sequencing.
-
 ## Language packs
 
 Detection is language-specific; reporting, baselines, CI, and the issue contract are not.
-Python and Kotlin are the first non-TS/JS built-in language packs. Built-in pack metadata
-now owns language discovery and extension routing, so future Vue, Svelte, Swift, and Ruby
+Python, Vue/Svelte SFC script, and Kotlin are built-in language or SFC-script packs. Built-in pack metadata
+now owns language discovery and extension routing, so future Swift and Ruby
 packs can add discovery without editing central scan conditionals. Other languages should
 follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
 | **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
+| **Vue SFC** | script TODOs, large scripts/functions, duplicate script functions | Vue template-specific rules | **Shipped** for script-block MVP |
+| **Svelte SFC** | script TODOs, large scripts/functions, duplicate script functions | SvelteKit routing and markup-specific rules | **Shipped** for script-block MVP |
 | **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 
@@ -209,7 +245,7 @@ duplication, thin wrappers, deferred TODOs, naming inconsistency — ship first;
 framework-specific packs follow once core coverage is solid. Python and Kotlin's current
 built-in packs and parser recommendations are captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
 
-These are intentional direction items, not near-term commitments. Discuss proposals in
+Unshipped rows are intentional direction items, not near-term commitments. Discuss proposals in
 [GitHub Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) or open a
 **Rule pack request** issue for a new language or framework pack.
 
@@ -252,8 +288,14 @@ debtlens scan examples/python --pack python
 # Python web routes
 debtlens scan examples/python-web --pack python-web
 
+# Vue SFC scripts
+debtlens scan examples/vue --pack vue
+
+# Svelte component scripts
+debtlens scan examples/svelte --pack svelte
+
 # Mixed TS/JS plus Python scan
-debtlens scan . --pack core,python
+debtlens scan . --pack core,python,vue,svelte
 
 # Jetpack Compose UI screens
 debtlens scan examples/compose --pack compose

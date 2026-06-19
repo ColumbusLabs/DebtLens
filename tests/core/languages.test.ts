@@ -16,6 +16,8 @@ describe("language registry", () => {
     assert.equal(detectSourceLanguage("service/jobs.py"), "python");
     assert.equal(detectSourceLanguage("android/MainActivity.kt"), "kotlin");
     assert.equal(detectSourceLanguage("android/build.gradle.kts"), "kotlin");
+    assert.equal(detectSourceLanguage("src/App.vue"), "vue");
+    assert.equal(detectSourceLanguage("src/routes/+page.svelte"), "svelte");
   });
 
   it("maps detectors without languages to the default TS/JS language", () => {
@@ -34,7 +36,7 @@ describe("language registry", () => {
 
   it("publishes include globs and exclude rewrites from language metadata", () => {
     assert.deepEqual(getLanguageDefinition("python").includeGlobs, ["**/*.py"]);
-    assert.deepEqual(includeGlobsForLanguages(["python", "kotlin"]), ["**/*.py", "**/*.{kt,kts}"]);
+    assert.deepEqual(includeGlobsForLanguages(["python", "vue", "svelte", "kotlin"]), ["**/*.py", "**/*.vue", "**/*.svelte", "**/*.{kt,kts}"]);
     assert.deepEqual(
       rewriteDefaultExcludesForLanguages(["kotlin"], defaultConfig.exclude).filter((pattern) => pattern.startsWith("android/")),
       ["android/**/*.{ts,tsx,js,jsx}"],

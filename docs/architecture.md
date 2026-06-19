@@ -15,8 +15,9 @@ DebtLens has four layers:
 
 `src/core/scan.ts` resolves files with `fast-glob`, creates a `ts-morph` project, loads
 source files, runs selected detectors, filters by minimum severity, and returns a stable
-`ScanResult` object. Language-specific detectors share that result contract; Python rules
-already run beside TS/JS rules and future language packs should preserve the same summary,
+`ScanResult` object. Language-specific detectors share that result contract; Python,
+Vue/Svelte SFC script, Kotlin, and Compose rules already run beside TS/JS rules, and
+future language packs should preserve the same summary,
 baseline, SARIF, HTML, JUnit, Markdown, PR comment, and JSON shapes.
 
 The scanner does not execute project code.

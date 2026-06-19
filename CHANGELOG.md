@@ -51,6 +51,10 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **Vue and Svelte SFC script packs** with `vue-*` and `svelte-*` TODO,
+  large-script, and duplicate-logic rules, plus examples and docs for
+  `--pack vue` and `--pack svelte` ([#192](https://github.com/ColumbusLabs/DebtLens/issues/192),
+  [#193](https://github.com/ColumbusLabs/DebtLens/issues/193)).
 - **Python web pack** with `python-route-sprawl` for Flask/Blueprint decorators and
   conservative Django URLConf route-count checks, plus examples and docs for
   `--pack python-web` ([#191](https://github.com/ColumbusLabs/DebtLens/issues/191)).

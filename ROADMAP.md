@@ -1,8 +1,8 @@
 # DebtLens Roadmap
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose today,
-with additional languages (Vue, Svelte, Swift, Ruby, …) planned as language packs.
-React was the first framework pack; React Native, Next.js, Expo, Node, Python, Kotlin,
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose today,
+with additional languages (Swift, Ruby, …) planned as language packs.
+React was the first framework pack; React Native, Next.js, Expo, Node, Python, Vue/Svelte SFC scripts, Kotlin,
 Jetpack Compose, and plain TS/JS projects are current supported targets, not the product identity. See
 [`docs/rule-packs.md`](./docs/rule-packs.md) and [`docs/pack-chooser.md`](./docs/pack-chooser.md)
 for the current support matrix, future languages, and contribution paths.
@@ -41,7 +41,7 @@ for the current support matrix, future languages, and contribution paths.
 ## v0.4 — Ecosystem expansion
 
 - Optional rule packs in config (`core`, `react`, `react-native`, `next`, `node`) — **partially shipped in v0.3**.
-- Vue/Svelte detectors where applicable.
+- **Vue and Svelte SFC script packs** — script TODO, large-script, and duplicate-logic signals with original component line mapping.
 - **First non-JS language pack: Python** — duplicate/dead-abstraction/TODO rules; same `ScanResult` and SARIF contract as TS/JS.
 - **Kotlin core pack** — duplicate/large-function/dead-abstraction/TODO rules; same `ScanResult` and SARIF contract as TS/JS.
 - **Jetpack Compose pack** — oversized composables and local state-hoisting smells; same `ScanResult` and SARIF contract as TS/JS.

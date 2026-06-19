@@ -32,6 +32,8 @@ describe("debtlens completions", () => {
     assert.match(result.stdout, /python-route-sprawl/);
     assert.match(result.stdout, /react-native/);
     assert.match(result.stdout, /python-web/);
+    assert.match(result.stdout, /vue-todo-comment/);
+    assert.match(result.stdout, /svelte-large-script/);
     assert.match(result.stdout, /markdown/);
     assert.match(result.stdout, /high/);
   });

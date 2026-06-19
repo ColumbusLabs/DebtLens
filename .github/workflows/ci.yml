@@ -30,6 +30,8 @@ jobs:
           diff -u /tmp/debtlens-source-packs.json /tmp/debtlens-dist-packs.json
           node dist/cli/index.js scan examples/python --pack python --format json --output debtlens-python-report.json
           node dist/cli/index.js scan examples/python-web --pack python-web --format json --output debtlens-python-web-report.json
+          node dist/cli/index.js scan examples/vue --pack vue --format json --output debtlens-vue-report.json
+          node dist/cli/index.js scan examples/svelte --pack svelte --format json --output debtlens-svelte-report.json
           node dist/cli/index.js scan examples/kotlin --pack kotlin --format json --output debtlens-kotlin-report.json
           node dist/cli/index.js scan examples/compose --pack compose --format json --output debtlens-compose-report.json
       - name: Benchmark regression gate
@@ -41,5 +43,7 @@ jobs:
       - run: node dist/cli/index.js scan examples/next --min-severity info --format markdown --output debtlens-next-report.md
       - run: node dist/cli/index.js scan examples/python --pack python --min-severity info --format markdown --output debtlens-python-report.md
       - run: node dist/cli/index.js scan examples/python-web --pack python-web --min-severity info --format markdown --output debtlens-python-web-report.md
+      - run: node dist/cli/index.js scan examples/vue --pack vue --min-severity info --format markdown --output debtlens-vue-report.md
+      - run: node dist/cli/index.js scan examples/svelte --pack svelte --min-severity info --format markdown --output debtlens-svelte-report.md
       - run: node dist/cli/index.js scan examples/kotlin --pack kotlin --min-severity info --format markdown --output debtlens-kotlin-report.md
       - run: node dist/cli/index.js scan examples/compose --pack compose --min-severity info --format markdown --output debtlens-compose-report.md

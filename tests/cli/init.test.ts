@@ -182,7 +182,7 @@ describe("debtlens init", () => {
   });
 
   it("rejects unknown pack ids", () => {
-    assert.throws(() => runInit(dir, false, "vue"), /Unknown rule pack "vue"/);
+    assert.throws(() => runInit(dir, false, "ember"), /Unknown rule pack "ember"/);
   });
 
   it("rejects non-JSON ESLint config paths", () => {

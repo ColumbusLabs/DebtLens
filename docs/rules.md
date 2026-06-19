@@ -2,7 +2,7 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
-Rules are grouped into **core**, language packs such as **python** and **kotlin**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
+Rules are grouped into **core**, language packs such as **python** and **kotlin**, SFC script packs such as **vue** and **svelte**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
 > **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens init --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
 
@@ -600,6 +600,101 @@ When this is a false positive:
 - the comment is already paired with explicit tracking and removal criteria
 
 Confidence: **0.90** for bare markers; higher for tracker-linked markers.
+
+## Vue and Svelte SFC script rules
+
+The `vue` and `svelte` packs scan inline single-file component script blocks while
+preserving findings on the original `.vue` or `.svelte` file. They do not analyze
+templates, markup, styles, or external `<script src="...">` content.
+
+### `vue-todo-comment`
+
+Flags TODO/FIXME/HACK-style markers inside Vue `<script>` and `<script setup>` blocks.
+It uses the same `todoComment` marker configuration as the TS/JS, Python, Kotlin, and
+Svelte TODO rules.
+
+Good fixes: track the work, add a removal condition, resolve the debt, or move the note
+to an issue if it does not need to live in the component script.
+
+When this is a false positive: the marker is an intentional tracked follow-up with a
+clear removal condition, or the project has custom markers that should be configured.
+
+### `vue-large-script`
+
+Flags Vue SFC script blocks or script functions that exceed script-specific size or
+branch budgets.
+
+Default thresholds:
+
+- `vue-large-script.maxLines`: 120
+- `vue-large-script.maxFunctionLines`: 80
+- `vue-large-script.maxBranches`: 12
+
+Good fixes: move unrelated data loading, state orchestration, or pure helpers into
+composables, stores, or plain modules; keep the component script focused on the component
+boundary.
+
+When this is a false positive: the component is generated, the script is a stable
+top-level orchestration shell, or project-specific thresholds need to be raised.
+
+### `vue-duplicate-logic`
+
+Finds near-duplicate functions inside Vue SFC script blocks after comments,
+identifiers, strings, and numeric literals are normalized. It reuses
+`duplicate-logic.minSimilarity`, `duplicate-logic.minStructuralSimilarity`,
+`duplicate-logic.minLines`, and `duplicate-logic.maxSnippets`.
+
+Good fixes: compare the paired scripts manually, extract a composable or helper only when
+the variation is stable, or delete the accidental duplicate.
+
+When this is a false positive: the functions share shape but intentionally differ in
+domain behavior, or a small amount of repetition is clearer than coupling components.
+
+### `svelte-todo-comment`
+
+Flags TODO/FIXME/HACK-style markers inside Svelte module and instance `<script>` blocks.
+It uses the same `todoComment` marker configuration as the other TODO rules and ignores
+markup comments.
+
+Good fixes: track the work, add a removal condition, resolve the debt, or move the note
+to an issue if it does not need to live in the component script.
+
+When this is a false positive: the marker is already tracked with an explicit removal
+condition, or custom marker configuration would better match the project.
+
+### `svelte-large-script`
+
+Flags Svelte component script blocks or script functions that exceed script-specific size
+or branch budgets.
+
+Default thresholds:
+
+- `svelte-large-script.maxLines`: 120
+- `svelte-large-script.maxFunctionLines`: 80
+- `svelte-large-script.maxBranches`: 12
+
+Good fixes: move durable workflow state and data shaping into stores, load helpers, or
+plain modules; keep the `.svelte` component script focused on component-owned behavior.
+
+For SvelteKit, this rule scans `.svelte` scripts only. Combine `--pack core,svelte` when
+you also want `+page.ts`, `+layout.ts`, `+server.ts`, and shared TypeScript helpers in
+the same run.
+
+When this is a false positive: the script is generated, intentionally acts as a stable
+component shell, or the default budgets are too strict for the project.
+
+### `svelte-duplicate-logic`
+
+Finds near-duplicate functions inside Svelte module or instance scripts after comments,
+identifiers, strings, and numeric literals are normalized. It reuses the same
+duplicate-logic thresholds as core and Vue duplication checks.
+
+Good fixes: compare the paired scripts manually, extract a store or helper only when the
+shared behavior is stable, or leave the duplication when coupling would make the
+components harder to review.
+
+When this is a false positive: the functions are intentionally parallel but domain
+specific, or a shared helper would obscure the component ownership boundary.
 
 ## Kotlin core rules
 

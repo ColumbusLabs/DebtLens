@@ -18,6 +18,9 @@ result so counts, filters, baselines, suppressions, and source links stay aligne
 PR comments use pull request head SHAs for source links when available, warn instead of
 failing on missing comment permissions by default, and can summarize omitted findings
 when `comment-max-findings` or `comment-max-bytes` caps are reached.
+Step summaries include gate decisions, warnings, filter stats, report paths, artifacts,
+and optional trend comparisons. The Action also exposes issue-count outputs and can emit
+capped workflow command annotations when SARIF/code scanning is not configured.
 
 ## Compare reports
 
@@ -37,13 +40,17 @@ and minimum severity aligned between the two reports so the trend describes the 
 surface.
 
 Scheduled CI jobs can write a fresh canonical JSON report, restore the previous report
-artifact, and append the Markdown compare output to the job summary:
+artifact, and pass it to the Action for a step-summary trend. Missing previous reports
+are treated as soft warnings. The README includes complete copy-paste workflows for both
+pull request trends and scheduled main-branch trends; the Action step is:
 
 ```yaml
-- name: Compare DebtLens trend
-  if: hashFiles('previous/debtlens-report.json') != ''
-  run: |
-    npx debtlens compare previous/debtlens-report.json current/debtlens-report.json --format markdown >> "$GITHUB_STEP_SUMMARY"
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    previous-report: previous/debtlens-report.json
+    json-output: current/debtlens-report.json
+    upload-json-artifact: true
+    step-summary: true
 ```
 
 ## Minimal Markdown excerpt

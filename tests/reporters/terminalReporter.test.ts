@@ -64,10 +64,10 @@ describe("renderTerminal", () => {
       ...makeResult([]),
       summary: {
         ...makeResult([]).summary,
-        filterStats: { suppressedByBaseline: 2, filteredByMinSeverity: 3 },
+        filterStats: { suppressedByBaseline: 2, filteredByMinSeverity: 3, filteredByConfidenceFloor: 1 },
       },
     }, { color: false });
-    assert.match(out, /Filtered: 2 baselined \| 3 below min severity/);
+    assert.match(out, /Filtered: 2 baselined \| 3 below min severity \| 1 below confidence floor/);
   });
 
   it("renders suppression audit summaries and details", () => {

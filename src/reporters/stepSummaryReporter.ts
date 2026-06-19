@@ -1,5 +1,6 @@
 import { compareScanResults } from "../core/scanComparison.js";
-import type { DebtIssue, ScanResult } from "../core/types.js";
+import type { DebtIssue, ScanResult, Severity } from "../core/types.js";
+import { formatFilterStats } from "./filterStats.js";
 import {
   formatSuppressionAuditSummary,
   formatSuppressionDirectiveLine,
@@ -7,7 +8,24 @@ import {
   summarizeSuppressionDirectives,
 } from "./suppressionAudit.js";
 
-export function renderStepSummary(result: ScanResult, options: { previousResult?: unknown } = {}): string {
+export interface StepSummaryOptions {
+  previousResult?: unknown;
+  previousReportWarning?: string;
+  gate?: {
+    scanStatus?: number;
+    failOn?: string;
+    failOnConfidence?: number;
+    failOnRegression?: boolean;
+  };
+  reports?: {
+    format?: string;
+    reportPath?: string;
+    jsonPath?: string;
+    jsonArtifactName?: string;
+  };
+}
+
+export function renderStepSummary(result: ScanResult, options: StepSummaryOptions = {}): string {
   const { summary } = result;
   const lines: string[] = [
     "## DebtLens",
@@ -19,9 +37,17 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
     `| ${summary.bySeverity.high} | ${summary.bySeverity.medium} | ${summary.bySeverity.low} | ${summary.bySeverity.info} | ${summary.totalIssues} |`,
   ];
 
+  renderGateDecision(lines, result, options.gate);
+
   if (options.previousResult) {
     renderTrend(lines, result, options.previousResult);
+  } else if (options.previousReportWarning) {
+    lines.push("", "### Trend", "", options.previousReportWarning);
   }
+
+  renderWarnings(lines, result);
+  renderFilterStats(lines, result);
+  renderReports(lines, options.reports);
 
   const baselineDelta = summary.deltaFromBaseline;
   if (baselineDelta) {
@@ -54,6 +80,69 @@ export function renderStepSummary(result: ScanResult, options: { previousResult?
   return `${lines.join("\n")}\n`;
 }
 
+function renderGateDecision(lines: string[], result: ScanResult, gate: StepSummaryOptions["gate"]): void {
+  if (!gate) return;
+  const scanStatus = gate.scanStatus ?? 0;
+  const status = scanStatus === 0 ? "Passed" : "Failed";
+  lines.push("", "### Gate Decision", "", `**${status}.** ${gateReason(result, gate)}`);
+}
+
+function gateReason(result: ScanResult, gate: NonNullable<StepSummaryOptions["gate"]>): string {
+  if ((gate.scanStatus ?? 0) === 0) {
+    if (gate.failOn || gate.failOnRegression) return "No configured fail-on gate was triggered.";
+    return "Scan completed without a configured blocking gate.";
+  }
+
+  const reasons: string[] = [];
+  const failOn = parseSeverity(gate.failOn);
+  if (failOn) {
+    const count = countAtOrAboveSeverity(result, failOn, gate.failOnConfidence);
+    const confidenceSuffix = gate.failOnConfidence === undefined
+      ? ""
+      : ` with confidence >= ${formatConfidence(gate.failOnConfidence)}`;
+    if (count > 0) reasons.push(`${count} finding${count === 1 ? "" : "s"} at or above ${failOn} severity${confidenceSuffix}`);
+  }
+  const delta = result.summary.deltaFromBaseline;
+  if (gate.failOnRegression && delta) {
+    const regressionReasons: string[] = [];
+    if (delta.totalDelta > 0) regressionReasons.push(`${formatDelta(delta.totalDelta)} total issues`);
+    if (delta.severityRegressions > 0) regressionReasons.push(`${delta.severityRegressions} severity regression${delta.severityRegressions === 1 ? "" : "s"}`);
+    const ruleRegressions = Object.entries(delta.byRule ?? {}).filter(([, entry]) => entry.delta > 0);
+    if (ruleRegressions.length > 0) regressionReasons.push(`${ruleRegressions.length} rule count regression${ruleRegressions.length === 1 ? "" : "s"}`);
+    if (regressionReasons.length > 0) reasons.push(`regression gate detected ${regressionReasons.join(", ")}`);
+  }
+  if (reasons.length === 0) return `Scanner exited with status ${gate.scanStatus ?? 1}.`;
+  return `${capitalize(reasons.join("; "))}.`;
+}
+
+function renderWarnings(lines: string[], result: ScanResult): void {
+  const warnings = result.summary.warnings ?? [];
+  if (warnings.length === 0) return;
+  lines.push("", "### Warnings", "");
+  for (const warning of warnings.slice(0, 5)) {
+    lines.push(`- ${warning}`);
+  }
+  if (warnings.length > 5) {
+    lines.push("", `_...and ${warnings.length - 5} more warning(s)._`);
+  }
+}
+
+function renderFilterStats(lines: string[], result: ScanResult): void {
+  const filterStats = formatFilterStats(result.summary.filterStats);
+  if (!filterStats) return;
+  lines.push("", "### Filters", "", filterStats);
+}
+
+function renderReports(lines: string[], reports: StepSummaryOptions["reports"]): void {
+  if (!reports) return;
+  const entries: string[] = [];
+  if (reports.reportPath) entries.push(`Report (${reports.format ?? "configured format"}): \`${reports.reportPath}\``);
+  if (reports.jsonPath) entries.push(`Canonical JSON: \`${reports.jsonPath}\``);
+  if (reports.jsonArtifactName) entries.push(`JSON artifact: \`${reports.jsonArtifactName}\``);
+  if (entries.length === 0) return;
+  lines.push("", "### Reports and Artifacts", "", ...entries.map((entry) => `- ${entry}`));
+}
+
 function renderTrend(lines: string[], result: ScanResult, previousResult: unknown): void {
   const comparison = compareScanResults(previousResult, result);
   lines.push(
@@ -74,6 +163,18 @@ function renderTrend(lines: string[], result: ScanResult, previousResult: unknow
       lines.push(`- ${warning}`);
     }
   }
+}
+
+function countAtOrAboveSeverity(result: ScanResult, minimum: Severity, minimumConfidence: number | undefined): number {
+  return result.issues.filter((issue) => (
+    severityRank(issue.severity) >= severityRank(minimum)
+    && (minimumConfidence === undefined || issue.confidence >= minimumConfidence)
+  )).length;
+}
+
+function parseSeverity(value: string | undefined): Severity | undefined {
+  if (value === "info" || value === "low" || value === "medium" || value === "high") return value;
+  return undefined;
 }
 
 function renderSuppressionAudit(lines: string[], result: ScanResult): void {
@@ -106,17 +207,27 @@ function formatMetric(value: number | null): string {
   return value === null ? "unavailable" : String(value);
 }
 
+function formatConfidence(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(value).replace(/0+$/, "").replace(/\.$/, "");
+}
+
 function capitalize(value: string): string {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
 }
 
 function topIssues(issues: DebtIssue[], limit: number): DebtIssue[] {
-  const rank = { high: 4, medium: 3, low: 2, info: 1 };
   return [...issues]
     .sort((left, right) => {
-      const severityDelta = rank[right.severity] - rank[left.severity];
+      const severityDelta = severityRank(right.severity) - severityRank(left.severity);
       if (severityDelta !== 0) return severityDelta;
       return right.confidence - left.confidence;
     })
     .slice(0, limit);
+}
+
+function severityRank(severity: Severity): number {
+  if (severity === "high") return 4;
+  if (severity === "medium") return 3;
+  if (severity === "low") return 2;
+  return 1;
 }

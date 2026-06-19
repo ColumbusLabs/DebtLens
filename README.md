@@ -105,6 +105,7 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `python-complex-control-flow` | python | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
 | `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
+| `python-route-sprawl` | python-web | Flask/Blueprint or Django URL modules registering too many routes | Medium |
 | `kotlin-duplicate-logic` | kotlin | Near-duplicate Kotlin functions | Medium |
 | `kotlin-large-function` | kotlin | Oversized or branch-heavy Kotlin functions | Medium |
 | `kotlin-dead-abstraction` | kotlin | Thin Kotlin pass-through functions | Low |
@@ -410,6 +411,7 @@ adds the registered source globs without one-off CLI flags. See
 | `next` | react + App Router boundary, route size, and data-loader checks |
 | `node` | core + Express/Fastify handler depth and route sprawl |
 | `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO comments |
+| `python-web` | python + Flask/Blueprint and Django URL route sprawl |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
 | `compose` | Jetpack Compose oversized composables and local state-hoisting smells |
 | `expo` | React Native tuning for Expo Router projects |
@@ -767,7 +769,7 @@ newcomer tasks from the historical v0.3 roadmap batch. Propose new work in
 template, or the [plugin API](./docs/plugin-api-rfc.md).
 
 Contribution paths: **core TS/JS rules**, **Python rules**, **Kotlin rules**, **React pack rules**,
-**framework packs** (Next.js, RN, Node, Compose), **scanner/CI** (baselines, monorepos, inline
+**framework packs** (Next.js, RN, Node, Compose, Python web), **scanner/CI** (baselines, monorepos, inline
 suppressions), **plugins**, and **reporters**. New rule authors should follow the rule checklist in
 [CONTRIBUTING.md](./CONTRIBUTING.md#rule-review-bar).
 
@@ -792,7 +794,7 @@ and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
-React Native, Next.js, Expo, Node, Python, Kotlin, Jetpack Compose, and maintainer workflows. Additional
+React Native, Next.js, Expo, Node, Python, Python web, Kotlin, Jetpack Compose, and maintainer workflows. Additional
 packs expand from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 

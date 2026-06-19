@@ -43,6 +43,7 @@
             "expo",
             "node",
             "python",
+            "python-web",
             "kotlin",
             "compose",
             "ai-assisted-maintainer",
@@ -51,7 +52,7 @@
         },
         {
           "type": "string",
-          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|kotlin|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|kotlin|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|kotlin|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|kotlin|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
         }
       ],
       "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
@@ -94,6 +95,7 @@
               "python-complex-control-flow",
               "python-duplicate-logic",
               "python-dead-abstraction",
+              "python-route-sprawl",
               "kotlin-todo-comment",
               "kotlin-large-function",
               "kotlin-duplicate-logic",
@@ -196,6 +198,9 @@
           "type": "number"
         },
         "route-sprawl.maxRoutes": {
+          "type": "number"
+        },
+        "python-route-sprawl.maxRoutes": {
           "type": "number"
         },
         "duplicate-logic.minSimilarity": {
@@ -537,6 +542,14 @@
             "high"
           ]
         },
+        "python-route-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "kotlin-todo-comment": {
           "enum": [
             "info",
@@ -750,6 +763,11 @@
           "maximum": 1
         },
         "python-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-route-sprawl": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

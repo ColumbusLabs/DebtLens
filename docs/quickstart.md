@@ -20,6 +20,7 @@ Use the [pack chooser](./pack-chooser.md) before enabling everything:
 npx debtlens scan . --pack core --min-severity medium
 npx debtlens scan . --pack react --min-severity medium
 npx debtlens scan . --pack python --min-severity low
+npx debtlens scan . --pack python-web --min-severity low
 npx debtlens scan . --pack kotlin --min-severity low
 npx debtlens scan . --pack compose --min-severity low
 ```
@@ -27,7 +28,7 @@ npx debtlens scan . --pack compose --min-severity low
 Mixed repos can scan multiple packs in one run:
 
 ```bash
-npx debtlens scan . --pack core,python,kotlin,compose --format markdown --output debtlens-report.md
+npx debtlens scan . --pack core,python-web,kotlin,compose --format markdown --output debtlens-report.md
 ```
 
 ## 3. Get an adoption plan

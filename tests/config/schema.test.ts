@@ -99,6 +99,7 @@ describe("config JSON schema", () => {
       "expo",
       "node",
       "python",
+      "python-web",
       "kotlin",
       "compose",
       "ai-assisted-maintainer",

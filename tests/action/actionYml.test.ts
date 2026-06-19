@@ -53,7 +53,7 @@ describe("GitHub Action metadata", () => {
   });
 
   it("documents supported packs and bootstraps tagged release assets before source fallback", () => {
-    assert.match(actionYml, /core, react, react-native, next, expo, node, python, kotlin, compose, ai-assisted-maintainer, oss-maintainer/);
+    assert.match(actionYml, /core, react, react-native, next, expo, node, python, python-web, kotlin, compose, ai-assisted-maintainer, oss-maintainer/);
     assert.match(actionYml, /DL_ACTION_REF: \$\{\{ github\.action_ref \}\}/);
     assert.match(actionYml, /DL_ACTION_REPOSITORY: \$\{\{ github\.action_repository \}\}/);
     assert.match(actionYml, /scripts\/prepare-action-runtime\.sh/);

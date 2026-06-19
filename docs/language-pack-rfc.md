@@ -137,8 +137,10 @@ Known limitations:
   the sidecar exposes tokenized comment metadata for future rules.
 - Type checkers and import resolution are out of scope for the first pack; imports are
   reported as syntax metadata only.
-- Framework packs such as Django or Flask can build on decorator/function metadata, but
-  URLConf resolution and class-based view inference remain separate framework work.
+- The shipped `python-web` pack builds on decorator/function metadata for Flask and
+  Blueprint routes, and uses conservative text matching for Django `path()`/`re_path()`
+  URLConf entries. Class-based view inference and deep URL resolver analysis remain
+  separate framework work.
 
 ## Kotlin parser recommendation
 

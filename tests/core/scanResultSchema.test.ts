@@ -29,6 +29,13 @@ describe("ScanResult JSON schema", () => {
                 ranking: { items: { required: string[]; properties: { churn: { required: string[] } } } };
               };
             };
+            ownership?: {
+              required: string[];
+              properties: {
+                ownerSummaries: { items: { required: string[]; properties: { topFiles: { items: { required: string[] } } } } };
+                unownedHotspots: { items: { required: string[] } };
+              };
+            };
           };
         };
       };
@@ -47,5 +54,9 @@ describe("ScanResult JSON schema", () => {
     assert.ok(schema.properties.summary.properties.hotspots?.required.includes("ranking"));
     assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.required.includes("churn"));
     assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.properties.churn.required.includes("changedLines"));
+    assert.ok(schema.properties.summary.properties.ownership?.required.includes("ownerSummaries"));
+    assert.ok(schema.properties.summary.properties.ownership?.required.includes("unownedHotspots"));
+    assert.ok(schema.properties.summary.properties.ownership?.properties.ownerSummaries.items.required.includes("topFiles"));
+    assert.ok(schema.properties.summary.properties.ownership?.properties.unownedHotspots.items.required.includes("owners"));
   });
 });

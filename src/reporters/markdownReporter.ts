@@ -42,6 +42,7 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   }
 
   renderHotspots(lines, result);
+  renderOwnership(lines, result);
   renderFixTargets(lines, result);
 
   for (const severity of severityOrder) {
@@ -143,6 +144,38 @@ function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots
   if (window.range) return `git range \`${window.range}\``;
   if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
   return "the configured git window";
+}
+
+function renderOwnership(lines: string[], result: ScanResult): void {
+  const ownership = result.summary.ownership;
+  if (!ownership) return;
+
+  lines.push("");
+  lines.push("## Ownership handoffs");
+  lines.push("");
+  lines.push(`CODEOWNERS source: \`${escapeMarkdownTableCell(ownership.codeownersPath)}\`.`);
+
+  if (ownership.ownerSummaries.length) {
+    lines.push("");
+    lines.push("| Owner | Files | Issues | Top files |");
+    lines.push("| --- | ---: | ---: | --- |");
+    for (const owner of ownership.ownerSummaries) {
+      const topFiles = owner.topFiles.map((file) => `${file.file} (${file.totalIssues})`).join(", ");
+      lines.push(`| ${escapeMarkdownTableCell(owner.owner)} | ${owner.files} | ${owner.totalIssues} | ${escapeMarkdownTableCell(topFiles)} |`);
+    }
+  }
+
+  if (ownership.unownedHotspots.length) {
+    lines.push("");
+    lines.push("### Unowned high-debt files");
+    lines.push("");
+    lines.push("| File | Score | Why | Top rules |");
+    lines.push("| --- | ---: | --- | --- |");
+    for (const target of ownership.unownedHotspots) {
+      const topRules = target.topRules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", ");
+      lines.push(`| \`${escapeMarkdownTableCell(target.file)}\` | ${target.score} | ${escapeMarkdownTableCell(target.reasons.join("; "))} | ${escapeMarkdownTableCell(topRules)} |`);
+    }
+  }
 }
 
 function renderFixTargets(lines: string[], result: ScanResult): void {

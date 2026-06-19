@@ -7,6 +7,7 @@ import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
+import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
 import { canonicalizePath, getChangedFiles, getFileChurn, getStagedFiles } from "../../utils/git.js";
 import { parseSeverity } from "../../core/severity.js";
@@ -82,6 +83,8 @@ export function registerScanCommand(program: Command): void {
     .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
     .option("--churn-days <count>", "with --hotspots, look back this many days", parseInteger)
     .option("--churn-range <range>", "with --hotspots, use this git revision range instead of --churn-days")
+    .option("--ownership", "attach CODEOWNERS-based ownership summaries to reports")
+    .option("--codeowners <path>", "with --ownership, read ownership rules from this CODEOWNERS file")
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
     .option("--sarif-compact", "with --format sarif, emit only rules referenced by findings")
     .option("--sarif-category <category>", "with --format sarif, set runs[].automationDetails.id for separated code scanning runs")
@@ -236,6 +239,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     enrichIssuesWithBlameAge(cwd, options, reported);
   }
   enrichWithHotspots(cwd, options, reported, rawOptions, writeStderr);
+  enrichWithOwnership(cwd, options, reported, rawOptions, writeStderr);
 
   const report = renderReport(reported, format, {
     color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
@@ -314,6 +318,51 @@ function shouldBuildHotspots(rawOptions: Record<string, unknown>): boolean {
   if (typeof rawOptions.hotspots === "string" && rawOptions.hotspots.trim().length > 0) return true;
   if (rawOptions.churnDays !== undefined) return true;
   return typeof rawOptions.churnRange === "string" && rawOptions.churnRange.trim().length > 0;
+}
+
+function enrichWithOwnership(
+  cwd: string,
+  options: ScanOptions,
+  result: ScanResult,
+  rawOptions: Record<string, unknown>,
+  writeStderr: (text: string) => void,
+): void {
+  if (!shouldBuildOwnership(rawOptions)) return;
+
+  const explicitPath = typeof rawOptions.codeowners === "string" && rawOptions.codeowners.trim().length > 0
+    ? rawOptions.codeowners
+    : undefined;
+  const codeowners = loadCodeowners(cwd, explicitPath);
+  if (!codeowners) {
+    writeStderr("DebtLens: --ownership ignored (CODEOWNERS not found).\n");
+    return;
+  }
+  if (result.issues.length === 0) return;
+
+  const paths = buildIssuePathMaps(options, result.issues);
+  const fileToRepositoryPath = new Map<string, string>();
+  for (const [file, absolutePath] of paths.absoluteByFile.entries()) {
+    const repositoryPath = relative(codeowners.root, canonicalizePath(absolutePath)).replaceAll("\\", "/");
+    if (repositoryPath && !repositoryPath.startsWith("..")) {
+      fileToRepositoryPath.set(file, repositoryPath);
+    }
+  }
+
+  const ownership = buildOwnershipSummary({
+    issues: result.issues,
+    codeowners,
+    fileToRepositoryPath,
+    hotspots: result.summary.hotspots?.ranking,
+    duplicateClusters: result.summary.duplicateClusters,
+  });
+  if (ownership) {
+    result.summary.ownership = ownership;
+  }
+}
+
+function shouldBuildOwnership(rawOptions: Record<string, unknown>): boolean {
+  return rawOptions.ownership === true
+    || (typeof rawOptions.codeowners === "string" && rawOptions.codeowners.trim().length > 0);
 }
 
 function buildIssuePathMaps(options: ScanOptions, issues: DebtIssue[]): { absoluteByFile: Map<string, string> } {

@@ -40,6 +40,7 @@ export function renderTerminal(
   }
 
   renderHotspots(lines, result, color);
+  renderOwnership(lines, result, color);
 
   if (options.groupBy === "rule") {
     renderGroups(lines, result.issues, groupIssuesByRule(result.issues), "rule", color);
@@ -79,6 +80,24 @@ function formatHotspotWindow(window: NonNullable<ScanResult["summary"]["hotspots
   if (window.range) return `git range ${window.range}`;
   if (window.days) return `the last ${window.days} day${window.days === 1 ? "" : "s"}`;
   return "the configured git window";
+}
+
+function renderOwnership(lines: string[], result: ScanResult, color: ReturnType<typeof createColorizer>): void {
+  const ownership = result.summary.ownership;
+  if (!ownership) return;
+
+  lines.push("");
+  lines.push(color.bold("Ownership handoffs"));
+  for (const owner of ownership.ownerSummaries.slice(0, 5)) {
+    const topFiles = owner.topFiles.map((file) => `${file.file} (${file.totalIssues})`).join(", ");
+    lines.push(`  ${owner.owner}: ${owner.totalIssues} finding${owner.totalIssues === 1 ? "" : "s"} across ${owner.files} file${owner.files === 1 ? "" : "s"}${topFiles ? ` | ${topFiles}` : ""}`);
+  }
+  if (ownership.unownedHotspots.length) {
+    lines.push("  Unowned high-debt files:");
+    for (const target of ownership.unownedHotspots.slice(0, 5)) {
+      lines.push(`    ${target.file} | score ${target.score} | ${target.reasons.join("; ")}`);
+    }
+  }
 }
 
 function renderSuppressionAuditSummary(lines: string[], result: ScanResult): void {

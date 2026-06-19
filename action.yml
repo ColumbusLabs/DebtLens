@@ -69,6 +69,12 @@ inputs:
   churn-range:
     description: Hotspot mode - derive churn from a git revision range.
     default: ""
+  ownership:
+    description: Enable CODEOWNERS-based ownership and handoff summaries.
+    default: "false"
+  codeowners:
+    description: Optional path to a CODEOWNERS file for ownership mode.
+    default: ""
   audit-suppressions:
     description: Include used and unused inline suppression directives in scan output.
     default: "false"
@@ -237,6 +243,8 @@ runs:
         DL_HOTSPOTS: ${{ inputs.hotspots }}
         DL_CHURN_DAYS: ${{ inputs.churn-days }}
         DL_CHURN_RANGE: ${{ inputs.churn-range }}
+        DL_OWNERSHIP: ${{ inputs.ownership }}
+        DL_CODEOWNERS: ${{ inputs.codeowners }}
         DL_AUDIT_SUPPRESSIONS: ${{ inputs.audit-suppressions }}
         DL_RESPECT_GITIGNORE: ${{ inputs.respect-gitignore }}
         DL_BASELINE: ${{ inputs.baseline }}
@@ -320,6 +328,8 @@ runs:
         [ "$DL_HOTSPOTS" = "true" ] && args+=(--hotspots)
         [ -n "$DL_CHURN_DAYS" ] && args+=(--churn-days "$DL_CHURN_DAYS")
         [ -n "$DL_CHURN_RANGE" ] && args+=(--churn-range "$DL_CHURN_RANGE")
+        [ "$DL_OWNERSHIP" = "true" ] && args+=(--ownership)
+        [ -n "$DL_CODEOWNERS" ] && args+=(--codeowners "$DL_CODEOWNERS")
         [ "$DL_AUDIT_SUPPRESSIONS" = "true" ] && args+=(--audit-suppressions)
         [ -n "$DL_PACKAGE" ] && args+=(--package "$DL_PACKAGE")
         [ "$DL_PROFILE" = "true" ] && args+=(--profile)

@@ -172,6 +172,62 @@ describe("markdown reporter", () => {
     assert.match(md, /\| `src\/Parent\.tsx` \| 27\.4 \| 3 commits, 24 changed lines \|/);
   });
 
+  it("renders optional CODEOWNERS ownership handoffs", () => {
+    const result = makeResult([issue]);
+    result.summary.ownership = {
+      source: "codeowners",
+      codeownersPath: ".github/CODEOWNERS",
+      files: [{
+        file: "src/Parent.tsx",
+        repositoryPath: "src/Parent.tsx",
+        owners: ["@frontend/team"],
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        matchedPattern: "src/",
+        matchedLine: 2,
+      }],
+      ownerSummaries: [{
+        owner: "@frontend/team",
+        files: 1,
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        topFiles: [{ file: "src/Parent.tsx", totalIssues: 1, score: 21 }],
+      }],
+      handoffs: [{
+        file: "src/Parent.tsx",
+        repositoryPath: "src/Parent.tsx",
+        owners: ["@frontend/team"],
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 0, medium: 0, high: 1 },
+        score: 21,
+        reasons: ["1 high-severity finding"],
+        topRules: [{ ruleId: "prop-drilling", count: 1 }],
+        matchedPattern: "src/",
+        matchedLine: 2,
+      }],
+      unownedHotspots: [{
+        file: "src/Orphan.ts",
+        repositoryPath: "src/Orphan.ts",
+        owners: [],
+        totalIssues: 2,
+        distinctRules: 2,
+        bySeverity: { info: 0, low: 1, medium: 1, high: 0 },
+        score: 20,
+        reasons: ["1 medium-severity finding"],
+        topRules: [{ ruleId: "todo-comment", count: 1 }],
+      }],
+    };
+
+    const md = renderMarkdown(result);
+
+    assert.match(md, /## Ownership handoffs/);
+    assert.match(md, /CODEOWNERS source: `.github\/CODEOWNERS`/);
+    assert.match(md, /\| @frontend\/team \| 1 \| 1 \| src\/Parent\.tsx \(1\) \|/);
+    assert.match(md, /### Unowned high-debt files/);
+    assert.match(md, /\| `src\/Orphan\.ts` \| 20 \|/);
+  });
+
   it("escapes Markdown table cells in correlations and heatmaps", () => {
     const result = makeResult([{ ...issue, file: "src/a|b.tsx\n" }]);
     result.summary.correlations = [{

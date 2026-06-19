@@ -133,6 +133,8 @@ function tools(): Array<Record<string, unknown>> {
           hotspots: { oneOf: [{ type: "boolean" }, { type: "number" }, { type: "string" }] },
           churnDays: { oneOf: [{ type: "number" }, { type: "string" }] },
           churnRange: { type: "string" },
+          ownership: { type: "boolean" },
+          codeowners: { type: "string" },
         },
       },
     },
@@ -274,6 +276,8 @@ async function callTool(
       hotspots: args.hotspots,
       churnDays: args.churnDays,
       churnRange: args.churnRange,
+      ownership: args.ownership,
+      codeowners: args.codeowners,
     }, {
       format,
     });

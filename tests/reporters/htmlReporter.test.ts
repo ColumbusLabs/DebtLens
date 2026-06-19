@@ -90,6 +90,52 @@ describe("html reporter", () => {
     assert.match(html, /Optional git-derived ranking from the last 7 days/);
     assert.match(html, /2 commits, 15 changed lines/);
   });
+
+  it("renders optional CODEOWNERS ownership handoffs", () => {
+    const result = makeResult([{
+      id: "1",
+      fingerprint: "1",
+      ruleId: "todo-comment",
+      ruleName: "Todo comment",
+      severity: "low",
+      confidence: 0.75,
+      message: "Avoid TODO markers",
+      file: "src/app.ts",
+      location: { startLine: 2 },
+      tags: [],
+    }]);
+    result.summary.ownership = {
+      source: "codeowners",
+      codeownersPath: ".github/CODEOWNERS",
+      files: [],
+      ownerSummaries: [{
+        owner: "@frontend/team",
+        files: 1,
+        totalIssues: 1,
+        bySeverity: { info: 0, low: 1, medium: 0, high: 0 },
+        topFiles: [{ file: "src/app.ts", totalIssues: 1, score: 8 }],
+      }],
+      handoffs: [],
+      unownedHotspots: [{
+        file: "src/orphan.ts",
+        repositoryPath: "src/orphan.ts",
+        owners: [],
+        totalIssues: 1,
+        distinctRules: 1,
+        bySeverity: { info: 0, low: 1, medium: 0, high: 0 },
+        score: 8,
+        reasons: ["1 low-severity finding"],
+        topRules: [{ ruleId: "todo-comment", count: 1 }],
+      }],
+    };
+
+    const html = renderHtml(result);
+
+    assert.match(html, /Ownership Handoffs/);
+    assert.match(html, /@frontend\/team/);
+    assert.match(html, /Unowned High-Debt Files/);
+    assert.match(html, /src\/orphan\.ts/);
+  });
 });
 
 function makeResult(issues: DebtIssue[]): ScanResult {

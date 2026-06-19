@@ -300,6 +300,68 @@ export interface ScanHotspotSummary {
   ranking: DebtHotspot[];
 }
 
+export interface CodeownersRule {
+  pattern: string;
+  owners: string[];
+  line: number;
+}
+
+export interface CodeownersFile {
+  path: string;
+  root: string;
+  rules: CodeownersRule[];
+  warnings?: string[];
+}
+
+export interface OwnershipFileSummary {
+  file: string;
+  repositoryPath: string;
+  owners: string[];
+  totalIssues: number;
+  bySeverity: Record<Severity, number>;
+  matchedPattern?: string;
+  matchedLine?: number;
+}
+
+export interface OwnershipHandoff {
+  file: string;
+  repositoryPath: string;
+  owners: string[];
+  totalIssues: number;
+  distinctRules: number;
+  bySeverity: Record<Severity, number>;
+  score: number;
+  reasons: string[];
+  topRules: Array<{
+    ruleId: string;
+    count: number;
+  }>;
+  matchedPattern?: string;
+  matchedLine?: number;
+}
+
+export interface OwnershipOwnerSummary {
+  owner: string;
+  files: number;
+  totalIssues: number;
+  bySeverity: Record<Severity, number>;
+  topFiles: Array<{
+    file: string;
+    totalIssues: number;
+    score: number;
+  }>;
+}
+
+export interface ScanOwnershipSummary {
+  source: "codeowners";
+  codeownersPath: string;
+  files: OwnershipFileSummary[];
+  ownerSummaries: OwnershipOwnerSummary[];
+  handoffs: OwnershipHandoff[];
+  unownedHotspots: OwnershipHandoff[];
+  warnings?: string[];
+}
+
 export interface InlineSuppressionAudit {
   ruleId: string;
   file: string;
@@ -414,6 +476,7 @@ export interface ScanSummary {
   correlations?: RuleCorrelation[];
   duplicateClusters?: DuplicateLogicCluster[];
   hotspots?: ScanHotspotSummary;
+  ownership?: ScanOwnershipSummary;
   profile?: ScanProfile;
   performance?: ScanPerformance;
 }

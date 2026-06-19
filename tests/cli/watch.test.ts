@@ -19,6 +19,8 @@ describe("debtlens watch", () => {
       blameAge: true,
       hotspots: 3,
       churnDays: 30,
+      ownership: true,
+      codeowners: ".github/CODEOWNERS",
       auditSuppressions: true,
       debounce: 10,
     });
@@ -41,6 +43,9 @@ describe("debtlens watch", () => {
       "3",
       "--churn-days",
       "30",
+      "--ownership",
+      "--codeowners",
+      ".github/CODEOWNERS",
     ]);
   });
 

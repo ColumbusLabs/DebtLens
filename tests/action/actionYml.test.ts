@@ -20,6 +20,8 @@ describe("GitHub Action metadata", () => {
       "hotspots",
       "churn-days",
       "churn-range",
+      "ownership",
+      "codeowners",
       "audit-suppressions",
       "fail-on-regression",
       "json-output",
@@ -86,6 +88,26 @@ describe("GitHub Action metadata", () => {
     assert.match(normalScanBlock, /\[ -n "\$DL_CHURN_DAYS" \] && args\+=\(--churn-days "\$DL_CHURN_DAYS"\)/);
     assert.match(normalScanBlock, /\[ -n "\$DL_CHURN_RANGE" \] && args\+=\(--churn-range "\$DL_CHURN_RANGE"\)/);
     assert.doesNotMatch(baselineWriteBlock, /DL_HOTSPOTS|DL_CHURN_DAYS|DL_CHURN_RANGE|--hotspots|--churn-days|--churn-range/);
+  });
+
+  it("passes ownership flags to normal scans only", () => {
+    assert.match(actionYml, /ownership:\n    description: Enable CODEOWNERS-based ownership and handoff summaries\.\n    default: "false"/);
+    assert.match(actionYml, /codeowners:\n    description: Optional path to a CODEOWNERS file for ownership mode\.\n    default: ""/);
+    assert.match(actionYml, /DL_OWNERSHIP: \$\{\{ inputs\.ownership \}\}/);
+    assert.match(actionYml, /DL_CODEOWNERS: \$\{\{ inputs\.codeowners \}\}/);
+
+    const baselineWriteBlock = actionYml.slice(
+      actionYml.indexOf('if [ -n "$DL_WRITE_BASELINE" ]; then'),
+      actionYml.indexOf('internal_json="$RUNNER_TEMP/debtlens-report.json"'),
+    );
+    const normalScanBlock = actionYml.slice(
+      actionYml.indexOf('internal_json="$RUNNER_TEMP/debtlens-report.json"'),
+      actionYml.indexOf('summary_fail_on="$DL_FAIL_ON"'),
+    );
+
+    assert.match(normalScanBlock, /\[ "\$DL_OWNERSHIP" = "true" \] && args\+=\(--ownership\)/);
+    assert.match(normalScanBlock, /\[ -n "\$DL_CODEOWNERS" \] && args\+=\(--codeowners "\$DL_CODEOWNERS"\)/);
+    assert.doesNotMatch(baselineWriteBlock, /DL_OWNERSHIP|DL_CODEOWNERS|--ownership|--codeowners/);
   });
 
   it("documents supported packs and bootstraps tagged release assets before source fallback", () => {

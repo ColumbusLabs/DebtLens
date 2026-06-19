@@ -101,6 +101,8 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `handler-depth` | node | Deeply nested Express/Fastify handlers | Medium |
 | `route-sprawl` | node | Route modules registering too many endpoints | Medium |
 | `python-duplicate-logic` | python | Near-duplicate Python functions | Medium |
+| `python-large-function` | python | Oversized or branch-heavy Python functions | Medium |
+| `python-complex-control-flow` | python | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
 | `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
 | `kotlin-duplicate-logic` | kotlin | Near-duplicate Kotlin functions | Medium |
@@ -407,7 +409,7 @@ adds the registered source globs without one-off CLI flags. See
 | `react-native` | react + RN host primitive forwarding |
 | `next` | react + App Router boundary, route size, and data-loader checks |
 | `node` | core + Express/Fastify handler depth and route sprawl |
-| `python` | Python duplicate functions, thin wrappers, and TODO comments |
+| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO comments |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
 | `compose` | Jetpack Compose oversized composables and local state-hoisting smells |
 | `expo` | React Native tuning for Expo Router projects |

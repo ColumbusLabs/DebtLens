@@ -52,6 +52,8 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `handler-depth` | **node** | Deeply nested Express/Fastify handlers | Medium |
 | `route-sprawl` | **node** | Route modules registering too many endpoints | Medium |
 | `python-duplicate-logic` | **python** | Near-duplicate Python functions using normalized function-body similarity | Medium |
+| `python-large-function` | **python** | Python functions over line or branch-count budgets | Medium |
+| `python-complex-control-flow` | **python** | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
 | `kotlin-duplicate-logic` | **kotlin** | Near-duplicate Kotlin functions using normalized function-body similarity | Medium |
@@ -116,6 +118,8 @@ The `python` pack declares the Python language in pack metadata, which widens di
 to `.py` files and emits the same `ScanResult` shape as TS/JS rules:
 
 - **`python-duplicate-logic`**
+- **`python-large-function`**
+- **`python-complex-control-flow`**
 - **`python-dead-abstraction`**
 - **`python-todo-comment`**
 
@@ -159,7 +163,7 @@ and Compose UI debt.
 | `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN host forwarding) |
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
-| `python` | Python duplicate functions, thin wrappers, and TODO debt | **Shipped** |
+| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO debt | **Shipped** |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
@@ -180,7 +184,7 @@ follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
+| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
 | **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
 

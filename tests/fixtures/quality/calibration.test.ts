@@ -77,11 +77,15 @@ const cases: CalibrationCase[] = [
     minSeverity: "info",
     minIssuesByRule: {
       "python-duplicate-logic": 1,
+      "python-large-function": 1,
+      "python-complex-control-flow": 1,
       "python-dead-abstraction": 1,
       "python-todo-comment": 1,
     },
     maxIssuesByRule: {
       "python-duplicate-logic": 2,
+      "python-large-function": 1,
+      "python-complex-control-flow": 1,
       "python-dead-abstraction": 1,
       "python-todo-comment": 1,
     },

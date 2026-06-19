@@ -81,6 +81,8 @@ const OSS_MAINTAINER_RULES = [
 
 const PYTHON_RULES = [
   "python-duplicate-logic",
+  "python-large-function",
+  "python-complex-control-flow",
   "python-dead-abstraction",
   "python-todo-comment",
 ] as const;
@@ -158,7 +160,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
   },
   python: {
     id: "python",
-    description: "Core Python maintainability rules for duplicate functions, thin wrappers, and debt comments.",
+    description: "Core Python maintainability rules for duplicate functions, large and branch-heavy functions, thin wrappers, and debt comments.",
     rules: [...PYTHON_RULES],
     languages: ["python"],
   },

@@ -167,6 +167,7 @@ describe("debtlens adopt", () => {
 
   it("supports package-scoped adoption reports in workspaces", () => {
     const root = runAdopt([".", "--cwd", monorepoFixtureRoot, "--rules", "todo-comment"]);
+    const packagePath = runAdopt(["packages/pkg-b", "--cwd", monorepoFixtureRoot, "--rules", "todo-comment"]);
     const pkgA = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-a", "--rules", "todo-comment"]);
     const pkgB = runAdopt([".", "--cwd", monorepoFixtureRoot, "--package", "pkg-b", "--rules", "todo-comment"]);
 
@@ -174,6 +175,9 @@ describe("debtlens adopt", () => {
     assert.match(root.stdout, /Pilot one workspace package before expanding/);
     assert.match(root.stdout, /Detected workspace packages \(pkg-a, pkg-b\)/);
     assert.match(root.stdout, /debtlens adopt .*--package pkg-a/);
+    assert.equal(packagePath.status, 0);
+    assert.match(packagePath.stdout, /debtlens adopt packages\/pkg-b .*--package pkg-b/);
+    assert.doesNotMatch(packagePath.stdout, /debtlens adopt packages\/pkg-b .*--package pkg-a/);
     assert.equal(pkgA.status, 0);
     assert.match(pkgA.stdout, /Total issues: 1/);
     assert.match(pkgA.stdout, /Start with a package-scoped dry run/);

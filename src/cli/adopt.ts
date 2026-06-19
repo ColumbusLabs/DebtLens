@@ -1,3 +1,4 @@
+import { isAbsolute, relative, resolve } from "node:path";
 import { loadConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { findWorkspaceRoot, listWorkspacePackages, resolveWorkspacePackage, type WorkspacePackage } from "../config/workspaces.js";
@@ -260,7 +261,7 @@ export function buildRolloutPlan(
   ];
 
   if (workspacePackages.length > 0) {
-    const samplePackage = workspacePackages[0]!;
+    const samplePackage = selectWorkspacePilotPackage(input, workspacePackages);
     plan.push({
       title: "Pilot one workspace package before expanding",
       commands: [formatCommand(buildScopedCommandArgs("adopt", {
@@ -363,6 +364,16 @@ function withMinSeverity(args: string[], minSeverity: Severity): string[] {
 function listAdoptionWorkspacePackages(cwd: string): WorkspacePackage[] {
   const workspaceRoot = findWorkspaceRoot(cwd);
   return workspaceRoot ? listWorkspacePackages(workspaceRoot) : [];
+}
+
+function selectWorkspacePilotPackage(input: AdoptInput, packages: WorkspacePackage[]): WorkspacePackage {
+  const targetPath = resolve(input.cwd, input.target);
+  return packages.find((workspacePackage) => pathContains(workspacePackage.directory, targetPath)) ?? packages[0]!;
+}
+
+function pathContains(parent: string, child: string): boolean {
+  const relativePath = relative(parent, child);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
 function formatPackageList(packages: WorkspacePackage[]): string {

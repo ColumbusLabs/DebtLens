@@ -25,8 +25,9 @@ For Python and future Vue/multi-language pack work, see the parser recommendatio
 
 The **[Unreleased]** section of [`CHANGELOG.md`](./CHANGELOG.md) tracks breaking and
 behavioral changes landing on `main` before the next semver tag. Notable recent items:
-MCP scan/doctor run in-process (no subprocess spawn), package config arrays union-merge
-with the repo root, atomic scan-cache writes, and stricter ESLint migration validation in
+MCP scan/doctor run in-process (no subprocess spawn), expanded MCP workflow tools for
+adoption, compare, suppression, and baseline diff/prune, package config arrays union-merge with
+the repo root, atomic scan-cache writes, and stricter ESLint migration validation in
 `debtlens init --from-eslint`. Review that section when upgrading from an earlier dev
 build or pinned Action tag.
 

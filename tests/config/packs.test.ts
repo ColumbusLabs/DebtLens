@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 10);
+    assert.equal(packs.length, 11);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.equal(getRulePack("react").rules.length, 20);
     assert.equal(getRulePack("react-native").rules.length, 21);
@@ -28,6 +28,10 @@ describe("rule packs", () => {
       "kotlin-large-function",
       "kotlin-dead-abstraction",
       "kotlin-todo-comment",
+    ]);
+    assert.deepEqual(getRulePack("compose").rules, [
+      "compose-large-composable",
+      "compose-state-hoisting",
     ]);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
@@ -68,12 +72,13 @@ describe("rule packs", () => {
   });
 
   it("combines comma-separated packs and widens includes for language packs", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python,kotlin" });
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python,kotlin,compose" });
 
-    assert.equal(options.pack, "core,python,kotlin");
+    assert.equal(options.pack, "core,python,kotlin,compose");
     assert.ok(options.rules?.includes("todo-comment"));
     assert.ok(options.rules?.includes("python-todo-comment"));
     assert.ok(options.rules?.includes("kotlin-todo-comment"));
+    assert.ok(options.rules?.includes("compose-large-composable"));
     assert.ok(options.include.includes("**/*.py"));
     assert.ok(options.include.includes("**/*.{kt,kts}"));
     assert.equal(options.exclude.includes("android/**"), false);
@@ -83,6 +88,22 @@ describe("rule packs", () => {
     const options = mergeConfig(".", {}, { cwd: process.cwd(), rules: ["kotlin-todo-comment"] });
 
     assert.deepEqual(options.rules, ["kotlin-todo-comment"]);
+    assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
+    assert.ok(options.include.includes("**/*.{kt,kts}"));
+  });
+
+  it("lets the Compose pack discover Kotlin without selecting generic Kotlin rules", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "compose" });
+
+    assert.deepEqual(options.rules, ["compose-large-composable", "compose-state-hoisting"]);
+    assert.deepEqual(options.include, ["**/*.{kt,kts}"]);
+    assert.equal(options.exclude.includes("android/**"), false);
+  });
+
+  it("widens includes for explicit Compose rules", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), rules: ["compose-large-composable"] });
+
+    assert.deepEqual(options.rules, ["compose-large-composable"]);
     assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
     assert.ok(options.include.includes("**/*.{kt,kts}"));
   });

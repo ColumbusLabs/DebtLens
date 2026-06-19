@@ -16,5 +16,7 @@ describe("CI workflow drift guards", () => {
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/python --pack python --min-severity info --format markdown/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --format json/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --min-severity info --format markdown/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/compose --pack compose --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/compose --pack compose --min-severity info --format markdown/);
   });
 });

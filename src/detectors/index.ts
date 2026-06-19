@@ -1,4 +1,5 @@
 import type { Detector } from "../core/types.js";
+import { composeLargeComposableDetector, composeStateHoistingDetector } from "./compose/index.js";
 import { apiSurfaceSprawlDetector } from "./apiSurfaceSprawl.js";
 import { barrelFileDetector } from "./barrelFile.js";
 import { contextProviderSprawlDetector } from "./contextProviderSprawl.js";
@@ -62,6 +63,8 @@ export const allDetectors: Detector[] = [
   kotlinLargeFunctionDetector,
   kotlinDuplicateLogicDetector,
   kotlinDeadAbstractionDetector,
+  composeLargeComposableDetector,
+  composeStateHoistingDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);

@@ -13,10 +13,11 @@ Action behavior are language-neutral; only file discovery and detectors are pack
 | Expo Router app | `expo` | `debtlens scan . --pack expo --min-severity medium` | Start advisory with JSON/Markdown artifacts. |
 | Node API | `node` | `debtlens scan . --pack node --min-severity medium` | Gate new route/handler sprawl only after baseline. |
 | Python service/module | `python` | `debtlens scan . --pack python --min-severity low` | Advisory first; Python TODO debt can be noisy in old repos. |
-| Kotlin service or Android module | `kotlin` | `debtlens scan . --pack kotlin --min-severity low` | Advisory first; Compose-specific UI checks live outside this core pack. |
-| Mixed TS/Python/Kotlin monorepo | `core,python,kotlin` | `debtlens scan . --pack core,python,kotlin --format json` | Use package or path-scoped baselines. |
+| Kotlin service or Android module | `kotlin` | `debtlens scan . --pack kotlin --min-severity low` | Advisory first; add `compose` only for Compose UI debt. |
+| Jetpack Compose app/module | `compose` | `debtlens scan . --pack compose --min-severity low` | Start advisory; tune size and state-hoisting thresholds after reviewing screens. |
+| Mixed TS/Python/Kotlin monorepo | `core,python,kotlin` | `debtlens scan . --pack core,python,kotlin --format json` | Use package or path-scoped baselines; add `compose` for Android UI modules. |
 | Open-source library | `oss-maintainer` | `debtlens scan . --pack oss-maintainer --min-severity medium` | Prefer reports and issues before hard CI gates. |
 | Assistant-heavy repo | `ai-assisted-maintainer` | `debtlens scan . --pack ai-assisted-maintainer --min-severity medium` | Use as review prompts, not authorship detection. |
 
-Future packs such as Vue, Svelte, Swift, Ruby, Jetpack Compose, and AI workflow instruction drift
+Future packs such as Vue, Svelte, Swift, Ruby, and AI workflow instruction drift
 should reuse this same chooser shape once their MVPs land.

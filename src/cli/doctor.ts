@@ -512,9 +512,11 @@ function formatIncludeSource(
   if (cliSources.include) return "CLI --include";
   const sources = configFieldSources(effectiveConfig, "include");
   const base = formatLayeredSource(sources.length ? sources : ["defaults"]);
+  const hasKotlinGlob = include.includes("**/*.{kt,kts}");
   const discovery = [
     ...(packIds.includes("python") && include.includes("**/*.py") ? ["python"] : []),
-    ...(packIds.includes("kotlin") && include.includes("**/*.{kt,kts}") ? ["kotlin"] : []),
+    ...(packIds.includes("kotlin") && hasKotlinGlob ? ["kotlin"] : []),
+    ...(packIds.includes("compose") && hasKotlinGlob ? ["compose"] : []),
   ];
   return discovery.length ? `${base} + ${discovery.join(" + ")} pack discovery` : base;
 }

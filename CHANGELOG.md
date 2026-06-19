@@ -51,6 +51,9 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **Jetpack Compose pack** with `compose-large-composable` and
+  `compose-state-hoisting` rules, Kotlin-backed discovery, Android Compose examples,
+  and docs/schema/Action metadata for `--pack compose` ([#197](https://github.com/ColumbusLabs/DebtLens/issues/197)).
 - **`debtlens compare previous.json current.json`** report trend command for comparing
   two ScanResult JSON reports without rescanning, with terminal, Markdown, and JSON
   output plus scheduled trend-job docs ([#183](https://github.com/ColumbusLabs/DebtLens/issues/183)).

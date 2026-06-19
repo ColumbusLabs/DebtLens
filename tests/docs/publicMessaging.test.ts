@@ -12,13 +12,14 @@ describe("public capability messaging", () => {
     const cliIndex = read("src/cli/index.ts");
     const roadmap = read("ROADMAP.md");
 
-    assert.match(packageJson.description, /TypeScript, JavaScript, Python, and Kotlin/);
+    assert.match(packageJson.description, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose/);
     assert.ok(packageJson.keywords.includes("python"));
     assert.ok(packageJson.keywords.includes("kotlin"));
-    assert.match(readme, /TypeScript, JavaScript, Python, and Kotlin/);
-    assert.match(actionYml, /TypeScript, JavaScript, Python, Kotlin/);
-    assert.match(cliIndex, /TypeScript, JavaScript, Python, Kotlin/);
-    assert.match(roadmap, /TypeScript, JavaScript, Python, and Kotlin today/);
+    assert.ok(packageJson.keywords.includes("jetpack-compose"));
+    assert.match(readme, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose/);
+    assert.match(actionYml, /TypeScript, JavaScript, Python, Kotlin, Jetpack Compose/);
+    assert.match(cliIndex, /TypeScript, JavaScript, Python, Kotlin, Jetpack Compose/);
+    assert.match(roadmap, /TypeScript, JavaScript, Python, Kotlin, and Jetpack Compose today/);
   });
 
   it("guards against stale TS-only or unshipped-plugin claims", () => {
@@ -50,6 +51,9 @@ describe("public capability messaging", () => {
     assert.doesNotMatch(publicDocs, /TypeScript and React codebases/);
     assert.doesNotMatch(publicDocs, /Kotlin.*future/i);
     assert.doesNotMatch(publicDocs, /unsupported.*Kotlin/i);
+    assert.doesNotMatch(publicDocs, /Jetpack Compose.*future/i);
+    assert.doesNotMatch(publicDocs, /future Compose pack/i);
+    assert.doesNotMatch(publicDocs, /Compose.*wait until/i);
   });
 
   it("links the first-run adoption docs from the README", () => {

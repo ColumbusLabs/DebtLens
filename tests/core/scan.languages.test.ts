@@ -125,4 +125,64 @@ fun renderBilling(): String {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("lets the Compose pack discover Android Kotlin sources excluded by default", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-compose-"));
+    try {
+      mkdirSync(join(dir, "android", "app", "src", "main", "java", "com", "example"), { recursive: true });
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "BillingScreen.kt"), `
+package com.example
+
+@Composable
+fun BillingScreen() {
+    var query by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCustomer by remember { mutableStateOf<String?>(null) }
+    var showOverdue by remember { mutableStateOf(false) }
+    var sortOrder by rememberSaveable { mutableStateOf("dueDate") }
+    Column { Text(query) }
+}
+`);
+
+      const options = mergeConfig(".", {}, { cwd: dir, pack: "compose" });
+      const result = await scan(options);
+
+      assert.equal(result.summary.filesScanned, 1);
+      assert.equal(result.summary.byRule["compose-state-hoisting"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not spend a pure Compose pack maxFiles budget on Android JavaScript files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-compose-maxfiles-"));
+    try {
+      mkdirSync(join(dir, "android", "app", "src", "main", "java", "com", "example"), { recursive: true });
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "0Generated.js"), `
+export const generated = true;
+`);
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "ZBillingScreen.kt"), `
+package com.example
+
+@Composable
+fun BillingScreen() {
+    var query by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedCustomer by remember { mutableStateOf<String?>(null) }
+    var showOverdue by remember { mutableStateOf(false) }
+    var sortOrder by rememberSaveable { mutableStateOf("dueDate") }
+    Column { Text(query) }
+}
+`);
+
+      const options = mergeConfig(".", {}, { cwd: dir, pack: "compose", maxFiles: 1 });
+      const result = await scan(options);
+
+      assert.deepEqual(options.include, ["**/*.{kt,kts}"]);
+      assert.equal(result.summary.filesScanned, 1);
+      assert.equal(result.summary.byRule["compose-state-hoisting"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

@@ -1,9 +1,9 @@
 # Language Pack RFC
 
-Status: **Python and Kotlin core packs shipped**
+Status: **Python, Kotlin core, and Jetpack Compose packs shipped**
 
 DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
-CI workflows, and GitHub Action are language-neutral, and the Python and Kotlin packs now
+CI workflows, and GitHub Action are language-neutral, and the Python, Kotlin, and Compose packs now
 prove that language-specific detectors can share the same `ScanResult` shape.
 
 ## Shared requirements
@@ -39,6 +39,7 @@ export interface LanguageContext {
 ```bash
 debtlens scan . --pack core,python
 debtlens scan . --pack core,python,kotlin
+debtlens scan . --pack kotlin,compose
 ```
 
 The scanner should:
@@ -98,9 +99,9 @@ Known limitations:
 
 ## Kotlin parser recommendation
 
-Recommendation: keep the first Kotlin pack dependency-free with a conservative lexical
+Recommendation: keep Kotlin and Compose packs dependency-free with a conservative lexical
 extractor, then revisit `tree-sitter-kotlin` or Kotlin compiler tooling only when deeper
-Compose or type-aware rules justify it.
+type-aware rules justify it.
 
 Current implementation:
 
@@ -109,12 +110,15 @@ Current implementation:
 - `kotlin-large-function` counts function lines and conservative branch tokens.
 - `kotlin-dead-abstraction` flags simple expression-body or single-return pass-through wrappers.
 - `--pack kotlin` widens discovery to `.kt` and `.kts` files and keeps Android source trees visible even though they are excluded by TS/JS defaults.
+- `compose-large-composable` flags oversized or branch-heavy `@Composable` functions.
+- `compose-state-hoisting` flags composables that own many local Compose state holders.
+- `--pack compose` also widens discovery to `.kt` and `.kts`, but selects only Compose UI rules unless combined with `kotlin`.
 
 Known limitations:
 
-- The extractor is not a Kotlin compiler. It intentionally avoids type resolution, import graphs, trailing-lambda semantics, and Compose UI-specific debt.
-- `@Composable` wrapper and large-function checks are left to a future Compose pack so core Kotlin does not overclaim UI expertise.
-- Framework packs such as Jetpack Compose should wait until core Kotlin findings are calibrated.
+- The extractor is not a Kotlin compiler. It intentionally avoids type resolution, import graphs, and trailing-lambda semantics.
+- Compose checks are lexical UI-shape signals; they do not claim ViewModel ownership, navigation ownership, or type-aware state-flow analysis.
+- Compose remains a separate pack so core Kotlin does not overclaim UI expertise.
 
 ## Vue parser recommendation
 
@@ -146,7 +150,7 @@ Known limitations:
 
 ## Example fixture
 
-[`examples/python/`](../examples/python/) and [`examples/kotlin/`](../examples/kotlin/)
-are calibrated language-pack fixtures. They are intentionally scanned only when their
-language packs or explicit language-specific rules are selected, so TS/JS defaults do not
-change for existing users.
+[`examples/python/`](../examples/python/), [`examples/kotlin/`](../examples/kotlin/),
+and [`examples/compose/`](../examples/compose/) are calibrated language-pack fixtures.
+They are intentionally scanned only when their language or framework packs or explicit
+language-specific rules are selected, so TS/JS defaults do not change for existing users.

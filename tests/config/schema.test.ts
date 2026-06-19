@@ -78,9 +78,14 @@ describe("config JSON schema", () => {
   });
 
   it("includes todoComment config shape", () => {
-    const built = buildConfigSchema() as { properties: { todoComment?: { type: string }; pack?: { enum: string[] } } };
+    const built = buildConfigSchema() as {
+      properties: {
+        todoComment?: { type: string };
+        pack?: { anyOf: Array<{ enum?: string[]; pattern?: string }> };
+      };
+    };
     assert.equal(built.properties.todoComment?.type, "object");
-    assert.deepEqual(built.properties.pack?.enum, [
+    assert.deepEqual(built.properties.pack?.anyOf[0]?.enum, [
       "core",
       "react",
       "react-native",
@@ -89,8 +94,10 @@ describe("config JSON schema", () => {
       "node",
       "python",
       "kotlin",
+      "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",
     ]);
+    assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /compose/);
   });
 });

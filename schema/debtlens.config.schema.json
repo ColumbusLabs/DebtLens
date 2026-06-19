@@ -33,19 +33,28 @@
       "description": "Lowest severity to report."
     },
     "pack": {
-      "enum": [
-        "core",
-        "react",
-        "react-native",
-        "next",
-        "expo",
-        "node",
-        "python",
-        "kotlin",
-        "ai-assisted-maintainer",
-        "oss-maintainer"
+      "anyOf": [
+        {
+          "enum": [
+            "core",
+            "react",
+            "react-native",
+            "next",
+            "expo",
+            "node",
+            "python",
+            "kotlin",
+            "compose",
+            "ai-assisted-maintainer",
+            "oss-maintainer"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|kotlin|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|kotlin|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
+        }
       ],
-      "description": "Built-in rule pack preset. Explicit rules override the pack."
+      "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
     },
     "rules": {
       "type": "array",
@@ -86,7 +95,9 @@
               "kotlin-todo-comment",
               "kotlin-large-function",
               "kotlin-duplicate-logic",
-              "kotlin-dead-abstraction"
+              "kotlin-dead-abstraction",
+              "compose-large-composable",
+              "compose-state-hoisting"
             ]
           },
           {
@@ -243,6 +254,18 @@
           "type": "number"
         },
         "config-drift.maxConfigFiles": {
+          "type": "number"
+        },
+        "compose-large-composable.maxLines": {
+          "type": "number"
+        },
+        "compose-large-composable.maxBranches": {
+          "type": "number"
+        },
+        "compose-large-composable.maxLocalState": {
+          "type": "number"
+        },
+        "compose-state-hoisting.maxLocalState": {
           "type": "number"
         }
       },
@@ -527,6 +550,22 @@
             "medium",
             "high"
           ]
+        },
+        "compose-large-composable": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "compose-state-hoisting": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
         }
       },
       "additionalProperties": {
@@ -703,6 +742,16 @@
           "maximum": 1
         },
         "kotlin-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "compose-large-composable": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "compose-state-hoisting": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

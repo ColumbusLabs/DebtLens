@@ -2,7 +2,7 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
-Rules are grouped into **core**, **react**, and framework packs such as **next**, **react-native**, and **node**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
+Rules are grouped into **core**, language packs such as **python** and **kotlin**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
 > **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens init --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
 
@@ -601,6 +601,62 @@ uses the same `todoComment` configuration as the TS/JS and Python TODO rules.
 
 Good fixes: track the work, add a removal condition, or resolve the marker before more
 code depends on it.
+
+## Jetpack Compose rules
+
+The `compose` pack scans `.kt` and `.kts` files for Compose UI debt. It is separate from
+the `kotlin` core pack: use `--pack compose` for Compose-only UI checks, or
+`--pack kotlin,compose` when one scan should include both core Kotlin and Compose signals.
+
+### `compose-large-composable`
+
+Flags `@Composable` functions that exceed Compose-specific line, branch, or local state
+budgets.
+
+Default thresholds:
+
+- `compose-large-composable.maxLines`: 90
+- `compose-large-composable.maxBranches`: 12
+- `compose-large-composable.maxLocalState`: 6
+
+Good fixes:
+
+- split repeated UI regions into smaller composables
+- move durable screen state into a caller, ViewModel, or state holder
+- extract branching policy from rendering code
+
+When this is a false positive:
+
+- the function is a deliberate top-level screen shell with stable slots
+- the threshold is too low for generated or migration-era UI code
+- the composable is a preview or local sample; previews are skipped when annotated with `@Preview`
+
+Confidence: **0.76-0.84** depending on whether size or complexity drove the finding.
+
+### `compose-state-hoisting`
+
+Flags `@Composable` functions that own many local Compose state holders such as
+`remember { mutableStateOf(...) }`, `rememberSaveable { mutableStateOf(...) }`,
+`rememberLazyListState()`, or `derivedStateOf { ... }`.
+
+Default threshold:
+
+- `compose-state-hoisting.maxLocalState`: 4
+
+Good fixes:
+
+- pass state and event callbacks into the composable
+- group related screen state in a state holder or ViewModel
+- keep ephemeral UI-only state local, but hoist durable workflow state
+
+When this is a false positive:
+
+- the composable owns only a small amount of ephemeral UI state
+- a single `uiState` plus an event callback already represents hoisted state
+- slot APIs use `content: @Composable () -> Unit`; slot parameters are not treated as production composable debt
+
+Confidence: **0.84** for pure local state concentration, slightly lower when the signature
+already includes some hoisted state or event parameters.
 
 ## `barrel-file`
 

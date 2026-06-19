@@ -3,6 +3,7 @@ import type { SourceFileInfo } from "../../core/types.js";
 export interface KotlinFunction {
   name: string;
   params: string[];
+  parameterTexts: string[];
   modifiers: string[];
   annotations: string[];
   file: SourceFileInfo;
@@ -58,10 +59,12 @@ export function extractKotlinFunctions(file: SourceFileInfo): KotlinFunction[] {
 
     const metadata = describeKotlinFunctionMetadata(lines, index, signature.modifiers);
     const expressionBody = extractExpressionBody(header.text, signature);
+    const parameterTexts = splitKotlinArgs(signature.params);
     if (expressionBody !== undefined) {
       functions.push({
         name: signature.name,
         params: parseKotlinParams(signature.params),
+        parameterTexts,
         modifiers: metadata.modifiers,
         annotations: metadata.annotations,
         file,
@@ -77,11 +80,12 @@ export function extractKotlinFunctions(file: SourceFileInfo): KotlinFunction[] {
 
     if (signature.bodyDelimiter?.char !== "{") continue;
 
-    const endIndex = findKotlinBlockEnd(lines, index);
+    const endIndex = findKotlinBlockEnd(lines, index, signature.bodyDelimiter.index);
     const textLines = lines.slice(index, endIndex + 1);
     functions.push({
       name: signature.name,
       params: parseKotlinParams(signature.params),
+      parameterTexts,
       modifiers: metadata.modifiers,
       annotations: metadata.annotations,
       file,
@@ -126,7 +130,7 @@ export function splitKotlinArgs(raw: string): string[] {
       continue;
     }
     if ("([{<".includes(char)) depth += 1;
-    if (")]}>" .includes(char)) depth = Math.max(0, depth - 1);
+    if (")]}>".includes(char)) depth = Math.max(0, depth - 1);
     if (char === "," && depth === 0) {
       if (current.trim()) args.push(current.trim());
       current = "";
@@ -176,7 +180,7 @@ function collectKotlinFunctionHeader(lines: string[], startIndex: number): { tex
 
   while (!parseKotlinFunctionSignature(text)?.bodyDelimiter && endIndex + 1 < lines.length && endIndex - startIndex < 8) {
     endIndex += 1;
-    text = `${text} ${(lines[endIndex] ?? "").trim()}`;
+    text = `${text}\n${lines[endIndex] ?? ""}`;
   }
 
   return { text, endIndex };
@@ -286,24 +290,28 @@ function findMatchingDelimiter(text: string, start: number, open: string, close:
   return -1;
 }
 
-function findKotlinBlockEnd(lines: string[], startIndex: number): number {
+function findKotlinBlockEnd(lines: string[], startIndex: number, bodyDelimiterIndex: number): number {
+  const text = lines.slice(startIndex).join("\n");
+  const code = maskKotlinTrivia(text);
   let depth = 0;
   let seenBlock = false;
 
-  for (let index = startIndex; index < lines.length; index += 1) {
-    const code = maskKotlinTrivia(lines[index] ?? "");
-    for (const char of code) {
-      if (char === "{") {
-        seenBlock = true;
-        depth += 1;
-      } else if (char === "}" && seenBlock) {
-        depth -= 1;
-        if (depth === 0) return index;
-      }
+  for (let index = bodyDelimiterIndex; index < code.length; index += 1) {
+    const char = code[index] ?? "";
+    if (char === "{") {
+      seenBlock = true;
+      depth += 1;
+    } else if (char === "}" && seenBlock) {
+      depth -= 1;
+      if (depth === 0) return startIndex + countLineBreaks(text.slice(0, index));
     }
   }
 
   return startIndex;
+}
+
+function countLineBreaks(text: string): number {
+  return text.match(/\n/g)?.length ?? 0;
 }
 
 function extractBlockBodyLines(textLines: string[]): string[] {
@@ -341,13 +349,15 @@ function collectLeadingAnnotations(lines: string[], index: number): string[] {
 }
 
 function collectInlineAnnotations(line: string): string[] {
-  return line.match(/@[A-Za-z_]\w*(?:\([^)]*\))?/g) ?? [];
+  const functionStart = line.search(/\bfun\b/);
+  const functionPrefix = functionStart === -1 ? line : line.slice(0, functionStart);
+  return functionPrefix.match(/@[A-Za-z_][\w.]*\b(?:\([^)]*\))?/g) ?? [];
 }
 
 function stripLeadingAnnotations(text: string): string {
   let stripped = text.trimStart();
   while (stripped.startsWith("@")) {
-    stripped = stripped.replace(/^@[A-Za-z_]\w*(?:\([^)]*\))?\s*/, "");
+    stripped = stripped.replace(/^@[A-Za-z_][\w.]*\b(?:\([^)]*\))?\s*/, "");
   }
   return stripped;
 }
@@ -360,7 +370,7 @@ function maskKotlinComments(text: string): string {
   return chars.join("");
 }
 
-function maskKotlinTrivia(text: string): string {
+export function maskKotlinTrivia(text: string): string {
   const chars = [...text];
   scanKotlin(text, {
     onComment: (_comment, _line, start, end) => maskRange(chars, start, end),

@@ -86,6 +86,11 @@ const KOTLIN_RULES = [
   "kotlin-todo-comment",
 ] as const;
 
+const COMPOSE_RULES = [
+  "compose-large-composable",
+  "compose-state-hoisting",
+] as const;
+
 export const RULE_PACKS: Record<string, RulePack> = {
   core: {
     id: "core",
@@ -145,6 +150,11 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "kotlin",
     description: "Core Kotlin maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
     rules: [...KOTLIN_RULES],
+  },
+  compose: {
+    id: "compose",
+    description: "Jetpack Compose UI maintainability rules for oversized composables and local state-hoisting smells.",
+    rules: [...COMPOSE_RULES],
   },
   "ai-assisted-maintainer": {
     id: "ai-assisted-maintainer",

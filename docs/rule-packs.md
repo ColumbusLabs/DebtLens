@@ -1,6 +1,6 @@
 # Rule packs
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, and Python
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, and Kotlin
 codebases. React and React Native were the first serious framework targets, but the
 scanner identity is the shared maintainability contract, not a single UI stack.
 
@@ -10,11 +10,11 @@ The product splits into layers:
    reporters, config, CI, and GitHub Action integration.
 2. **Core rules** — detectors that apply to most TS/JS projects regardless of UI framework.
 3. **Framework and language packs** — optional rule groups and tuning for React, React
-   Native, Next.js, Expo, Node APIs, Python, monorepos, and future Vue, Svelte, Swift,
-   Kotlin, Ruby, and other ecosystems.
+   Native, Next.js, Expo, Node APIs, Python, Kotlin, and monorepos. Additional ecosystems
+   such as Vue, Svelte, Swift, and Ruby follow the same model.
 
-Today all TS/JS built-in rules run together by default, while Python discovery is enabled
-by the `python` pack or explicit `python-*` rules. Select a pack in config or use
+Today all TS/JS built-in rules run together by default, while Python and Kotlin discovery
+are enabled by their language packs or explicit language-specific rules. Select a pack in config or use
 `debtlens init --pack <name>` to opt into a preset. Explicit `rules` in config or
 `--rules` on the CLI override the pack. Organization policy packages can layer plugins
 and presets on top of these built-ins; see [`policy-packages.md`](./policy-packages.md).
@@ -53,6 +53,10 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `python-duplicate-logic` | **python** | Near-duplicate Python functions using normalized function-body similarity | Medium |
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
+| `kotlin-duplicate-logic` | **kotlin** | Near-duplicate Kotlin functions using normalized function-body similarity | Medium |
+| `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
+| `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
+| `kotlin-todo-comment` | **kotlin** | TODO/FIXME/HACK/temporary implementation comments in Kotlin files | Low |
 
 ### Core rules
 
@@ -114,6 +118,19 @@ as TS/JS rules:
 
 Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 
+### Kotlin pack (shipped today)
+
+The `kotlin` pack widens discovery to `.kt` and `.kts` files and emits the same
+`ScanResult` shape as TS/JS rules:
+
+- **`kotlin-duplicate-logic`**
+- **`kotlin-large-function`**
+- **`kotlin-dead-abstraction`**
+- **`kotlin-todo-comment`**
+
+Use `--pack core,python,kotlin` when one scan should cover mixed TS/JS, Python, and
+Kotlin paths. Jetpack Compose-specific UI debt is intentionally separate pack work.
+
 ### Maintainer packs
 
 - **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, and test-boundary signals. It is about maintainability review only; it does not claim to detect AI-generated authorship.
@@ -128,6 +145,7 @@ Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
 | `python` | Python duplicate functions, thin wrappers, and TODO debt | **Shipped** |
+| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
 | `oss-maintainer` | Public API and package-maintainer signals | **Shipped** |
@@ -139,19 +157,19 @@ for the Vue parser recommendation and [`ROADMAP.md`](../ROADMAP.md) for sequenci
 ## Language packs
 
 Detection is language-specific; reporting, baselines, CI, and the issue contract are not.
-Python is the first non-TS/JS built-in language pack, and future languages should follow
-the same shared result contract.
+Python and Kotlin are the first non-TS/JS built-in language packs. Other languages should
+follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
 | **Python** | duplicate logic, dead abstractions, TODO debt | Django/Flask route sprawl (TBD) | **Shipped** for core Python rules |
+| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (oversized composables, state-hoisting smells) | **Shipped** for core Kotlin rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | Direction |
-| **Kotlin** | same core patterns as Swift row | Jetpack Compose, Android UI layers | Direction |
 
 Each language needs its own parser/AST path. Rules that map well across languages —
 duplication, thin wrappers, deferred TODOs, naming inconsistency — ship first;
-framework-specific packs follow once core coverage is solid. Python's current built-in
-pack and future parser recommendation are captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
+framework-specific packs follow once core coverage is solid. Python and Kotlin's current
+built-in packs and parser recommendations are captured in [`language-pack-rfc.md`](./language-pack-rfc.md).
 
 These are intentional direction items, not near-term commitments. Discuss proposals in
 [GitHub Discussions](https://github.com/ColumbusLabs/DebtLens/discussions) or open a

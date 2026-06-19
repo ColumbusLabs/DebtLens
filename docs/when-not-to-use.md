@@ -1,15 +1,15 @@
 # When Not To Use DebtLens
 
-DebtLens is a maintainability signal scanner for TypeScript, JavaScript, and Python with
-framework packs for React, React Native, Next.js, Expo, and Node. It is useful when a team
+DebtLens is a maintainability signal scanner for TypeScript, JavaScript, Python, and
+Kotlin with framework packs for React, React Native, Next.js, Expo, and Node. It is useful when a team
 wants review prompts for code shape, baseline drift, and CI rollout discipline. It is not
 the right tool for every repository.
 
 Avoid using DebtLens as the primary gate when:
 
-- The repo is mostly outside the shipped packs. DebtLens can scan TS/JS and Python files in
-  a polyglot monorepo, but Ruby, Go, Swift, Kotlin, Rust, generated platform code, and
-  framework templates outside the current packs need future language work before DebtLens
+- The repo is mostly outside the shipped packs. DebtLens can scan TS/JS, Python, and Kotlin
+  files in a polyglot monorepo, but Ruby, Go, Swift, Rust, generated platform code, and
+  framework templates outside the current packs need language work before DebtLens
   should be a primary gate.
 - The target is generated, vendored, compiled, or checked-in build output. Exclude `dist`, `.next`, generated clients, fixture snapshots, and third-party code.
 - You need semantic correctness, runtime behavior, or security proof. DebtLens does not execute code, type-check user projects, model data flow, or replace security scanners.

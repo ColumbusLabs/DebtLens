@@ -252,7 +252,10 @@ function filesForDetector(detector: Detector, files: SourceFileInfo[]): SourceFi
 }
 
 function detectSourceLanguage(path: string): SourceLanguage {
-  return extname(path).toLowerCase() === ".py" ? "python" : "tsjs";
+  const extension = extname(path).toLowerCase();
+  if (extension === ".py") return "python";
+  if (extension === ".kt" || extension === ".kts") return "kotlin";
+  return "tsjs";
 }
 
 function normalizeIssueIdentity(issue: DebtIssue): void {

@@ -11,8 +11,10 @@ describe("CI workflow drift guards", () => {
     assert.match(ciWorkflow, /diff -u \/tmp\/debtlens-source-packs\.json \/tmp\/debtlens-dist-packs\.json/);
   });
 
-  it("smoke scans the shipped Python pack through dist", () => {
+  it("smoke scans shipped language packs through dist", () => {
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/python --pack python --format json/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/python --pack python --min-severity info --format markdown/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/kotlin --pack kotlin --min-severity info --format markdown/);
   });
 });

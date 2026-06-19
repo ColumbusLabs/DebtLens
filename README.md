@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-**DebtLens is a maintainability scanner for TypeScript, JavaScript, and Python codebases.**
+**DebtLens is a maintainability scanner for TypeScript, JavaScript, Python, and Kotlin codebases.**
 The first supported rule packs target React (including React Native, Expo, and Next.js apps)
-and core Python modules, but the core idea applies broadly: catch duplicated logic, bloated
+plus core Python and Kotlin modules, but the core idea applies broadly: catch duplicated logic, bloated
 modules, weak boundaries, TODO debt, and naming drift before it becomes permanent.
 
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.
@@ -19,7 +19,7 @@ Start with the [`five-minute quickstart`](./docs/quickstart.md), then use the
 [`false-positive calibration guide`](./docs/false-positives.md) when you move from a
 local scan to CI.
 If you are adopting DebtLens broadly, read [`docs/when-not-to-use.md`](./docs/when-not-to-use.md) first so it gates the right work.
-For Python and future Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
+For Python, Kotlin, and Vue/multi-language pack work, see the parser recommendations in [`docs/language-pack-rfc.md`](./docs/language-pack-rfc.md).
 
 ## Migration
 
@@ -78,7 +78,7 @@ DebtLens gives maintainers and newer contributors a neutral, explainable report 
 ## Current rule set
 
 Built-in rules are grouped into **core** TS/JS, **react**, framework, maintainer, and
-**python** packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
+language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 | Rule | Pack | What it catches | Default severity |
 | --- | --- | --- | --- |
@@ -103,6 +103,10 @@ Built-in rules are grouped into **core** TS/JS, **react**, framework, maintainer
 | `python-duplicate-logic` | python | Near-duplicate Python functions | Medium |
 | `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
 | `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
+| `kotlin-duplicate-logic` | kotlin | Near-duplicate Kotlin functions | Medium |
+| `kotlin-large-function` | kotlin | Oversized or branch-heavy Kotlin functions | Medium |
+| `kotlin-dead-abstraction` | kotlin | Thin Kotlin pass-through functions | Low |
+| `kotlin-todo-comment` | kotlin | TODO/FIXME/HACK comments in Kotlin files | Low |
 
 ## Performance benchmarks
 
@@ -399,6 +403,7 @@ Built-in presets select a rule set without hand-picking every rule id. See [`doc
 | `next` | react + App Router boundary, route size, and data-loader checks |
 | `node` | core + Express/Fastify handler depth and route sprawl |
 | `python` | Python duplicate functions, thin wrappers, and TODO comments |
+| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
 | `expo` | React Native tuning for Expo Router projects |
 | `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
@@ -416,7 +421,7 @@ Explicit `rules` in config override the pack. Use `debtlens packs` to list prese
 Use comma-separated packs for mixed-language scans:
 
 ```bash
-debtlens scan . --pack core,python
+debtlens scan . --pack core,python,kotlin
 ```
 
 ### Per-rule severities and confidence floors
@@ -753,7 +758,7 @@ newcomer tasks from the historical v0.3 roadmap batch. Propose new work in
 [Discussions](https://github.com/ColumbusLabs/DebtLens/discussions), via the rule request
 template, or the [plugin API](./docs/plugin-api-rfc.md).
 
-Contribution paths: **core TS/JS rules**, **Python rules**, **React pack rules**,
+Contribution paths: **core TS/JS rules**, **Python rules**, **Kotlin rules**, **React pack rules**,
 **framework packs** (Next.js, RN, Node), **scanner/CI** (baselines, monorepos, inline
 suppressions), **plugins**, and **reporters**. New rule authors should follow the rule checklist in
 [CONTRIBUTING.md](./CONTRIBUTING.md#rule-review-bar).
@@ -779,8 +784,8 @@ and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
-React Native, Next.js, Expo, Node, Python, and maintainer workflows; future packs expand
-from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
+React Native, Next.js, Expo, Node, Python, Kotlin, and maintainer workflows. Additional
+packs expand from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 ## License

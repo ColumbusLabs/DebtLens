@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 9);
+    assert.equal(packs.length, 10);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.equal(getRulePack("react").rules.length, 20);
     assert.equal(getRulePack("react-native").rules.length, 21);
@@ -22,6 +22,12 @@ describe("rule packs", () => {
       "python-duplicate-logic",
       "python-dead-abstraction",
       "python-todo-comment",
+    ]);
+    assert.deepEqual(getRulePack("kotlin").rules, [
+      "kotlin-duplicate-logic",
+      "kotlin-large-function",
+      "kotlin-dead-abstraction",
+      "kotlin-todo-comment",
     ]);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
@@ -61,12 +67,23 @@ describe("rule packs", () => {
     assert.deepEqual(options.rules, ["naming-drift"]);
   });
 
-  it("combines comma-separated packs and widens includes for python", () => {
-    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python" });
+  it("combines comma-separated packs and widens includes for language packs", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), pack: "core,python,kotlin" });
 
-    assert.equal(options.pack, "core,python");
+    assert.equal(options.pack, "core,python,kotlin");
     assert.ok(options.rules?.includes("todo-comment"));
     assert.ok(options.rules?.includes("python-todo-comment"));
+    assert.ok(options.rules?.includes("kotlin-todo-comment"));
     assert.ok(options.include.includes("**/*.py"));
+    assert.ok(options.include.includes("**/*.{kt,kts}"));
+    assert.equal(options.exclude.includes("android/**"), false);
+  });
+
+  it("widens includes for explicit language-specific rules", () => {
+    const options = mergeConfig(".", {}, { cwd: process.cwd(), rules: ["kotlin-todo-comment"] });
+
+    assert.deepEqual(options.rules, ["kotlin-todo-comment"]);
+    assert.equal(options.include.includes("**/*.{ts,tsx,js,jsx}"), false);
+    assert.ok(options.include.includes("**/*.{kt,kts}"));
   });
 });

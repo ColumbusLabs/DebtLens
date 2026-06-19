@@ -512,9 +512,11 @@ function formatIncludeSource(
   if (cliSources.include) return "CLI --include";
   const sources = configFieldSources(effectiveConfig, "include");
   const base = formatLayeredSource(sources.length ? sources : ["defaults"]);
-  return packIds.includes("python") && include.includes("**/*.py")
-    ? `${base} + python pack discovery`
-    : base;
+  const discovery = [
+    ...(packIds.includes("python") && include.includes("**/*.py") ? ["python"] : []),
+    ...(packIds.includes("kotlin") && include.includes("**/*.{kt,kts}") ? ["kotlin"] : []),
+  ];
+  return discovery.length ? `${base} + ${discovery.join(" + ")} pack discovery` : base;
 }
 
 function formatScalarSource(

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
+import { mergeConfig } from "../../src/config/mergeConfig.js";
 import { scan } from "../../src/core/scan.js";
 
 describe("scan language-specific behavior", () => {
@@ -40,6 +41,86 @@ describe("scan language-specific behavior", () => {
       assert.equal(result.summary.filesScanned, 0);
       assert.equal(result.summary.totalIssues, 1);
       assert.equal(result.issues[0]?.ruleId, "test-duplication");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("lets the Kotlin pack discover Android Kotlin sources excluded by default", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-kotlin-"));
+    try {
+      mkdirSync(join(dir, "android", "app", "src", "main", "java", "com", "example"), { recursive: true });
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "Billing.kt"), `
+package com.example
+
+fun renderBilling(): String {
+    // TODO(PROJ-44): replace temporary billing label.
+    return "billing"
+}
+`);
+
+      const options = mergeConfig(".", {}, { cwd: dir, pack: "kotlin" });
+      const result = await scan(options);
+
+      assert.equal(result.summary.filesScanned, 1);
+      assert.equal(result.summary.byRule["kotlin-todo-comment"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not spend a pure Kotlin pack maxFiles budget on Android JavaScript files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-kotlin-maxfiles-"));
+    try {
+      mkdirSync(join(dir, "android", "app", "src", "main", "java", "com", "example"), { recursive: true });
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "0Generated.js"), `
+export const generated = true;
+`);
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "ZBilling.kt"), `
+package com.example
+
+fun renderBilling(): String {
+    // TODO(PROJ-45): replace generated billing label.
+    return "billing"
+}
+`);
+
+      const options = mergeConfig(".", {}, { cwd: dir, pack: "kotlin", maxFiles: 1 });
+      const result = await scan(options);
+
+      assert.deepEqual(options.include, ["**/*.{kt,kts}"]);
+      assert.equal(result.summary.filesScanned, 1);
+      assert.equal(result.summary.byRule["kotlin-todo-comment"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not spend a mixed Kotlin pack maxFiles budget on Android JavaScript files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-mixed-kotlin-maxfiles-"));
+    try {
+      mkdirSync(join(dir, "android", "app", "src", "main", "java", "com", "example"), { recursive: true });
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "0Generated.js"), `
+export const generated = true;
+`);
+      writeFileSync(join(dir, "android", "app", "src", "main", "java", "com", "example", "ZBilling.kt"), `
+package com.example
+
+fun renderBilling(): String {
+    // TODO(PROJ-46): replace mixed-pack billing label.
+    return "billing"
+}
+`);
+
+      const options = mergeConfig(".", {}, { cwd: dir, pack: "react-native,kotlin", maxFiles: 1 });
+      const result = await scan(options);
+
+      assert.ok(options.include.includes("**/*.{ts,tsx,js,jsx}"));
+      assert.ok(options.include.includes("**/*.{kt,kts}"));
+      assert.ok(options.exclude.includes("android/**/*.{ts,tsx,js,jsx}"));
+      assert.equal(options.exclude.includes("android/**"), false);
+      assert.equal(result.summary.filesScanned, 1);
+      assert.equal(result.summary.byRule["kotlin-todo-comment"], 1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

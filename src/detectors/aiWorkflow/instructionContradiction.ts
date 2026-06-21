@@ -60,7 +60,7 @@ export const instructionContradictionDetector: Detector = {
 
     for (const pair of CONTRADICTION_PAIRS) {
       const leftMatches = blocks.filter((block) => pair.left.test(block.text));
-      const rightMatches = blocks.filter((block) => pair.right.test(block.text));
+      const rightMatches = blocks.filter((block) => matchesContradictionSide(pair.right, block.text));
       if (leftMatches.length === 0 || rightMatches.length === 0) continue;
 
       for (const left of leftMatches) {
@@ -99,4 +99,11 @@ export const instructionContradictionDetector: Detector = {
 function summarize(text: string): string {
   const singleLine = text.replace(/\s+/g, " ").trim();
   return singleLine.length <= 100 ? singleLine : `${singleLine.slice(0, 97)}...`;
+}
+
+function matchesContradictionSide(pattern: RegExp, text: string): boolean {
+  const match = pattern.exec(text);
+  if (!match) return false;
+  const prefix = text.slice(0, match.index).trimEnd();
+  return !/\b(?:do not|don't|never|not)\s*$/i.test(prefix);
 }

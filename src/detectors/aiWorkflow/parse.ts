@@ -37,12 +37,17 @@ export function resolveInstructionFiles(
   context: DetectorContext,
   maxFiles = 50,
 ): InstructionFile[] {
+  const scopedPaths = context.options.changedFiles;
   const fromContext = context.files
     .filter((file) => isInstructionFile(file.relativePath))
-    .map((file) => ({ relativePath: file.relativePath, content: file.content }))
+    .filter((file) => !scopedPaths?.length || scopedPaths.includes(file.relativePath))
+    .map((file) => ({
+      relativePath: file.relativePath,
+      content: resolveInstructionContent(context, file.relativePath, file.content),
+    }))
     .slice(0, maxFiles);
 
-  if (fromContext.length >= maxFiles) return fromContext;
+  if (fromContext.length >= maxFiles || scopedPaths?.length) return fromContext;
 
   const seen = new Set(fromContext.map((file) => file.relativePath));
   const discovered = discoverInstructionFiles(context, maxFiles - fromContext.length);
@@ -54,6 +59,14 @@ export function resolveInstructionFiles(
   }
 
   return fromContext;
+}
+
+function resolveInstructionContent(
+  context: DetectorContext,
+  relativePath: string,
+  fallback: string,
+): string {
+  return context.options.fileContents?.[relativePath] ?? fallback;
 }
 
 function discoverInstructionFiles(context: DetectorContext, limit: number): InstructionFile[] {
@@ -71,9 +84,10 @@ function discoverInstructionFiles(context: DetectorContext, limit: number): Inst
         ? basename(absolutePath)
         : relative(context.options.target, absolutePath).replaceAll("\\", "/");
       if (!isInstructionFile(relativePath)) return undefined;
+      const override = context.options.fileContents?.[relativePath];
       return {
         relativePath,
-        content: readFileSync(resolve(absolutePath), "utf8"),
+        content: override ?? readFileSync(resolve(absolutePath), "utf8"),
       };
     })
     .filter((file): file is InstructionFile => file !== undefined);

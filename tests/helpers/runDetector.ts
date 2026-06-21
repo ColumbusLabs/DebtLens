@@ -26,6 +26,10 @@ export interface RunDetectorOptions {
   todoCommentMarkers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
   /** Override inferred source language for all files. */
   language?: SourceLanguage;
+  /** Limit detectors to these relative paths when set. */
+  changedFiles?: string[];
+  /** Override file contents keyed by relative path. */
+  fileContents?: Record<string, string>;
 }
 
 function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
@@ -92,6 +96,8 @@ export async function runDetector(
     todoCommentMarkers: options.todoCommentMarkers
       ? compileTodoCommentMarkers(options.todoCommentMarkers)
       : undefined,
+    changedFiles: options.changedFiles,
+    fileContents: options.fileContents,
   };
 
   const issues = await detector.detect({

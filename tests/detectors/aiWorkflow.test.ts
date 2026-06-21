@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { defaultConfig } from "../../src/config/defaults.js";
 import { mergeConfig } from "../../src/config/mergeConfig.js";
 import { getRulePack } from "../../src/config/packs.js";
 import {
@@ -86,6 +87,15 @@ describe("ai-instruction-contradiction detector", () => {
     assert.equal(issues.length, 0);
   });
 
+  it("does not treat negated skip guidance as a contradictory skip-tests policy", async () => {
+    const issues = await runDetector(instructionContradictionDetector, {
+      "AGENTS.md": "## Testing\n\nAlways run the full test suite before committing changes.",
+      "CLAUDE.md": "## Testing\n\nDo not skip tests for documentation-only edits.",
+    }, { language: "tsjs" });
+
+    assert.equal(issues.length, 0);
+  });
+
   it("discovers instruction files from the scan target when they are absent from context", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-ai-workflow-scope-"));
     try {
@@ -117,8 +127,23 @@ describe("ai-workflow-drift pack discovery", () => {
       "ai-instruction-duplication",
       "ai-instruction-contradiction",
     ]);
+    assert.deepEqual(getRulePack("ai-workflow-drift").languages, []);
     for (const glob of INSTRUCTION_FILE_GLOBS) {
       assert.ok(options.include.includes(glob), `missing include glob ${glob}`);
     }
+    for (const glob of defaultConfig.include) {
+      assert.ok(!options.include.includes(glob), `unexpected TS/JS include glob ${glob}`);
+    }
+  });
+
+  it("respects changedFiles scope without disk discovery", async () => {
+    const issues = await runDetector(instructionContradictionDetector, {
+      "AGENTS.md": "## Testing\n\nAlways run the full test suite before committing changes.",
+    }, {
+      language: "tsjs",
+      changedFiles: ["AGENTS.md"],
+    });
+
+    assert.equal(issues.length, 0);
   });
 });

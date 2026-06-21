@@ -316,7 +316,7 @@ export const RULE_PACKS: Record<string, RulePack> = {
     id: "ai-workflow-drift",
     description: "Flags duplicated or contradictory AI assistant instruction files; does not detect AI-authored code.",
     rules: [...AI_WORKFLOW_DRIFT_RULES],
-    languages: ["tsjs"],
+    languages: [],
     includeGlobs: [...INSTRUCTION_FILE_GLOBS],
   },
 };

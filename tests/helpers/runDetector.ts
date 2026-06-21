@@ -10,6 +10,10 @@ export interface RunDetectorOptions {
   thresholds?: ScanThresholds;
   /** Minimum severity passed through on the synthetic ScanOptions. */
   minSeverity?: ScanOptions["minSeverity"];
+  /** Include globs passed through on the synthetic ScanOptions. */
+  include?: string[];
+  /** Exclude globs passed through on the synthetic ScanOptions. */
+  exclude?: string[];
   /** Naming-drift vocabulary override. */
   vocabulary?: Record<string, string[]>;
   /** Naming-drift: skip built-in concept groups. */
@@ -81,8 +85,8 @@ export async function runDetector(
   const scanOptions: ScanOptions = {
     cwd: "/",
     target: options.target ?? ".",
-    include: [],
-    exclude: [],
+    include: options.include ?? [],
+    exclude: options.exclude ?? [],
     minSeverity: options.minSeverity ?? "info",
     thresholds,
     rules: undefined,

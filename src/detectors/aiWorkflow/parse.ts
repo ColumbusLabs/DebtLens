@@ -37,17 +37,17 @@ export function resolveInstructionFiles(
   context: DetectorContext,
   maxFiles = 50,
 ): InstructionFile[] {
-  const scopedPaths = context.options.changedFiles;
+  const scopedPaths = normalizeScopedPaths(context);
   const fromContext = context.files
     .filter((file) => isInstructionFile(file.relativePath))
-    .filter((file) => !scopedPaths?.length || scopedPaths.includes(file.relativePath))
+    .filter((file) => !scopedPaths || scopedPaths.has(file.relativePath))
     .map((file) => ({
       relativePath: file.relativePath,
       content: resolveInstructionContent(context, file.relativePath, file.content),
     }))
     .slice(0, maxFiles);
 
-  if (fromContext.length >= maxFiles || scopedPaths?.length) return fromContext;
+  if (fromContext.length >= maxFiles || scopedPaths) return fromContext;
 
   const seen = new Set(fromContext.map((file) => file.relativePath));
   const discovered = discoverInstructionFiles(context, maxFiles - fromContext.length);
@@ -76,7 +76,7 @@ function discoverInstructionFiles(context: DetectorContext, limit: number): Inst
   const stats = statSync(context.options.target);
   const absolutePaths = stats.isFile()
     ? [context.options.target]
-    : collectInstructionPaths(context.options.target, context.options.exclude, limit);
+    : collectInstructionPaths(context.options.target, context.options.include, context.options.exclude, limit);
 
   return absolutePaths
     .map((absolutePath) => {
@@ -84,6 +84,7 @@ function discoverInstructionFiles(context: DetectorContext, limit: number): Inst
         ? basename(absolutePath)
         : relative(context.options.target, absolutePath).replaceAll("\\", "/");
       if (!isInstructionFile(relativePath)) return undefined;
+      if (!isIncluded(relativePath, context.options.include)) return undefined;
       const override = context.options.fileContents?.[relativePath];
       return {
         relativePath,
@@ -93,7 +94,22 @@ function discoverInstructionFiles(context: DetectorContext, limit: number): Inst
     .filter((file): file is InstructionFile => file !== undefined);
 }
 
-function collectInstructionPaths(root: string, exclude: string[], limit: number): string[] {
+function normalizeScopedPaths(context: DetectorContext): Set<string> | undefined {
+  const changedFiles = context.options.changedFiles;
+  if (changedFiles === undefined) return undefined;
+
+  const scoped = new Set<string>();
+  for (const path of changedFiles) {
+    const normalized = path.replaceAll("\\", "/");
+    scoped.add(normalized);
+    if (isAbsolute(path) && isAbsolute(context.options.target)) {
+      scoped.add(relative(context.options.target, path).replaceAll("\\", "/"));
+    }
+  }
+  return scoped;
+}
+
+function collectInstructionPaths(root: string, include: string[], exclude: string[], limit: number): string[] {
   const paths: string[] = [];
 
   const visit = (directory: string) => {
@@ -110,13 +126,17 @@ function collectInstructionPaths(root: string, exclude: string[], limit: number)
       if (entry.isDirectory()) {
         visit(absolutePath);
       } else if (entry.isFile()) {
-        if (isInstructionFile(relativePath)) paths.push(absolutePath);
+        if (isInstructionFile(relativePath) && isIncluded(relativePath, include)) paths.push(absolutePath);
       }
     }
   };
 
   visit(root);
   return paths;
+}
+
+function isIncluded(path: string, include: string[]): boolean {
+  return include.length === 0 || include.some((glob) => globMatches(path, glob));
 }
 
 function isExcluded(path: string, exclude: string[]): boolean {
@@ -131,7 +151,11 @@ function globMatches(path: string, glob: string): boolean {
   for (let index = 0; index < glob.length; index += 1) {
     const char = glob[index];
     const next = glob[index + 1];
-    if (char === "*" && next === "*") {
+    const nextNext = glob[index + 2];
+    if (char === "*" && next === "*" && nextNext === "/") {
+      expression += "(?:.*/)?";
+      index += 2;
+    } else if (char === "*" && next === "*") {
       expression += ".*";
       index += 1;
     } else if (char === "*") {

@@ -146,4 +146,40 @@ describe("ai-workflow-drift pack discovery", () => {
 
     assert.equal(issues.length, 0);
   });
+
+  it("treats an empty changedFiles scope as empty instead of falling back to disk discovery", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-ai-workflow-empty-scope-"));
+    try {
+      writeFileSync(join(dir, "AGENTS.md"), "## Testing\n\nAlways run tests before committing.\n", "utf8");
+      writeFileSync(join(dir, "CLAUDE.md"), "## Testing\n\nSkip tests for documentation-only edits.\n", "utf8");
+
+      const issues = await runDetector(instructionContradictionDetector, {}, {
+        target: dir,
+        language: "tsjs",
+        changedFiles: [],
+      });
+
+      assert.equal(issues.length, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not discover instruction files excluded by explicit include globs", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-ai-workflow-include-scope-"));
+    try {
+      writeFileSync(join(dir, "AGENTS.md"), "## Testing\n\nAlways run tests before committing.\n", "utf8");
+      writeFileSync(join(dir, "CLAUDE.md"), "## Testing\n\nSkip tests for documentation-only edits.\n", "utf8");
+
+      const issues = await runDetector(instructionContradictionDetector, {}, {
+        target: dir,
+        language: "tsjs",
+        include: ["**/*.ts"],
+      });
+
+      assert.equal(issues.length, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

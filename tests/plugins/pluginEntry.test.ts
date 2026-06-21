@@ -10,7 +10,7 @@ describe("debtlens/plugin entry point", () => {
   });
 
   it("exports registered source languages for plugin authors", () => {
-    assert.deepEqual(SUPPORTED_SOURCE_LANGUAGES, ["tsjs", "python", "kotlin", "vue", "svelte"]);
+    assert.deepEqual(SUPPORTED_SOURCE_LANGUAGES, ["tsjs", "python", "kotlin", "swift", "vue", "svelte"]);
   });
 
   it("exposes the detector contract types", () => {

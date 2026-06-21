@@ -12,16 +12,17 @@ describe("public capability messaging", () => {
     const cliIndex = read("src/cli/index.ts");
     const roadmap = read("ROADMAP.md");
 
-    assert.match(packageJson.description, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose/);
+    assert.match(packageJson.description, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose/);
     assert.ok(packageJson.keywords.includes("python"));
     assert.ok(packageJson.keywords.includes("vue"));
     assert.ok(packageJson.keywords.includes("svelte"));
     assert.ok(packageJson.keywords.includes("kotlin"));
+    assert.ok(packageJson.keywords.includes("swift"));
     assert.ok(packageJson.keywords.includes("jetpack-compose"));
-    assert.match(readme, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose/);
-    assert.match(actionYml, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Jetpack Compose/);
-    assert.match(cliIndex, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Jetpack Compose/);
-    assert.match(roadmap, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, and Jetpack Compose today/);
+    assert.match(readme, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose/);
+    assert.match(actionYml, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Swift, Jetpack Compose/);
+    assert.match(cliIndex, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Swift, Jetpack Compose/);
+    assert.match(roadmap, /TypeScript, JavaScript, Python, Vue\/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose today/);
   });
 
   it("guards against stale TS-only or unshipped-plugin claims", () => {

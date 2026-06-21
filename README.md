@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen.svg)](https://nodejs.org)
 
-**DebtLens is a maintainability scanner for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose codebases.**
+**DebtLens is a maintainability scanner for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose codebases.**
 The first supported rule packs target React (including React Native, Expo, and Next.js apps)
-plus core Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose modules, but the core idea applies broadly: catch duplicated logic, bloated
+plus core Python, Vue/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose modules, but the core idea applies broadly: catch duplicated logic, bloated
 modules, weak boundaries, TODO debt, and naming drift before it becomes permanent.
 
 It is not an "AI code detector." It does not try to prove who wrote a line of code. Instead, it finds the patterns that tend to slip into codebases when teams move quickly with coding assistants — duplicated logic, bloated components, state sprawl, overloaded effects, thin abstractions, prop drilling, TODO debt, and naming drift.

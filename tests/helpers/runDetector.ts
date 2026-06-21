@@ -31,6 +31,7 @@ export interface RunDetectorOptions {
 function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
   if (override) return override;
   if (relativePath.endsWith(".kt") || relativePath.endsWith(".kts")) return "kotlin";
+  if (relativePath.endsWith(".swift")) return "swift";
   if (relativePath.endsWith(".vue")) return "vue";
   if (relativePath.endsWith(".svelte")) return "svelte";
   return relativePath.endsWith(".py") ? "python" : "tsjs";

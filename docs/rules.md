@@ -2,7 +2,7 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
-Rules are grouped into **core**, language packs such as **python** and **kotlin**, SFC script packs such as **vue** and **svelte**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
+Rules are grouped into **core**, language packs such as **python**, **kotlin**, and **swift**, SFC script packs such as **vue** and **svelte**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
 > **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens init --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
 
@@ -731,6 +731,46 @@ justifies the abstraction.
 
 Flags TODO/FIXME/HACK-style markers in Kotlin line comments, block comments, and KDoc. It
 uses the same `todoComment` configuration as the TS/JS and Python TODO rules.
+
+Good fixes: track the work, add a removal condition, or resolve the marker before more
+code depends on it.
+
+## Swift rules
+
+The `swift` pack ports the core maintainability signals to `.swift` files while
+reusing the same `ScanResult`, SARIF, baseline, and reporter contracts.
+
+### `swift-duplicate-logic`
+
+Finds structurally similar Swift functions after comments, identifiers, strings, and
+numeric literals are normalized. It reuses `duplicate-logic.minSimilarity`,
+`duplicate-logic.minLines`, and `duplicate-logic.maxSnippets`.
+
+Good fixes: compare the paired functions, extract stable shared behavior only when the
+variation is intentional, or delete the weaker duplicate.
+
+### `swift-large-function`
+
+Flags Swift functions that exceed line or branch-count budgets. It reuses
+`large-function.maxLines` and `large-function.maxBranches`, and skips SwiftUI `body`
+properties and `@ViewBuilder` functions.
+
+Good fixes: split branching policy, data normalization, and side effects into named
+helpers. SwiftUI view sizing is intentionally left to a separate SwiftUI pack.
+
+### `swift-dead-abstraction`
+
+Flags simple Swift wrappers such as implicit-return pass-through functions and one-line
+`return callee(args)` wrappers. It reuses `dead-abstraction.maxWrapperLines` and skips
+`override` and `@ViewBuilder` wrappers.
+
+Good fixes: inline wrappers that add no durable boundary, or add the missing behavior that
+justifies the abstraction.
+
+### `swift-todo-comment`
+
+Flags TODO/FIXME/HACK-style markers in Swift line comments and block comments. It uses the
+same `todoComment` configuration as the TS/JS, Python, and Kotlin TODO rules.
 
 Good fixes: track the work, add a removal condition, or resolve the marker before more
 code depends on it.

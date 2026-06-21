@@ -13,6 +13,7 @@ const duplicateLogicRuleIds = new Set([
   "vue-duplicate-logic",
   "svelte-duplicate-logic",
   "kotlin-duplicate-logic",
+  "swift-duplicate-logic",
 ]);
 
 export function summarizeIssues(issues: DebtIssue[]): ScanCountSummary {

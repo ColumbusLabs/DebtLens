@@ -75,6 +75,17 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
       "android/**": ["android/**/*.{ts,tsx,js,jsx}"],
     },
   },
+  swift: {
+    id: "swift",
+    label: "Swift",
+    extensions: [".swift"],
+    includeGlobs: ["**/*.swift"],
+    ruleIdPrefixes: ["swift-", "swiftui-"],
+    parseSourceFile: parseWithTsMorph,
+    defaultExcludeRewrites: {
+      "ios/**": ["ios/**/*.{ts,tsx,js,jsx}"],
+    },
+  },
   vue: {
     id: "vue",
     label: "Vue",

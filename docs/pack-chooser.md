@@ -17,10 +17,11 @@ Action behavior are language-neutral; only file discovery and detectors are pack
 | Vue app | `vue` | `debtlens scan . --pack vue --min-severity low` | Script-block MVP only; template debt needs separate review. |
 | Svelte/SvelteKit app | `svelte` | `debtlens scan . --pack svelte --min-severity low` | Script-block MVP only; markup and load routing rules are out of scope. |
 | Kotlin service or Android module | `kotlin` | `debtlens scan . --pack kotlin --min-severity low` | Advisory first; add `compose` only for Compose UI debt. |
+| Swift service or iOS module | `swift` | `debtlens scan . --pack swift --min-severity low` | Advisory first; add `swiftui` when SwiftUI view debt matters. |
 | Jetpack Compose app/module | `compose` | `debtlens scan . --pack compose --min-severity low` | Start advisory; tune size and state-hoisting thresholds after reviewing screens. |
-| Mixed TS/Python/SFC/Kotlin monorepo | `core,python,vue,svelte,kotlin` | `debtlens scan . --pack core,python,vue,svelte,kotlin --format json` | Use package or path-scoped baselines; add `compose` for Android UI modules. |
+| Mixed TS/Python/SFC/Kotlin/Swift monorepo | `core,python,vue,svelte,kotlin,swift` | `debtlens scan . --pack core,python,vue,svelte,kotlin,swift --format json` | Use package or path-scoped baselines; add `compose` or `swiftui` for UI modules. |
 | Open-source library | `oss-maintainer` | `debtlens scan . --pack oss-maintainer --min-severity medium` | Prefer reports and issues before hard CI gates. |
 | Assistant-heavy repo | `ai-assisted-maintainer` | `debtlens scan . --pack ai-assisted-maintainer --min-severity medium` | Use as review prompts, not authorship detection. |
 
-Future packs such as Swift, Ruby, and AI workflow instruction drift
-should reuse this same chooser shape once their MVPs land.
+Future packs such as Ruby and AI workflow instruction drift should reuse this same
+chooser shape once their MVPs land.

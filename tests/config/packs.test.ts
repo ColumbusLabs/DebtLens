@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 14);
+    assert.equal(packs.length, 15);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
@@ -64,6 +64,13 @@ describe("rule packs", () => {
       "compose-state-hoisting",
     ]);
     assert.deepEqual(getRulePack("compose").languages, ["kotlin"]);
+    assert.deepEqual(getRulePack("swift").rules, [
+      "swift-duplicate-logic",
+      "swift-large-function",
+      "swift-dead-abstraction",
+      "swift-todo-comment",
+    ]);
+    assert.deepEqual(getRulePack("swift").languages, ["swift"]);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });

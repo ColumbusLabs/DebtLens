@@ -111,6 +111,13 @@ const KOTLIN_RULES = [
   "kotlin-todo-comment",
 ] as const;
 
+const SWIFT_RULES = [
+  "swift-duplicate-logic",
+  "swift-large-function",
+  "swift-dead-abstraction",
+  "swift-todo-comment",
+] as const;
+
 const COMPOSE_RULES = [
   "compose-large-composable",
   "compose-state-hoisting",
@@ -217,6 +224,12 @@ export const RULE_PACKS: Record<string, RulePack> = {
     description: "Core Kotlin maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
     rules: [...KOTLIN_RULES],
     languages: ["kotlin"],
+  },
+  swift: {
+    id: "swift",
+    description: "Core Swift maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
+    rules: [...SWIFT_RULES],
+    languages: ["swift"],
   },
   compose: {
     id: "compose",

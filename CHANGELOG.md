@@ -5,6 +5,11 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Swift core pack** (`--pack swift`) with `swift-todo-comment`, `swift-large-function`,
+  `swift-dead-abstraction`, and `swift-duplicate-logic` for `.swift` files ([#194](https://github.com/ColumbusLabs/DebtLens/issues/194)).
+
 ### Changed
 
 - GitHub Action JSON artifact upload is now opt-in (`upload-json-artifact` defaults to

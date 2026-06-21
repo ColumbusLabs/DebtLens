@@ -71,6 +71,8 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `swift-large-function` | **swift** | Swift functions over line or branch-count budgets | Medium |
 | `swift-dead-abstraction` | **swift** | Thin Swift functions that only pass arguments through | Low |
 | `swift-todo-comment` | **swift** | TODO/FIXME/HACK/temporary implementation comments in Swift files | Low |
+| `swiftui-large-view` | **swiftui** | Oversized or branch-heavy SwiftUI `View` bodies | Medium |
+| `swiftui-state-sprawl` | **swiftui** | SwiftUI views with many local property-wrapper state holders | Medium |
 | `compose-large-composable` | **compose** | Oversized or branch-heavy Jetpack Compose functions | Medium |
 | `compose-state-hoisting` | **compose** | Composables that own many local state holders instead of hoisting state | Medium |
 
@@ -223,6 +225,7 @@ and Compose UI debt.
 | `svelte` | Svelte component script TODO, large-script, and duplicate-logic signals | **Shipped** |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
+| `swiftui` | SwiftUI oversized views and local state sprawl | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
@@ -243,7 +246,7 @@ follow the same shared result contract.
 | **Vue SFC** | script TODOs, large scripts/functions, duplicate script functions | Vue template-specific rules | **Shipped** for script-block MVP |
 | **Svelte SFC** | script TODOs, large scripts/functions, duplicate script functions | SvelteKit routing and markup-specific rules | **Shipped** for script-block MVP |
 | **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
-| **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | **Shipped** for core Swift rules |
+| **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | **Shipped** for core Swift and SwiftUI rules |
 
 Each language needs its own parser/AST path. Rules that map well across languages —
 duplication, thin wrappers, deferred TODOs, naming inconsistency — ship first;

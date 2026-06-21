@@ -775,6 +775,59 @@ same `todoComment` configuration as the TS/JS, Python, and Kotlin TODO rules.
 Good fixes: track the work, add a removal condition, or resolve the marker before more
 code depends on it.
 
+## SwiftUI rules
+
+The `swiftui` pack scans `.swift` files for SwiftUI view debt. It is separate from
+the `swift` core pack: use `--pack swiftui` for SwiftUI-only UI checks, or
+`--pack swift,swiftui` when one scan should include both core Swift and SwiftUI signals.
+
+### `swiftui-large-view`
+
+Flags SwiftUI `View` structs whose `body` exceeds SwiftUI-specific line, branch, or local
+state budgets.
+
+Default thresholds:
+
+- `swiftui-large-view.maxLines`: 90
+- `swiftui-large-view.maxBranches`: 12
+- `swiftui-large-view.maxLocalState`: 6
+
+Good fixes:
+
+- split repeated UI regions into smaller views
+- move durable screen state into a parent view, observable model, or coordinator
+- extract branching policy from rendering code
+
+When this is a false positive:
+
+- the view is a deliberate top-level screen shell with stable slots
+- the threshold is too low for generated or migration-era UI code
+- the view is a preview; `#Preview` blocks and `PreviewProvider` types are skipped
+
+Confidence: **0.76-0.84** depending on whether size or complexity drove the finding.
+
+### `swiftui-state-sprawl`
+
+Flags SwiftUI views that own many local property-wrapper state holders such as
+`@State`, `@StateObject`, `@ObservedObject`, `@FocusState`, `@SceneStorage`, or
+`@AppStorage`.
+
+Default threshold:
+
+- `swiftui-state-sprawl.maxStateHolders`: 4
+
+Good fixes:
+
+- pass state and event callbacks into the view
+- group related screen state in an `ObservableObject` or dedicated model
+- keep ephemeral UI-only state local, but hoist durable workflow state
+
+When this is a false positive:
+
+- the view owns only a small amount of ephemeral UI state
+- a single `uiState` value plus an event callback already represents hoisted state
+- commented or stringified property-wrapper examples in docs or samples should stay quiet
+
 ## Jetpack Compose rules
 
 The `compose` pack scans `.kt` and `.kts` files for Compose UI debt. It is separate from

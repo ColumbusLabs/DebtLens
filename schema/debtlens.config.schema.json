@@ -48,6 +48,7 @@
             "svelte",
             "kotlin",
             "swift",
+            "swiftui",
             "compose",
             "ai-assisted-maintainer",
             "oss-maintainer"
@@ -55,7 +56,7 @@
         },
         {
           "type": "string",
-          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
         }
       ],
       "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
@@ -113,6 +114,8 @@
               "swift-large-function",
               "swift-duplicate-logic",
               "swift-dead-abstraction",
+              "swiftui-large-view",
+              "swiftui-state-sprawl",
               "compose-large-composable",
               "compose-state-hoisting"
             ]
@@ -304,6 +307,18 @@
           "type": "number"
         },
         "compose-state-hoisting.maxLocalState": {
+          "type": "number"
+        },
+        "swiftui-large-view.maxLines": {
+          "type": "number"
+        },
+        "swiftui-large-view.maxBranches": {
+          "type": "number"
+        },
+        "swiftui-large-view.maxLocalState": {
+          "type": "number"
+        },
+        "swiftui-state-sprawl.maxStateHolders": {
           "type": "number"
         }
       },
@@ -693,6 +708,22 @@
             "high"
           ]
         },
+        "swiftui-large-view": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "swiftui-state-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "compose-large-composable": {
           "enum": [
             "info",
@@ -949,6 +980,16 @@
           "maximum": 1
         },
         "swift-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "swiftui-large-view": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "swiftui-state-sprawl": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

@@ -23,6 +23,8 @@ describe("CI workflow drift guards", () => {
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/swift --pack swift --format json/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/swift --pack swift --min-severity info --format markdown/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/compose --pack compose --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/swiftui --pack swiftui --format json/);
+    assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/swiftui --pack swiftui --min-severity info --format markdown/);
     assert.match(ciWorkflow, /dist\/cli\/index\.js scan examples\/compose --pack compose --min-severity info --format markdown/);
   });
 });

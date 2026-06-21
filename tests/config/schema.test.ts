@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { buildConfigSchema, SCHEMA_ID } from "../../src/config/schema.js";
 import { configTemplate, renderConfigFile } from "../../src/config/template.js";
+import { getRulePack } from "../../src/config/packs.js";
 import { gatePresets } from "../../src/core/gatePresets.js";
 import { severities } from "../../src/core/severity.js";
 import { detectorIds } from "../../src/detectors/index.js";
@@ -44,6 +45,16 @@ describe("config JSON schema", () => {
     assert.equal(built.properties.pluginApiVersion?.type, "integer");
     assert.equal(built.properties.pluginApiVersion?.minimum, 1);
     assert.equal(built.properties.plugins?.type, "array");
+  });
+
+  it("includes pack threshold defaults in threshold completions", () => {
+    const built = buildConfigSchema() as {
+      properties: { thresholds: { properties: Record<string, { type: string }> } };
+    };
+
+    for (const key of Object.keys(getRulePack("swiftui").thresholds ?? {})) {
+      assert.equal(built.properties.thresholds.properties[key]?.type, "number", `missing threshold key: ${key}`);
+    }
   });
 
   it("uses the canonical severity set", () => {
@@ -110,6 +121,7 @@ describe("config JSON schema", () => {
       "svelte",
       "kotlin",
       "swift",
+      "swiftui",
       "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",

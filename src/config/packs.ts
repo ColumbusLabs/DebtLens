@@ -118,6 +118,11 @@ const SWIFT_RULES = [
   "swift-todo-comment",
 ] as const;
 
+const SWIFTUI_RULES = [
+  "swiftui-large-view",
+  "swiftui-state-sprawl",
+] as const;
+
 const COMPOSE_RULES = [
   "compose-large-composable",
   "compose-state-hoisting",
@@ -230,6 +235,18 @@ export const RULE_PACKS: Record<string, RulePack> = {
     description: "Core Swift maintainability rules for duplicate functions, large functions, thin wrappers, and debt comments.",
     rules: [...SWIFT_RULES],
     languages: ["swift"],
+  },
+  swiftui: {
+    id: "swiftui",
+    description: "SwiftUI maintainability rules for oversized views and local state sprawl.",
+    rules: [...SWIFTUI_RULES],
+    languages: ["swift"],
+    thresholds: {
+      "swiftui-large-view.maxLines": 90,
+      "swiftui-large-view.maxBranches": 12,
+      "swiftui-large-view.maxLocalState": 6,
+      "swiftui-state-sprawl.maxStateHolders": 4,
+    },
   },
   compose: {
     id: "compose",

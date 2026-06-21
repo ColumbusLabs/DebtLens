@@ -10,7 +10,7 @@ import {
   rubyLargeFunctionDetector,
   rubyTodoCommentDetector,
 } from "../../src/detectors/ruby/index.js";
-import { splitRubyArgs } from "../../src/detectors/ruby/parse.js";
+import { extractRubyFunctions, splitRubyArgs } from "../../src/detectors/ruby/parse.js";
 import { renderReport } from "../../src/reporters/index.js";
 import { runDetector } from "../helpers/runDetector.js";
 
@@ -171,6 +171,31 @@ end
       "prefix",
       '{ "paid" => ["a", "b"], "open" => ["c"] }',
     ]);
+  });
+
+  it("keeps method spans when bodies include nested while/until blocks", () => {
+    const file = {
+      absolutePath: "/tmp/service.rb",
+      relativePath: "service.rb",
+      content: `
+def reconcile_invoice(invoice)
+  while invoice.pending?
+    apply_credit(invoice)
+  end
+  until invoice.settled?
+    notify_owner(invoice)
+  end
+  invoice
+end
+`,
+      language: "ruby" as const,
+      sourceFile: undefined!,
+    };
+
+    const methods = extractRubyFunctions(file);
+    assert.equal(methods.length, 1);
+    assert.equal(methods[0]?.name, "reconcile_invoice");
+    assert.equal(methods[0]?.endLine - methods[0]!.startLine + 1, 9);
   });
 
   it("detects simple Ruby wrappers and skips private methods", async () => {

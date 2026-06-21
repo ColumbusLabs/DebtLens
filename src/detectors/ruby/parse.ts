@@ -237,21 +237,51 @@ function findMatchingDelimiter(text: string, start: number, open: string, close:
 }
 
 function findRubyMethodEnd(lines: string[], startIndex: number): number {
-  const baseIndent = leadingWhitespace(lines[startIndex] ?? "").length;
+  let depth = 0;
 
-  for (let index = startIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const trimmed = maskRubyComments(line).trim();
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const trimmed = maskRubyComments(lines[index] ?? "").trim();
     if (!trimmed) continue;
 
-    const indent = leadingWhitespace(line).length;
-    if (indent > baseIndent) continue;
+    if (/^def\b/.test(trimmed)) {
+      if (index > startIndex) return index - 1;
+      depth += 1;
+      continue;
+    }
 
-    if (/^end\b/.test(trimmed)) return index;
-    if (/^def\b/.test(trimmed)) return index - 1;
+    depth += countRubyBlockOpeners(trimmed);
+    depth -= countRubyBlockClosers(trimmed);
+
+    if (depth <= 0) return index;
   }
 
   return lines.length - 1;
+}
+
+function countRubyBlockOpeners(line: string): number {
+  let count = 0;
+  const patterns = [
+    /\bclass\b/g,
+    /\bmodule\b/g,
+    /\bif\b/g,
+    /\bunless\b/g,
+    /\bcase\b/g,
+    /\bwhile\b/g,
+    /\buntil\b/g,
+    /\bfor\b/g,
+    /\bbegin\b/g,
+  ];
+
+  for (const pattern of patterns) {
+    count += line.match(pattern)?.length ?? 0;
+  }
+
+  count += line.match(/\bdo\b/g)?.length ?? 0;
+  return count;
+}
+
+function countRubyBlockClosers(line: string): number {
+  return line.match(/\bend\b/g)?.length ?? 0;
 }
 
 function leadingWhitespace(line: string): string {

@@ -36,6 +36,8 @@ export async function resolveFilePaths(options: ScanOptions): Promise<string[]> 
     }
   }
 
+  paths.sort((a, b) => a.localeCompare(b));
+
   return paths.slice(0, options.maxFiles ?? paths.length);
 }
 

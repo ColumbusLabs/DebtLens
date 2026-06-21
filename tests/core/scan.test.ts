@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
 import { mergeConfig } from "../../src/config/mergeConfig.js";
+import { resolveFilePaths } from "../../src/core/resolveFiles.js";
 import { scan } from "../../src/core/scan.js";
 
 describe("scan integration", () => {
@@ -64,6 +65,34 @@ describe("scan integration", () => {
       assert.equal(defaultResult.summary.totalIssues, 2);
       assert.equal(filteredResult.summary.totalIssues, 1);
       assert.deepEqual(filteredResult.issues.map((issue) => issue.file), ["src/kept.ts"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("applies maxFiles after deterministic path ordering", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-maxfiles-order-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "z.ts"), "export const z = 1;\n");
+      writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(dir, "src", "m.ts"), "export const m = 1;\n");
+
+      const paths = await resolveFilePaths({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low",
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: 2,
+      });
+
+      assert.deepEqual(paths.map((path) => relative(dir, path)), [
+        "src/a.ts",
+        "src/m.ts",
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

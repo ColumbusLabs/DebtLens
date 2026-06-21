@@ -32,6 +32,7 @@ export function registerDoctorCommand(program: Command): void {
     .option("--config <path>", "path to debtlens.config.json")
     .option("--cwd <path>", "working directory", process.cwd())
     .option("--package <name>", "inspect a single workspace package by name")
+    .option("--no-color", "accepted for consistency with scan/watch output")
     .option("--provenance", "show which layer supplied resolved config values")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {

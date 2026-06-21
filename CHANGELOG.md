@@ -5,6 +5,31 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- Scan results now warn when matched files exceed `maxFiles`; terminal output prints the
+  advisory and JSON reports include it in `summary.warnings` while keeping
+  `summary.filesScanned` as the actual scanned count.
+- `debtlens adopt` accepts `--max-files` and `--respect-gitignore` so dry-run adoption
+  previews can use the same large-repo scope controls as `scan`.
+
+### Changed
+
+- Default excludes now skip additional unambiguous dependency, build, virtualenv, and
+  generated caches such as `out/**`, `.output/**`, `.venv/**`, `venv/**`,
+  `**/site-packages/**`, `**/__pycache__/**`, and `**/__generated__/**`.
+- README and quickstart guidance now prefer package-pinned `npx --package` execution and
+  document a narrower adoption path for serious open-source repos and monorepos.
+
+### Fixed
+
+- `commented-out-code` ignores JSDoc/TSDoc-style documentation runs and separator-only
+  comment banners while still reporting real commented imports, functions, and returns.
+- Kotlin duplicate/dead-abstraction detection ignores semantic no-op `Unit` hook bodies
+  so public API listener surfaces do not dominate reports.
+- Python dead-abstraction detection skips obvious decorated endpoint and framework
+  boundary wrappers while preserving internal pass-through wrapper findings.
+
 ## [0.4.0] - 2026-06-21
 
 ### Added

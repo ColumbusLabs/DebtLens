@@ -99,6 +99,36 @@ describe("debtlens scan warnings", () => {
     assert.match(result.stderr, /DebtLens warning: duplicate-logic inspected 1 of/);
     assert.match(parsed.summary.warnings[0], /duplicate-logic inspected 1 of/);
   });
+
+  it("prints max-files truncation warnings to stderr and JSON summary", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-maxfiles-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(dir, "src", "b.ts"), "export const b = 1;\n");
+      writeFileSync(join(dir, "src", "c.ts"), "export const c = 1;\n");
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--max-files",
+        "2",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.filesScanned, 2);
+      assert.match(result.stderr, /DebtLens warning: DebtLens scanned the first 2 of 3 matched files/);
+      assert.match(parsed.summary.warnings[0], /DebtLens scanned the first 2 of 3 matched files/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("debtlens scan output formats", () => {

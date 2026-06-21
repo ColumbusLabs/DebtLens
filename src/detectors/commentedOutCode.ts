@@ -162,6 +162,8 @@ function isExcludedRun(
   run: CommentRun,
   todoPatterns: ReturnType<typeof resolveTodoCommentPatterns>,
 ): boolean {
+  if (isDocumentationRun(run) || isSeparatorRun(run)) return true;
+
   for (const line of run.lines) {
     if (isLicenseOrCopyrightLine(line.rawLine, line.text)) return true;
     if (todoPatterns.some((pattern) => pattern.regex.test(line.rawLine))) return true;
@@ -179,6 +181,47 @@ function isLicenseOrCopyrightLine(rawLine: string, text: string): boolean {
 
 function runHasCodeLikeLine(run: CommentRun): boolean {
   return run.lines.some((line) => isCodeLikeComment(line.text));
+}
+
+function isDocumentationRun(run: CommentRun): boolean {
+  const meaningful = run.lines
+    .map((line) => line.text.trim())
+    .filter(Boolean);
+  if (meaningful.length === 0) return false;
+
+  const looksLikeBlockDoc = run.lines.some((line) => /^\s*\/\*\*/.test(line.rawLine));
+  const hasDocTag = meaningful.some((line) => /^@[A-Za-z][\w-]*/.test(line));
+  if (!looksLikeBlockDoc && !hasDocTag) return false;
+
+  return meaningful.every((line) => isDocumentationLine(line));
+}
+
+function isDocumentationLine(text: string): boolean {
+  if (/^@[A-Za-z][\w-]*/.test(text)) return true;
+  if (/^\{?@[A-Za-z][\w-]*/.test(text)) return true;
+  if (/^(?:\/?\*\*?\/?|\/)$/.test(text)) return true;
+  if (isSeparatorLine(text)) return true;
+  return isProseOnly(text) || /^[A-Za-z0-9_`'"()[\]\s.,:;!?/@{}|&<>#-]+$/.test(text);
+}
+
+function isSeparatorRun(run: CommentRun): boolean {
+  const meaningful = run.lines
+    .map((line) => line.text.trim())
+    .filter(Boolean);
+  if (meaningful.length === 0) return false;
+  if (!meaningful.some((line) => isSeparatorLine(line))) return false;
+
+  return meaningful.every((line) => isSeparatorLine(line) || isSeparatorLabelLine(line));
+}
+
+function isSeparatorLine(text: string): boolean {
+  return /^[\s\-_=*#/|.]+$/.test(text) && /[-_=*#/|.]{3,}/.test(text);
+}
+
+function isSeparatorLabelLine(text: string): boolean {
+  if (/\b(?:const|let|var|function|import|return|class|export|async|await)\b/.test(text)) return false;
+  if (/[;{}=<>]/.test(text)) return false;
+  return /^[A-Za-z][A-Za-z0-9\s.,:/()+_-]+$/.test(text) && text.includes(":");
 }
 
 function isCodeLikeComment(text: string): boolean {

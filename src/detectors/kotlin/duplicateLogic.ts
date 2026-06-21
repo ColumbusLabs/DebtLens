@@ -2,7 +2,7 @@ import type { DebtIssue, Detector, DetectorContext } from "../../core/types.js";
 import { createIssue } from "../../utils/createIssue.js";
 import { jaccard, shingle } from "../../utils/similarity.js";
 import { buildDuplicateLogicCandidatePairs } from "../duplicateLogic.js";
-import { extractKotlinFunctions, fingerprintKotlin, normalizeKotlinSnippet } from "./parse.js";
+import { extractKotlinFunctions, fingerprintKotlin, isKotlinSemanticNoopFunction, normalizeKotlinSnippet } from "./parse.js";
 
 interface KotlinSnippet {
   name: string;
@@ -33,6 +33,7 @@ export const kotlinDuplicateLogicDetector: Detector = {
       for (const fn of extractKotlinFunctions(file)) {
         const lines = fn.endLine - fn.startLine + 1;
         if (lines < minLines || lines > 240) continue;
+        if (isKotlinSemanticNoopFunction(fn)) continue;
         const normalized = normalizeKotlinSnippet(fn.text);
         if (normalized.length < 60) continue;
         snippets.push({

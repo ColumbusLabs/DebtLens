@@ -7,6 +7,9 @@ adding inline suppressions.
 | --- | --- | --- |
 | Existing legacy debt | `--write-baseline` then `--baseline` | Keeps current debt visible without blocking every PR. |
 | Generated or vendored files | `exclude` or `--respect-gitignore` | The scanner should not evaluate code humans do not maintain. |
+| Documentation or separator comments | Upgrade, then report minimal samples if still noisy | JSDoc/TSDoc-style blocks and comment banners should not be flagged as `commented-out-code`. |
+| Public framework boundary wrappers | Config scope, framework pack thresholds, or baseline | Route handlers, views, and API hook surfaces can be intentionally thin while still valuable. |
+| Kotlin lifecycle or hook APIs | Baseline or suppress narrow exceptions | Empty `Unit` overrides are usually public API contracts, not duplicate business logic. |
 | Framework convention that repeats safely | Pack-specific thresholds or rule config | Keeps the rule useful for real debt elsewhere. |
 | Low-confidence finding family | `ruleConfidenceFloors` or `--fail-on-confidence` | Keeps findings visible while preventing weak gates. |
 | One documented exception | Inline suppression with a reason | Auditable, local, and visible in JSON/SARIF output. |
@@ -22,9 +25,37 @@ debtlens scan . --baseline debtlens-baseline.json --fail-on high
 
 ```json
 {
-  "exclude": ["dist/**", "build/**", ".next/**", "generated/**"]
+  "exclude": ["dist/**", "build/**", "out/**", ".next/**", ".output/**", ".venv/**", "venv/**", "**/site-packages/**", "**/__generated__/**"]
 }
 ```
+
+Avoid scanning dependency caches, generated clients, build output, virtualenvs, and
+language package caches. Keep broad folders such as `vendor/**` or `third_party/**`
+as project-specific choices: some repositories maintain code there, while others only
+mirror upstream code.
+
+## Scope serious repos first
+
+Large repositories should start with a maintained source directory, `--package`, or
+`--changed origin/main` before whole-repo gating. If DebtLens warns that it scanned
+only the first `maxFiles` matched files, either raise `--max-files` for a deliberate
+full scan or narrow scope with `--include`, `--exclude`, `--rules`, `--changed`, and
+`--respect-gitignore`.
+
+## Tune public boundaries separately
+
+Thin wrappers under files such as `views.py`, `routes.py`, or `api.py`, decorated web
+endpoints, and Kotlin listener hooks are often framework contracts. DebtLens tries to
+avoid obvious no-op public boundaries, but if a project has its own framework layer,
+prefer package scope, thresholds, baselines, confidence floors, or narrow inline
+suppressions over disabling a useful rule everywhere.
+
+## Keep true dead code visible
+
+`commented-out-code` should ignore documentation blocks and separator banners, but it
+should still report real commented imports, functions, returns, and control flow. If a
+commented snippet is intentionally retained, use an inline suppression with a reason or
+delete the snippet and link to source control.
 
 ## Suppress a narrow exception
 

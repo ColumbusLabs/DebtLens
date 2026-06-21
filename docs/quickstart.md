@@ -6,7 +6,7 @@ what the output means, and leaves a cleanup path for generated files.
 ## 1. Run a safe first scan
 
 ```bash
-npx debtlens scan . --min-severity medium --format terminal
+npx --yes --package=debtlens@latest debtlens scan . --min-severity medium --format terminal
 ```
 
 Start with `medium` so a legacy repo does not bury useful findings under low-severity
@@ -17,26 +17,26 @@ cleanup work. The summary line shows files scanned, rules run, and counts by sev
 Use the [pack chooser](./pack-chooser.md) before enabling everything:
 
 ```bash
-npx debtlens scan . --pack core --min-severity medium
-npx debtlens scan . --pack react --min-severity medium
-npx debtlens scan . --pack python --min-severity low
-npx debtlens scan . --pack python-web --min-severity low
-npx debtlens scan . --pack vue --min-severity low
-npx debtlens scan . --pack svelte --min-severity low
-npx debtlens scan . --pack kotlin --min-severity low
-npx debtlens scan . --pack compose --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack core --min-severity medium
+npx --yes --package=debtlens@latest debtlens scan . --pack react --min-severity medium
+npx --yes --package=debtlens@latest debtlens scan . --pack python --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack python-web --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack vue --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack svelte --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack kotlin --min-severity low
+npx --yes --package=debtlens@latest debtlens scan . --pack compose --min-severity low
 ```
 
 Mixed repos can scan multiple packs in one run:
 
 ```bash
-npx debtlens scan . --pack core,python-web,vue,svelte,kotlin,compose --format markdown --output debtlens-report.md
+npx --yes --package=debtlens@latest debtlens scan . --pack core,python-web,vue,svelte,kotlin,compose --format markdown --output debtlens-report.md
 ```
 
 ## 3. Get an adoption plan
 
 ```bash
-npx debtlens adopt . --format markdown
+npx --yes --package=debtlens@latest debtlens adopt . --format markdown
 ```
 
 Use the recommendation to decide whether the first CI run should be advisory, baseline
@@ -44,22 +44,30 @@ only, or a high-severity gate. The named presets are the shortest way to express
 choice:
 
 ```bash
-npx debtlens scan . --gate advisory
-npx debtlens scan . --gate new-code --diff-base origin/main
-npx debtlens scan . --gate strict-new-code --diff-base origin/main
+npx --yes --package=debtlens@latest debtlens scan . --gate advisory
+npx --yes --package=debtlens@latest debtlens scan . --gate new-code --diff-base origin/main
+npx --yes --package=debtlens@latest debtlens scan . --gate strict-new-code --diff-base origin/main
 ```
 
 Start with `advisory` while tuning rules. Move to `new-code` when pull requests should
 block high-severity new findings, and tighten to `strict-new-code` after owners agree
 that medium-severity new findings and count regressions should fail CI.
 
+For serious repos, start narrower than the whole tree. Use `adopt` for the rollout
+plan, then try `--changed origin/main`, a maintained source subdirectory, or
+`--package <name>` before broad scans. If the scan warns that only the first
+`maxFiles` matched files were scanned, either raise `--max-files` deliberately or
+narrow with `--include`, `--exclude`, `--rules`, `--changed`, and
+`--respect-gitignore`. Baseline legacy findings before turning the scan into a
+blocking gate.
+
 ## 4. Baseline legacy debt before gating
 
 For established repos, create a baseline first:
 
 ```bash
-npx debtlens scan . --write-baseline debtlens-baseline.json
-npx debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens scan . --write-baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
 ```
 
 This keeps known debt visible while making the gate focus on newly introduced high-severity
@@ -70,17 +78,17 @@ requests once the baseline is pruned and the team is ready to keep newly touched
 cleaner than the historical snapshot:
 
 ```bash
-npx debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
-npx debtlens scan . --gate strict-new-code --diff-base origin/main
+npx --yes --package=debtlens@latest debtlens scan . --gate legacy-baseline --baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens scan . --gate strict-new-code --diff-base origin/main
 ```
 
 When the team fixes legacy debt, maintain the same file instead of replacing it blindly:
 
 ```bash
-npx debtlens baseline diff . --baseline debtlens-baseline.json
-npx debtlens baseline prune . --baseline debtlens-baseline.json --dry-run
-npx debtlens baseline prune . --baseline debtlens-baseline.json
-npx debtlens baseline update . --baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens baseline diff . --baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens baseline prune . --baseline debtlens-baseline.json --dry-run
+npx --yes --package=debtlens@latest debtlens baseline prune . --baseline debtlens-baseline.json
+npx --yes --package=debtlens@latest debtlens baseline update . --baseline debtlens-baseline.json
 ```
 
 `diff` and `--dry-run` do not write files. `prune` removes resolved entries, while

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { CONFIG_FILENAME } from "../../src/cli/init.js";
 import { DEFAULT_BASELINE_FILENAME } from "../../src/core/baseline.js";
@@ -126,6 +126,28 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /Dry run — no files written/);
     assert.equal(existsSync(join(dir, CONFIG_FILENAME)), false);
     assert.equal(existsSync(join(dir, DEFAULT_BASELINE_FILENAME)), false);
+  });
+
+  it("passes max-files and respect-gitignore through to the adoption scan", () => {
+    execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+    writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+    writeFileSync(join(dir, "src", "kept.ts"), "// TODO: kept marker\nexport const kept = 1;\n");
+    writeFileSync(join(dir, "src", "ignored.ts"), "// TODO: ignored marker\nexport const ignored = 1;\n");
+
+    const result = runAdopt([
+      ".",
+      "--cwd",
+      dir,
+      "--rules",
+      "todo-comment",
+      "--max-files",
+      "1",
+      "--respect-gitignore",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /DebtLens warning: DebtLens scanned the first 1 of 2 matched files/);
+    assert.match(result.stdout, /Files scanned: 1/);
   });
 
   it("prints a stakeholder severity histogram as markdown", () => {

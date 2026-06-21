@@ -98,6 +98,33 @@ describe("scan integration", () => {
     }
   });
 
+  it("warns when maxFiles truncates matched files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-maxfiles-warning-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+      writeFileSync(join(dir, "src", "b.ts"), "export const b = 1;\n");
+      writeFileSync(join(dir, "src", "c.ts"), "export const c = 1;\n");
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low",
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: 2,
+      });
+
+      assert.equal(result.summary.filesScanned, 2);
+      assert.match(result.summary.warnings?.[0] ?? "", /DebtLens scanned the first 2 of 3 matched files/);
+      assert.match(result.summary.warnings?.[0] ?? "", /--max-files/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("uses central suppression accounting for valid suppressions on new detectors", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-new-rule-suppress-"));
     try {

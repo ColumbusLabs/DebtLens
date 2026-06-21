@@ -50,6 +50,33 @@ export const x = 1;
     assert.equal(issues.length, 0);
   });
 
+  it("does not flag JSDoc or TSDoc type documentation as commented-out code", async () => {
+    const src = `
+/**
+ * CLI client for querying a trace server.
+ * @this {EventSource}
+ * @param {{ data: string, onError: (err: Error) => void }} options options
+ * @returns {() => void} function to destroy response
+ */
+export function keepAlive(options: Options) {
+  return () => options.onError;
+}
+`;
+    const issues = await runDetector(commentedOutCodeDetector, { "x.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("does not flag separator comment banners as commented-out code", async () => {
+    const src = `
+// ---------------------------------------------------------------------------
+// Scenario: e2e (real production server via next build + next start)
+// ---------------------------------------------------------------------------
+export const scenario = "e2e";
+`;
+    const issues = await runDetector(commentedOutCodeDetector, { "x.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
   it("does not flag a single commented-out line below minLines", async () => {
     const src = `
 // const x = 1;

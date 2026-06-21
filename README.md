@@ -32,12 +32,12 @@ the repo root, atomic scan-cache writes, and stricter ESLint migration validatio
 build or pinned Action tag.
 
 ```bash
-npx debtlens scan
-npx debtlens scan src --format markdown
-npx debtlens scan --min-severity medium --fail-on high
-npx debtlens scan --gate advisory
-npx debtlens scan --gate new-code
-npx debtlens scan --rules duplicates,state,effects
+npx --yes --package=debtlens@latest debtlens scan
+npx --yes --package=debtlens@latest debtlens scan src --format markdown
+npx --yes --package=debtlens@latest debtlens scan --min-severity medium --fail-on high
+npx --yes --package=debtlens@latest debtlens scan --gate advisory
+npx --yes --package=debtlens@latest debtlens scan --gate new-code
+npx --yes --package=debtlens@latest debtlens scan --rules duplicates,state,effects
 ```
 
 ## Example output
@@ -177,7 +177,7 @@ npm install --save-dev debtlens
 or run without installing:
 
 ```bash
-npx debtlens scan
+npx --yes --package=debtlens@latest debtlens scan
 ```
 
 ## Usage
@@ -338,6 +338,8 @@ debtlens adopt --write-config --write-baseline --force
 
 The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). For established repositories, follow the generated plan's baseline or `--diff-base` CI commands so pull requests focus on newly introduced debt; add `--fail-on-regression` when you want count increases to fail as well.
 
+For serious open-source repositories and broad monorepos, treat adoption as a scoped rollout instead of a whole-repo gate on day one. Run `adopt` first, then start with `--changed origin/main` or a maintained source subdirectory, add `--package` for workspaces, keep generated/dependency outputs excluded, and narrow expensive or noisy rules with `--rules`, thresholds, baselines, or confidence floors before widening coverage. If the default 2,000-file cap appears, either raise it with `--max-files` for a deliberate full scan or make the target more precise with `--package`, `--include`, `--exclude`, `--changed`, or `--respect-gitignore`.
+
 Named quality-gate presets give teams a shared rollout vocabulary:
 
 | Preset | Use when | Default behavior |
@@ -358,6 +360,8 @@ For safety, mutating `baseline prune` refuses explicitly scoped scans such as `-
 When a scan reads zero files, DebtLens prints a stderr warning with likely causes such as include/exclude globs, the target path, `--cwd`, or an empty git file set from `--changed` / `--staged`. The warning is advisory and does not change the exit code for `--fail-on`.
 
 When `duplicate-logic` reaches `duplicate-logic.maxSnippets`, DebtLens warns that duplicate comparisons were capped. JSON output includes the same advisory under `summary.warnings`.
+
+When matched files exceed `maxFiles`, DebtLens scans the first selected files, prints a stderr warning, and includes the same advisory in `summary.warnings`. `summary.filesScanned` remains the actual number of files scanned so dashboards and gates do not confuse the cap with the full matched set.
 
 ## JSON contract
 
@@ -437,7 +441,7 @@ Create `debtlens.config.json`:
 {
   "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
   "include": ["src/**/*.{ts,tsx,js,jsx}"],
-  "exclude": ["node_modules/**", "dist/**", "build/**", ".next/**"],
+  "exclude": ["node_modules/**", "dist/**", "build/**", "out/**", ".next/**", ".output/**", ".venv/**", "venv/**", "**/__generated__/**"],
   "minSeverity": "low",
   "respectGitignore": false,
   "rules": [

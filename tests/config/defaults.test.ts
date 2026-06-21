@@ -13,4 +13,18 @@ describe("default config", () => {
       assert.ok(defaultConfig.exclude.includes(pattern), `missing exclude: ${pattern}`);
     }
   });
+
+  it("excludes generated, dependency, and virtualenv caches by default", () => {
+    for (const pattern of [
+      "out/**",
+      ".output/**",
+      ".venv/**",
+      "venv/**",
+      "**/site-packages/**",
+      "**/__pycache__/**",
+      "**/__generated__/**",
+    ]) {
+      assert.ok(defaultConfig.exclude.includes(pattern), `missing exclude: ${pattern}`);
+    }
+  });
 });

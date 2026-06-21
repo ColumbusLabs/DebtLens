@@ -6,7 +6,7 @@ import { mergeConfig } from "../config/mergeConfig.js";
 import { validateConfigShape } from "../config/validateConfig.js";
 import { resolveWorkspacePackage } from "../config/workspaces.js";
 import { allDetectors, detectorIds } from "../detectors/index.js";
-import { resolveFilePaths } from "../core/resolveFiles.js";
+import { resolveFileSelection } from "../core/resolveFiles.js";
 import { defaultConfig } from "../config/defaults.js";
 import { getRulePack } from "../config/packs.js";
 import { DEFAULT_SOURCE_LANGUAGE, getLanguageDefinition, unique } from "../core/languages.js";
@@ -108,7 +108,8 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     ...(pluginContribution.thresholds ? { pluginThresholds: pluginContribution.thresholds } : {}),
     ...(pluginContribution.vocabulary ? { pluginVocabulary: pluginContribution.vocabulary } : {}),
   });
-  const filePaths = await resolveFilePaths(options);
+  const fileSelection = await resolveFileSelection(options);
+  const filePaths = fileSelection.paths;
   const resolvedRules = resolveRuleIds(options, pluginContribution);
   const warnings = missingConfigPath
     ? [`DebtLens warning: config file not found at ${missingConfigPath}.`]
@@ -156,7 +157,8 @@ export async function runDoctor(input: DoctorInput): Promise<DoctorReport> {
     }
   }
 
-  lines.push(`Matched files: ${filePaths.length}`);
+  lines.push(`Matched files: ${fileSelection.totalMatchedFiles}`);
+  lines.push(`Files selected for scan: ${filePaths.length}`);
 
   if (input.showProvenance && configValidation.state !== "invalid") {
     lines.push("");

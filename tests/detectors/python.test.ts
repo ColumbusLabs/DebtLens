@@ -110,7 +110,7 @@ def format_customer(customer):
     assert.equal(issues.length, 0);
   });
 
-  it("detects async def functions and skips decorator lines when parsing bodies", async () => {
+  it("skips decorated endpoint wrappers but still reports internal async wrappers", async () => {
     const issues = await runDetector(pythonDeadAbstractionDetector, {
       "src/service.py": `
 @router.get("/items")
@@ -123,9 +123,29 @@ async def load_items(session):
 `,
     });
 
-    assert.equal(issues.length, 2);
-    assert.ok(issues.some((issue) => issue.message.includes("list_items")));
+    assert.equal(issues.length, 1);
     assert.ok(issues.some((issue) => issue.message.includes("load_items")));
+  });
+
+  it("skips thin Python wrappers in obvious framework boundary files and classes", async () => {
+    const issues = await runDetector(pythonDeadAbstractionDetector, {
+      "app/views.py": `
+def customer_detail(request, customer_id):
+    return render_customer(request, customer_id)
+
+class CustomerView:
+    def get(self, request):
+        return handle_customer(request)
+`,
+      "app/services.py": `
+def customer_detail(request, customer_id):
+    return render_customer(request, customer_id)
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.file, "app/services.py");
+    assert.match(issues[0]?.message ?? "", /customer_detail/);
   });
 
   it("uses the Python AST sidecar for async functions, decorators, classes, imports, and nested functions", () => {

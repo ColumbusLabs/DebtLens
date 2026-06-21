@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import type { DebtIssue, Detector, DetectorContext } from "../../core/types.js";
 import { createIssue } from "../../utils/createIssue.js";
 import { extractPythonFunctions, splitPythonArgs, type PythonFunction } from "./parse.js";
@@ -17,6 +18,7 @@ export const pythonDeadAbstractionDetector: Detector = {
       for (const fn of extractPythonFunctions(file, { addWarning: context.addWarning })) {
         const lines = fn.endLine - fn.startLine + 1;
         if (lines > maxWrapperLines) continue;
+        if (shouldSkipPythonBoundaryWrapper(fn)) continue;
         const wrapper = describePythonWrapper(fn);
         if (!wrapper) continue;
 
@@ -51,4 +53,25 @@ function describePythonWrapper(fn: PythonFunction): { description: string; confi
   const params = fn.params[0] === "self" ? fn.params.slice(1) : fn.params;
   if (args.length !== params.length || !args.every((arg, index) => arg === params[index])) return undefined;
   return { description: `it only delegates to ${callee}(...)`, confidence: 0.8 };
+}
+
+function shouldSkipPythonBoundaryWrapper(fn: PythonFunction): boolean {
+  if (!isPublicPythonName(fn.name)) return false;
+  if (fn.decorators?.some((decorator) => isFrameworkBoundaryDecorator(decorator.text))) return true;
+
+  const fileName = basename(fn.file.relativePath).toLowerCase();
+  if (/^(?:views|routes|api|controllers?|handlers?)\.py$/.test(fileName)) return true;
+
+  const parentClass = fn.parentClass ?? "";
+  return /(?:View|ViewSet|Controller|Resource)$/.test(parentClass);
+}
+
+function isPublicPythonName(name: string): boolean {
+  return !name.startsWith("_");
+}
+
+function isFrameworkBoundaryDecorator(text: string): boolean {
+  const normalized = text.trim().replace(/^@/, "");
+  return /^(?:router|bp|app|blueprint)\.(?:route|get|post|put|patch|delete|head|options|websocket)\b/.test(normalized)
+    || /^(?:api_view|action|receiver|permission_required|login_required|csrf_exempt|require_[A-Za-z_]\w*)\b/.test(normalized);
 }

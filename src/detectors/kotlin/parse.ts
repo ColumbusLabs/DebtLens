@@ -165,6 +165,14 @@ export function countKotlinBranches(fn: KotlinFunction): number {
   return text.match(/\b(?:if|when|for|while|catch)\b|&&|\|\||\?:/g)?.length ?? 0;
 }
 
+export function isKotlinSemanticNoopFunction(fn: KotlinFunction): boolean {
+  const body = fn.expressionBody
+    ? fn.expressionBody
+    : fn.bodyLines.join("\n");
+  const significant = maskKotlinTrivia(body).trim();
+  return significant.length === 0 || significant === "Unit" || significant === "return Unit";
+}
+
 export function extractKotlinCommentSegments(file: SourceFileInfo): KotlinCommentSegment[] {
   const segments: KotlinCommentSegment[] = [];
   scanKotlin(file.content, {

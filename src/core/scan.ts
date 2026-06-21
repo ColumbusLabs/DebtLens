@@ -4,7 +4,7 @@ import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
-import { canonicalize, resolveFilePaths } from "./resolveFiles.js";
+import { canonicalize, resolveFileSelection } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
@@ -14,7 +14,8 @@ import type { DebtIssue, Detector, DetectorContext, ScanOptions, ScanResult, Sou
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startedAt = Date.now();
-  const filePaths = await resolveFilePaths(options);
+  const fileSelection = await resolveFileSelection(options);
+  const filePaths = fileSelection.paths;
   const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
   const detectors = selectDetectors(registry, options.rules, filePaths.map(detectSourceLanguage));
   const snapshots = loadFileSnapshots(filePaths, options);
@@ -58,6 +59,9 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
 
   if (cacheDisabledReason) {
     warnings.push(cacheDisabledReason);
+  }
+  if (fileSelection.maxFilesApplied) {
+    warnings.push(buildMaxFilesWarning(fileSelection.paths.length, fileSelection.totalMatchedFiles));
   }
   for (const warning of validatePerRuleOverrides(registry, options)) {
     if (!warnings.includes(warning)) warnings.push(warning);
@@ -165,6 +169,10 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   }
 
   return result;
+}
+
+function buildMaxFilesWarning(scannedFiles: number, totalMatchedFiles: number): string {
+  return `DebtLens scanned the first ${scannedFiles} of ${totalMatchedFiles} matched files because maxFiles is capped. Use --max-files, --package, --include, --exclude, --rules, --changed, or --respect-gitignore to tune scope.`;
 }
 
 function loadFileSnapshots(filePaths: string[], options: ScanOptions): FileSnapshot[] {

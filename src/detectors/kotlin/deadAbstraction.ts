@@ -1,6 +1,6 @@
 import type { DebtIssue, Detector, DetectorContext } from "../../core/types.js";
 import { createIssue } from "../../utils/createIssue.js";
-import { extractKotlinFunctions, splitKotlinArgs, type KotlinFunction } from "./parse.js";
+import { extractKotlinFunctions, isKotlinSemanticNoopFunction, splitKotlinArgs, type KotlinFunction } from "./parse.js";
 
 export const kotlinDeadAbstractionDetector: Detector = {
   id: "kotlin-dead-abstraction",
@@ -17,6 +17,7 @@ export const kotlinDeadAbstractionDetector: Detector = {
       for (const fn of extractKotlinFunctions(file)) {
         const lines = fn.endLine - fn.startLine + 1;
         if (lines > maxWrapperLines) continue;
+        if (isKotlinSemanticNoopFunction(fn)) continue;
         if (shouldSkipWrapper(fn)) continue;
         const wrapper = describeKotlinWrapper(fn);
         if (!wrapper) continue;

@@ -126,6 +126,19 @@ describe("debtlens doctor", () => {
     assert.match(result.stdout, /DebtLens warning: scanned 0 files/);
   });
 
+  it("shows matched and selected file counts when max-files caps selection", () => {
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, "src", "a.ts"), "export const a = 1;\n");
+    writeFileSync(join(dir, "src", "b.ts"), "export const b = 1;\n");
+    writeFileSync(join(dir, "src", "c.ts"), "export const c = 1;\n");
+
+    const result = runDoctor([".", "--cwd", dir, "--include", "src/**/*.ts", "--max-files", "2"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Matched files: 3/);
+    assert.match(result.stdout, /Files selected for scan: 2/);
+  });
+
   it("prints exclude globs and applies them to matched files", () => {
     mkdirSync(join(dir, "src"), { recursive: true });
     writeFileSync(join(dir, "src", "keep.ts"), "export const ok = 1;\n");

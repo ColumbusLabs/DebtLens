@@ -3,7 +3,17 @@ import fg from "fast-glob";
 import type { ScanOptions } from "./types.js";
 import { getIgnoredFiles } from "../utils/git.js";
 
+export interface FileSelection {
+  paths: string[];
+  totalMatchedFiles: number;
+  maxFilesApplied: boolean;
+}
+
 export async function resolveFilePaths(options: ScanOptions): Promise<string[]> {
+  return (await resolveFileSelection(options)).paths;
+}
+
+export async function resolveFileSelection(options: ScanOptions): Promise<FileSelection> {
   const stats = statSync(options.target);
   const isFile = stats.isFile();
   const changed = options.changedFiles
@@ -11,9 +21,9 @@ export async function resolveFilePaths(options: ScanOptions): Promise<string[]> 
     : undefined;
 
   if (isFile) {
-    if (changed && !changed.has(canonicalize(options.target))) return [];
-    if (options.respectGitignore && isIgnoredByGit(options.cwd, options.target)) return [];
-    return [options.target];
+    if (changed && !changed.has(canonicalize(options.target))) return emptySelection();
+    if (options.respectGitignore && isIgnoredByGit(options.cwd, options.target)) return emptySelection();
+    return { paths: [options.target], totalMatchedFiles: 1, maxFilesApplied: false };
   }
 
   let paths = await fg(options.include, {
@@ -38,7 +48,18 @@ export async function resolveFilePaths(options: ScanOptions): Promise<string[]> 
 
   paths.sort((a, b) => a.localeCompare(b));
 
-  return paths.slice(0, options.maxFiles ?? paths.length);
+  const totalMatchedFiles = paths.length;
+  const limitedPaths = paths.slice(0, options.maxFiles ?? paths.length);
+
+  return {
+    paths: limitedPaths,
+    totalMatchedFiles,
+    maxFilesApplied: limitedPaths.length < totalMatchedFiles,
+  };
+}
+
+function emptySelection(): FileSelection {
+  return { paths: [], totalMatchedFiles: 0, maxFilesApplied: false };
 }
 
 function isIgnoredByGit(cwd: string, path: string): boolean {

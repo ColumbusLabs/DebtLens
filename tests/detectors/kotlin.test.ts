@@ -138,6 +138,31 @@ fun formatCustomer(customer: Customer): String {
     assert.match(issues[0]?.message ?? "", /normalizeInvoice/);
   });
 
+  it("does not treat semantic no-op API hooks as duplicate logic", async () => {
+    const issues = await runDetector(kotlinDuplicateLogicDetector, {
+      "src/EventListener.kt": `
+open fun dispatcherQueueStart(
+    call: Call,
+    dispatcher: Dispatcher,
+    startedAtMillis: Long,
+) {
+}
+
+open fun dispatcherQueueEnd(
+    call: Call,
+    dispatcher: Dispatcher,
+    endedAtMillis: Long,
+) {
+    // default no-op hook
+}
+`,
+    }, {
+      thresholds: { "duplicate-logic.minLines": 3 },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
   it("detects branch-heavy Kotlin functions with threshold overrides", async () => {
     const issues = await runDetector(kotlinLargeFunctionDetector, {
       "src/Service.kt": `
@@ -212,6 +237,12 @@ override fun renderOverride(invoice: Invoice) = buildInvoiceView(invoice)
 
 @Composable
 fun RenderInvoice(invoice: Invoice) = InvoiceCard(invoice)
+
+open fun onCallStart(call: Call): Unit = Unit
+
+open fun onCallEnd(call: Call) {
+    return Unit
+}
 `,
     });
 

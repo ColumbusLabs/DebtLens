@@ -308,6 +308,18 @@
         },
         "compose-state-hoisting.maxLocalState": {
           "type": "number"
+        },
+        "swiftui-large-view.maxLines": {
+          "type": "number"
+        },
+        "swiftui-large-view.maxBranches": {
+          "type": "number"
+        },
+        "swiftui-large-view.maxLocalState": {
+          "type": "number"
+        },
+        "swiftui-state-sprawl.maxStateHolders": {
+          "type": "number"
         }
       },
       "additionalProperties": {

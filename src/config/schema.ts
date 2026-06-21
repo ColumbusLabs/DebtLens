@@ -1,7 +1,7 @@
 import { severities } from "../core/severity.js";
 import { gatePresets } from "../core/gatePresets.js";
 import { detectorIds } from "../detectors/index.js";
-import { RULE_PACK_IDS } from "./packs.js";
+import { listRulePacks, RULE_PACK_IDS } from "./packs.js";
 import { defaultConfig } from "./defaults.js";
 
 export const SCHEMA_ID =
@@ -14,7 +14,10 @@ export const SCHEMA_ID =
  */
 export function buildConfigSchema(): Record<string, unknown> {
   const knownThresholds = Object.fromEntries(
-    Object.keys(defaultConfig.thresholds).map((key) => [key, { type: "number" }]),
+    Object.keys({
+      ...defaultConfig.thresholds,
+      ...Object.assign({}, ...listRulePacks().map((pack) => pack.thresholds ?? {})),
+    }).map((key) => [key, { type: "number" }]),
   );
   const packAlternation = RULE_PACK_IDS.map(escapeRegex).join("|");
   const severityValue = { enum: [...severities] };

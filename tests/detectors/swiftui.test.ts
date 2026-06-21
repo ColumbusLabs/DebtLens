@@ -103,6 +103,58 @@ struct BillingFilters: View {
     assert.match(issues[0]?.message ?? "", /BillingFilters/);
   });
 
+  it("counts argument-bearing SwiftUI storage wrappers at threshold boundaries", async () => {
+    const issues = await runDetector(swiftuiStateSprawlDetector, {
+      "src/BillingFilters.swift": `
+struct BillingFilters: View {
+    @State private var query = ""
+    @State private var expanded = false
+    @State private var selectedCustomer: String?
+    @AppStorage("sortOrder") private var sortOrder = "dueDate"
+
+    var body: some View {
+        Text(query)
+    }
+}
+`,
+    }, {
+      thresholds: { "swiftui-state-sprawl.maxStateHolders": 3 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match((issues[0]?.evidence ?? []).join(" "), /sortOrder/);
+  });
+
+  it("counts SwiftUI large-view branches only inside body", async () => {
+    const issues = await runDetector(swiftuiLargeViewDetector, {
+      "src/FormatterView.swift": `
+struct FormatterView: View {
+    let formatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        if Locale.current.usesMetricSystem {
+            formatter.maximumFractionDigits = 2
+        } else {
+            formatter.maximumFractionDigits = 1
+        }
+        return formatter
+    }()
+
+    var body: some View {
+        Text("ready")
+    }
+}
+`,
+    }, {
+      thresholds: {
+        "swiftui-large-view.maxLines": 40,
+        "swiftui-large-view.maxBranches": 0,
+        "swiftui-large-view.maxLocalState": 10,
+      },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
   it("does not count commented or stringified state holders", async () => {
     const issues = await runDetector(swiftuiStateSprawlDetector, {
       "src/BillingFilters.swift": `

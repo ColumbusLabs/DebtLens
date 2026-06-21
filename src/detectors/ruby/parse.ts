@@ -41,6 +41,7 @@ export function extractRubyFunctions(file: SourceFileInfo): RubyFunction[] {
     }
 
     if (isIgnorableFunctionPrefix(line)) continue;
+    if (!/^def\b/.test(trimmed)) continue;
 
     const header = collectRubyFunctionHeader(lines, index);
     const signature = parseRubyFunctionSignature(header.text, header.endIndex);
@@ -240,7 +241,7 @@ function findRubyMethodEnd(lines: string[], startIndex: number): number {
   let depth = 0;
 
   for (let index = startIndex; index < lines.length; index += 1) {
-    const trimmed = maskRubyComments(lines[index] ?? "").trim();
+    const trimmed = maskRubyTrivia(lines[index] ?? "").trim();
     if (!trimmed) continue;
 
     if (/^def\b/.test(trimmed)) {
@@ -261,15 +262,15 @@ function findRubyMethodEnd(lines: string[], startIndex: number): number {
 function countRubyBlockOpeners(line: string): number {
   let count = 0;
   const patterns = [
-    /\bclass\b/g,
-    /\bmodule\b/g,
-    /\bif\b/g,
-    /\bunless\b/g,
-    /\bcase\b/g,
-    /\bwhile\b/g,
-    /\buntil\b/g,
-    /\bfor\b/g,
-    /\bbegin\b/g,
+    /(?:^|[=([{;,]\s*)\bclass\b/g,
+    /(?:^|[=([{;,]\s*)\bmodule\b/g,
+    /(?:^|[=([{;,]\s*)\bif\b/g,
+    /(?:^|[=([{;,]\s*)\bunless\b/g,
+    /(?:^|[=([{;,]\s*)\bcase\b/g,
+    /(?:^|[=([{;,]\s*)\bwhile\b/g,
+    /(?:^|[=([{;,]\s*)\buntil\b/g,
+    /(?:^|[=([{;,]\s*)\bfor\b/g,
+    /(?:^|[=([{;,]\s*)\bbegin\b/g,
   ];
 
   for (const pattern of patterns) {

@@ -328,6 +328,12 @@
         },
         "swiftui-state-sprawl.maxStateHolders": {
           "type": "number"
+        },
+        "rails-route-sprawl.maxRoutes": {
+          "type": "number"
+        },
+        "rails-controller-sprawl.maxActions": {
+          "type": "number"
         }
       },
       "additionalProperties": {

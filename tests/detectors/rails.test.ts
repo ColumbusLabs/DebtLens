@@ -61,6 +61,23 @@ end
     assert.ok(routes.some((route) => route.source === "resources"));
   });
 
+  it("counts constrained Rails resource routes written with common action list syntaxes", () => {
+    const file = parseRubyFile("config/routes.rb", `
+Rails.application.routes.draw do
+  resources :accounts, only: %i[index show]
+  resources :invoices, except: %i[destroy]
+  resource :profile, only: ["show", "edit"]
+  resources :teams, only: [:index, :show]
+end
+`);
+    const routes = extractRailsRoutes(file);
+
+    assert.equal(routes.filter((route) => route.path === "/accounts").length, 2);
+    assert.equal(routes.filter((route) => route.path === "/invoices").length, 6);
+    assert.equal(routes.filter((route) => route.path === "/profile").length, 2);
+    assert.equal(routes.filter((route) => route.path === "/teams").length, 2);
+  });
+
   it("extracts public controller actions and ignores private methods", () => {
     const file = parseRubyFile("app/controllers/accounts_controller.rb", `
 class AccountsController < ApplicationController

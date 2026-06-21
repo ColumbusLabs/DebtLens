@@ -15,6 +15,8 @@ export interface RailsControllerAction {
 }
 
 const HTTP_VERBS = new Set(["get", "post", "put", "patch", "delete", "head", "options", "mount"]);
+const RESOURCE_ACTIONS = ["index", "show", "new", "create", "edit", "update", "destroy"];
+const SINGULAR_RESOURCE_ACTIONS = ["show", "new", "create", "edit"];
 
 export function extractRailsRoutes(file: SourceFileInfo): RailsRoute[] {
   if (!isRailsRoutesFile(file.relativePath)) return [];
@@ -90,9 +92,7 @@ function describeRailsRouteLine(line: string, lineNumber: number): RailsRoute[] 
   const resourcesMatch = line.match(/^resources\s+:(\w+)/);
   if (resourcesMatch) {
     const resource = resourcesMatch[1] ?? "resource";
-    const onlyMatch = line.match(/only:\s*\[([^\]]+)\]/);
-    const exceptMatch = line.match(/except:\s*\[([^\]]+)\]/);
-    const count = estimateResourcesCount(onlyMatch?.[1], exceptMatch?.[1]);
+    const count = estimateRouteActionCount(line, "resources");
     for (let index = 0; index < count; index += 1) {
       routes.push({
         method: "RESOURCES",
@@ -107,7 +107,7 @@ function describeRailsRouteLine(line: string, lineNumber: number): RailsRoute[] 
   const resourceMatch = line.match(/^resource\s+:(\w+)/);
   if (resourceMatch) {
     const resource = resourceMatch[1] ?? "resource";
-    const count = line.includes("only:") ? estimateResourceOnlyCount(line) : 4;
+    const count = estimateRouteActionCount(line, "resource");
     for (let index = 0; index < count; index += 1) {
       routes.push({
         method: "RESOURCE",
@@ -142,23 +142,59 @@ function describeRailsRouteLine(line: string, lineNumber: number): RailsRoute[] 
   return routes;
 }
 
-function estimateResourcesCount(only?: string, except?: string): number {
-  const defaultActions = ["index", "show", "new", "create", "edit", "update", "destroy"];
-  if (only) {
-    const selected = [...only.matchAll(/:(\w+)/g)].map((match) => match[1] ?? "");
-    return selected.length || 7;
-  }
+function estimateRouteActionCount(line: string, source: "resources" | "resource"): number {
+  const defaultActions = source === "resources" ? RESOURCE_ACTIONS : SINGULAR_RESOURCE_ACTIONS;
+  const only = extractRailsActionOption(line, "only");
+  if (only) return only.length || defaultActions.length;
+
+  const except = extractRailsActionOption(line, "except");
   if (except) {
-    const excluded = new Set([...except.matchAll(/:(\w+)/g)].map((match) => match[1] ?? ""));
+    const excluded = new Set(except);
     return defaultActions.filter((action) => !excluded.has(action)).length;
   }
-  return 7;
+
+  return defaultActions.length;
 }
 
-function estimateResourceOnlyCount(line: string): number {
-  const onlyMatch = line.match(/only:\s*\[([^\]]+)\]/);
-  if (!onlyMatch) return 4;
-  return [...(onlyMatch[1] ?? "").matchAll(/:(\w+)/g)].length || 4;
+function extractRailsActionOption(line: string, option: "only" | "except"): string[] | undefined {
+  const optionIndex = line.search(new RegExp(`\\b${option}:`));
+  if (optionIndex === -1) return undefined;
+  const rawOption = line.slice(optionIndex + option.length + 1).trimStart();
+  const raw = readRailsActionList(rawOption);
+  if (!raw) return undefined;
+  if (raw.startsWith("%")) {
+    return parseActionWords(raw.slice(3, -1));
+  }
+  if (raw.startsWith("[")) {
+    return [...raw.matchAll(/:(\w+)|["'](\w+)["']/g)]
+      .map((match) => match[1] ?? match[2] ?? "")
+      .filter(Boolean);
+  }
+  return [raw.replace(/^:/, "").replace(/^["']|["']$/g, "")].filter(Boolean);
+}
+
+function readRailsActionList(raw: string): string | undefined {
+  const percentArray = raw.match(/^%[iI]([\[(])/);
+  if (percentArray) {
+    const open = percentArray[1] ?? "[";
+    const close = open === "[" ? "]" : ")";
+    const endIndex = raw.indexOf(close, 3);
+    return endIndex === -1 ? undefined : raw.slice(0, endIndex + 1);
+  }
+
+  if (raw.startsWith("[")) {
+    const endIndex = raw.indexOf("]");
+    return endIndex === -1 ? undefined : raw.slice(0, endIndex + 1);
+  }
+
+  return raw.match(/^(:\w+|"[^"]+"|'[^']+')/)?.[1];
+}
+
+function parseActionWords(raw: string): string[] {
+  return raw
+    .split(/\s+/)
+    .map((action) => action.replace(/^:/, "").trim())
+    .filter(Boolean);
 }
 
 function isRailsRoutesFile(relativePath: string): boolean {

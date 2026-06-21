@@ -198,6 +198,36 @@ end
     assert.equal(methods[0]?.endLine - methods[0]!.startLine + 1, 9);
   });
 
+  it("keeps postfix conditionals from swallowing visibility changes", () => {
+    const file = {
+      absolutePath: "/tmp/accounts_controller.rb",
+      relativePath: "accounts_controller.rb",
+      content: `
+class AccountsController
+  def show
+    return head :not_found unless @account
+    render json: @account
+  end
+
+  private
+
+  def account_params
+    params.require(:account)
+  end
+end
+`,
+      language: "ruby" as const,
+      sourceFile: undefined!,
+    };
+
+    const methods = extractRubyFunctions(file);
+    assert.deepEqual(methods.map((method) => [method.name, method.visibility]), [
+      ["show", "public"],
+      ["account_params", "private"],
+    ]);
+    assert.equal(methods[0]?.text.includes("private"), false);
+  });
+
   it("detects simple Ruby wrappers and skips private methods", async () => {
     const issues = await runDetector(rubyDeadAbstractionDetector, {
       "src/service.rb": `

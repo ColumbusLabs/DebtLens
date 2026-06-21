@@ -453,8 +453,8 @@ The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/De
 ### Rule packs
 
 Built-in presets select a rule set without hand-picking every rule id. Language packs
-also declare their discovery metadata, so selecting `python`, `vue`, `svelte`, `kotlin`, or `compose`
-adds the registered source globs without one-off CLI flags. See
+also declare their discovery metadata, so selecting `python`, `vue`, `svelte`, `kotlin`, `swift`,
+`ruby`, `rails`, `compose`, or `swiftui` adds the registered source globs without one-off CLI flags. See
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 
 | Pack | Rules |
@@ -469,7 +469,11 @@ adds the registered source globs without one-off CLI flags. See
 | `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals |
 | `svelte` | Svelte SFC script TODO, large-script, and duplicate-logic signals |
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
+| `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO comments |
+| `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO comments |
+| `rails` | Ruby core rules plus Rails route and controller sprawl checks |
 | `compose` | Jetpack Compose oversized composables and local state-hoisting smells |
+| `swiftui` | SwiftUI oversized views and local state-sprawl checks |
 | `expo` | React Native tuning for Expo Router projects |
 | `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
@@ -487,7 +491,7 @@ Explicit `rules` in config override the pack. Use `debtlens packs` to list prese
 Use comma-separated packs for mixed-language scans:
 
 ```bash
-debtlens scan . --pack core,python,vue,svelte,kotlin,compose
+debtlens scan . --pack core,python,vue,svelte,kotlin,swift,ruby,rails,compose,swiftui
 ```
 
 ### Per-rule severities and confidence floors
@@ -928,7 +932,7 @@ and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
-React Native, Next.js, Expo, Node, Python, Python web, Vue/Svelte SFC scripts, Kotlin, Jetpack Compose, and maintainer workflows. Additional
+React Native, Next.js, Expo, Node, Python, Python web, Vue/Svelte SFC scripts, Kotlin, Swift, Ruby/Rails, Jetpack Compose, SwiftUI, and maintainer workflows. Additional
 packs expand from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 

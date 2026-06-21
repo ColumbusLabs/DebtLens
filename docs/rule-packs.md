@@ -79,6 +79,8 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `ruby-todo-comment` | **ruby** | TODO/FIXME/HACK/temporary implementation comments in Ruby files | Low |
 | `rails-route-sprawl` | **rails** | Rails `routes.rb` modules registering too many routes | Medium |
 | `rails-controller-sprawl` | **rails** | Rails controllers with too many public actions | Medium |
+| `ai-instruction-duplication` | **ai-workflow-drift** | The same normalized instruction block repeated across assistant instruction files | Medium |
+| `ai-instruction-contradiction` | **ai-workflow-drift** | Conservative opposing directives across assistant instruction files | High |
 | `compose-large-composable` | **compose** | Oversized or branch-heavy Jetpack Compose functions | Medium |
 | `compose-state-hoisting` | **compose** | Composables that own many local state holders instead of hoisting state | Medium |
 
@@ -234,6 +236,7 @@ and Compose UI debt.
 | `swiftui` | SwiftUI oversized views and local state sprawl | **Shipped** |
 | `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO debt | **Shipped** |
 | `rails` | Ruby core rules plus Rails route and controller sprawl | **Shipped** |
+| `ai-workflow-drift` | Duplicated or contradictory AI assistant instruction files | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |

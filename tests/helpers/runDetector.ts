@@ -10,6 +10,10 @@ export interface RunDetectorOptions {
   thresholds?: ScanThresholds;
   /** Minimum severity passed through on the synthetic ScanOptions. */
   minSeverity?: ScanOptions["minSeverity"];
+  /** Include globs passed through on the synthetic ScanOptions. */
+  include?: string[];
+  /** Exclude globs passed through on the synthetic ScanOptions. */
+  exclude?: string[];
   /** Naming-drift vocabulary override. */
   vocabulary?: Record<string, string[]>;
   /** Naming-drift: skip built-in concept groups. */
@@ -26,6 +30,10 @@ export interface RunDetectorOptions {
   todoCommentMarkers?: Array<{ pattern: string; severity?: Severity; label?: string }>;
   /** Override inferred source language for all files. */
   language?: SourceLanguage;
+  /** Limit detectors to these relative paths when set. */
+  changedFiles?: string[];
+  /** Override file contents keyed by relative path. */
+  fileContents?: Record<string, string>;
 }
 
 function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
@@ -77,8 +85,8 @@ export async function runDetector(
   const scanOptions: ScanOptions = {
     cwd: "/",
     target: options.target ?? ".",
-    include: [],
-    exclude: [],
+    include: options.include ?? [],
+    exclude: options.exclude ?? [],
     minSeverity: options.minSeverity ?? "info",
     thresholds,
     rules: undefined,
@@ -92,6 +100,8 @@ export async function runDetector(
     todoCommentMarkers: options.todoCommentMarkers
       ? compileTodoCommentMarkers(options.todoCommentMarkers)
       : undefined,
+    changedFiles: options.changedFiles,
+    fileContents: options.fileContents,
   };
 
   const issues = await detector.detect({

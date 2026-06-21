@@ -15,6 +15,9 @@ All notable changes to DebtLens are documented here. This project adheres to
   `ruby-dead-abstraction`, and `ruby-todo-comment` ([#198](https://github.com/ColumbusLabs/DebtLens/issues/198)).
 - **Rails framework pack** (`rails`) combining Ruby core rules with `rails-route-sprawl`
   and `rails-controller-sprawl` ([#198](https://github.com/ColumbusLabs/DebtLens/issues/198)).
+- **`ai-workflow-drift` pack** with `ai-instruction-duplication` and
+  `ai-instruction-contradiction` for repository-local assistant instruction files.
+  The pack does not detect AI-authored code ([#214](https://github.com/ColumbusLabs/DebtLens/issues/214)).
 
 ### Changed
 

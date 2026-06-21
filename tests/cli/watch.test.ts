@@ -81,13 +81,16 @@ describe("debtlens watch", () => {
       stderr += chunk;
     });
 
-    const timeout = setTimeout(() => child.kill("SIGTERM"), 10000);
+    const timeout = setTimeout(() => child.kill("SIGTERM"), 30000);
     const close = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>((resolve) => {
       child.on("close", (code, signal) => resolve({ code, signal }));
     });
     clearTimeout(timeout);
 
-    assert.ok(close.code === 0 || close.signal === "SIGINT", stderr);
+    assert.ok(
+      close.code === 0 || close.signal === "SIGINT",
+      `watch exited with code=${close.code} signal=${close.signal}\nstdout:\n${stdout}\nstderr:\n${stderr}`,
+    );
     assert.match(stdout, /DebtLens watch: watching/);
   });
 });

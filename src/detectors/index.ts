@@ -1,4 +1,5 @@
 import type { Detector } from "../core/types.js";
+import { instructionContradictionDetector, instructionDuplicationDetector } from "./aiWorkflow/index.js";
 import { composeLargeComposableDetector, composeStateHoistingDetector } from "./compose/index.js";
 import { apiSurfaceSprawlDetector } from "./apiSurfaceSprawl.js";
 import { barrelFileDetector } from "./barrelFile.js";
@@ -104,6 +105,8 @@ export const allDetectors: Detector[] = [
   railsControllerSprawlDetector,
   composeLargeComposableDetector,
   composeStateHoistingDetector,
+  instructionDuplicationDetector,
+  instructionContradictionDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);

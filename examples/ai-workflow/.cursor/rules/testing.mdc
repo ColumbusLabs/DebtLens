@@ -1,0 +1,7 @@
+---
+description: Testing policy for documentation-only edits
+---
+
+# Testing policy
+
+Skip tests when making documentation-only changes.

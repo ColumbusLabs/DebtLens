@@ -38,6 +38,7 @@ jobs:
           node dist/cli/index.js scan examples/rails --pack rails --format json --output debtlens-rails-report.json
           node dist/cli/index.js scan examples/compose --pack compose --format json --output debtlens-compose-report.json
           node dist/cli/index.js scan examples/swiftui --pack swiftui --format json --output debtlens-swiftui-report.json
+          node dist/cli/index.js scan examples/ai-workflow --pack ai-workflow-drift --format json --output debtlens-ai-workflow-report.json
       - name: Benchmark regression gate
         run: npm run benchmark:ci
         env:
@@ -55,3 +56,4 @@ jobs:
       - run: node dist/cli/index.js scan examples/rails --pack rails --min-severity info --format markdown --output debtlens-rails-report.md
       - run: node dist/cli/index.js scan examples/compose --pack compose --min-severity info --format markdown --output debtlens-compose-report.md
       - run: node dist/cli/index.js scan examples/swiftui --pack swiftui --min-severity info --format markdown --output debtlens-swiftui-report.md
+      - run: node dist/cli/index.js scan examples/ai-workflow --pack ai-workflow-drift --min-severity info --format markdown --output debtlens-ai-workflow-report.md

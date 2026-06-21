@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 18);
+    assert.equal(packs.length, 19);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
@@ -95,6 +95,11 @@ describe("rule packs", () => {
     assert.deepEqual(getRulePack("rails").languages, ["ruby"]);
     assert.equal(getRulePack("rails").thresholds?.["rails-route-sprawl.maxRoutes"], 8);
     assert.equal(getRulePack("rails").thresholds?.["rails-controller-sprawl.maxActions"], 8);
+    assert.deepEqual(getRulePack("ai-workflow-drift").rules, [
+      "ai-instruction-duplication",
+      "ai-instruction-contradiction",
+    ]);
+    assert.ok(getRulePack("ai-workflow-drift").includeGlobs?.includes("**/AGENTS.md"));
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });

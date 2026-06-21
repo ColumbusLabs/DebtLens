@@ -477,6 +477,7 @@ also declare their discovery metadata, so selecting `python`, `vue`, `svelte`, `
 | `expo` | React Native tuning for Expo Router projects |
 | `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
+| `ai-workflow-drift` | duplicated or contradictory AI assistant instruction files; no AI-authorship claims |
 
 ```json
 {
@@ -932,7 +933,7 @@ and PR comment upsert, and `--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,
-React Native, Next.js, Expo, Node, Python, Python web, Vue/Svelte SFC scripts, Kotlin, Swift, Ruby/Rails, Jetpack Compose, SwiftUI, and maintainer workflows. Additional
+React Native, Next.js, Expo, Node, Python, Python web, Vue/Svelte SFC scripts, Kotlin, Swift, Ruby/Rails, Jetpack Compose, SwiftUI, maintainer workflows, and AI workflow instruction drift. Additional
 packs expand from the same scan/reporting contract. See [`ROADMAP.md`](./ROADMAP.md) and
 [`docs/rule-packs.md`](./docs/rule-packs.md).
 

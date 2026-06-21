@@ -18,6 +18,7 @@ these commands when evaluating output, writing docs, or checking a reporter chan
 | SwiftUI screen | `debtlens scan examples/swiftui --pack swiftui --min-severity info` | SwiftUI large-view and state-sprawl rules. |
 | Ruby service | `debtlens scan examples/ruby --pack ruby --min-severity info` | Ruby duplicate, large-method, thin-wrapper, and TODO rules. |
 | Rails app | `debtlens scan examples/rails --pack rails --min-severity info` | Rails route/controller sprawl plus Ruby core rules. |
+| AI workflow instructions | `debtlens scan examples/ai-workflow --pack ai-workflow-drift --min-severity info` | Duplicated and contradictory assistant instruction files. |
 | Jetpack Compose screen | `debtlens scan examples/compose --pack compose --min-severity info` | Compose large-composable and state-hoisting rules. |
 | Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |
 | False-positive playground | `debtlens scan examples/false-positives --pack react --min-severity info` | Calibrated near-misses that should stay quiet. |

@@ -37,7 +37,7 @@ inputs:
     description: Compare against a git ref and report only introduced findings.
     default: ""
   pack:
-    description: Built-in rule pack preset (core, react, react-native, next, expo, node, python, python-web, vue, svelte, kotlin, swift, ruby, rails, compose, swiftui, ai-assisted-maintainer, oss-maintainer).
+    description: Built-in rule pack preset (core, react, react-native, next, expo, node, python, python-web, vue, svelte, kotlin, swift, ruby, rails, compose, swiftui, ai-assisted-maintainer, oss-maintainer, ai-workflow-drift).
     default: ""
   package:
     description: Workspace package name to scan.

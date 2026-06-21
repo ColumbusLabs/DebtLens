@@ -625,7 +625,7 @@ debtlens compare previous.json current.json --format json
 
 ## GitHub Action
 
-Run DebtLens on pull requests and surface findings as code-scanning annotations. Pin version tags such as `@v0.3.0` when you want repeatable CI; moving tags such as `@v0` track the latest compatible v0 release. Versioned releases attach a self-contained Action runtime asset so tagged Action runs can skip the source build path; source checkouts build as a fallback when the release asset or `dist/cli/index.js` is missing.
+Run DebtLens on pull requests and surface findings as code-scanning annotations. Pin version tags such as `@v0.4.0` when you want repeatable CI; moving tags such as `@v0` track the latest compatible v0 release. Versioned releases attach a self-contained Action runtime asset so tagged Action runs can skip the source build path; source checkouts build as a fallback when the release asset or `dist/cli/index.js` is missing.
 
 ```yaml
 name: DebtLens
@@ -642,7 +642,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0     # needed for --changed and optional hotspot churn
-      - uses: ColumbusLabs/debtlens@v0.3.0
+      - uses: ColumbusLabs/debtlens@v0.4.0
         with:
           changed: origin/${{ github.base_ref }}
           format: sarif
@@ -940,10 +940,11 @@ node dist/cli/index.js scan examples/react --min-severity info
 
 ## Project status
 
-DebtLens is in the **v0.3** release line. Recent capabilities include `debtlens adopt`
-and `debtlens doctor`, rule packs, inline suppressions with required reasons,
-confidence-aware `--fail-on`, monorepo `--package` scanning, GitHub Action step summaries
-and PR comment upsert, and `--diff-base` branch comparisons.
+DebtLens is in the **v0.4** release line. Recent capabilities include code-smell detectors
+for silent failures and dead code, `debtlens adopt` and `debtlens doctor`, rule packs,
+inline suppressions with required reasons, confidence-aware `--fail-on`, monorepo
+`--package` scanning, GitHub Action step summaries and PR comment upsert, and
+`--diff-base` branch comparisons.
 
 The architecture stays intentionally simple: a language-agnostic scan and reporting
 layer with pluggable rule packs on top. Current shipped packs cover core TS/JS, React,

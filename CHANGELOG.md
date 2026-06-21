@@ -5,6 +5,8 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-21
+
 ### Added
 
 - **Code smell detectors** for silent failures and dead code: `empty-catch`, `swallowed-error`,

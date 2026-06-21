@@ -176,11 +176,7 @@ export function extractSwiftViewStructs(file: SourceFileInfo): SwiftViewStruct[]
 
 export function parseSwiftParams(raw: string): string[] {
   return splitSwiftArgs(raw)
-    .map((param) => param.replace(/=.*/, "").trim())
-    .map((param) => param.replace(/^(?:inout|some|any|borrowing|consuming)\s+/, "").trim())
-    .map((param) => param.replace(/_+\s+/, "").trim())
-    .map((param) => param.split(":")[0]?.trim() ?? "")
-    .filter((param) => /^[A-Za-z_]\w*$/.test(param))
+    .map(parseSwiftParamName)
     .filter(Boolean);
 }
 
@@ -319,10 +315,20 @@ function parseSwiftFunctionSignature(headerText: string): SwiftFunctionSignature
   if (header.slice(cursor - 4, cursor) !== "func") return undefined;
   while (/\s/.test(header[cursor] ?? "")) cursor += 1;
 
-  const nameMatch = header.slice(cursor).match(/^([A-Za-z_]\w*)\s*\(/);
+  const nameMatch = header.slice(cursor).match(/^([A-Za-z_]\w*)/);
   if (!nameMatch) return undefined;
   const name = nameMatch[1] ?? "";
-  cursor += nameMatch[0].length - 1;
+  cursor += name.length;
+  while (/\s/.test(header[cursor] ?? "")) cursor += 1;
+
+  if (header[cursor] === "<") {
+    const genericEnd = findMatchingDelimiter(header, cursor, "<", ">");
+    if (genericEnd === -1) return undefined;
+    cursor = genericEnd + 1;
+    while (/\s/.test(header[cursor] ?? "")) cursor += 1;
+  }
+
+  if (header[cursor] !== "(") return undefined;
 
   const paramsStart = cursor;
   const paramsEnd = findMatchingDelimiter(header, paramsStart, "(", ")");
@@ -410,6 +416,20 @@ function extractBlockBodyLines(textLines: string[]): string[] {
   return text.slice(start + 1, end).split(/\r?\n/);
 }
 
+function parseSwiftParamName(rawParam: string): string {
+  const declaration = rawParam
+    .replace(/=.*/, "")
+    .replace(/@[A-Za-z_][\w.]*\b(?:\([^)]*\))?/g, "")
+    .replace(/\.\.\./g, "")
+    .trim();
+  const namePart = declaration.split(":")[0]?.trim() ?? "";
+  const tokens = namePart
+    .split(/\s+/)
+    .filter((token) => token && !["inout", "some", "any", "borrowing", "consuming"].includes(token));
+  const localName = tokens.at(-1)?.replace(/^_+$/, "") ?? "";
+  return /^[A-Za-z_]\w*$/.test(localName) ? localName : "";
+}
+
 function extractViewBody(textLines: string[], startIndex: number): {
   bodyLines: string[];
   startLine: number;
@@ -421,13 +441,33 @@ function extractViewBody(textLines: string[], startIndex: number): {
 
   const bodyDelimiterIndex = text.indexOf("{", bodyMatch.index);
   if (bodyDelimiterIndex === -1) return undefined;
-  const endIndex = findSwiftBlockEnd(textLines, 0, bodyDelimiterIndex);
-  const bodyLines = extractBlockBodyLines(textLines.slice(0, endIndex + 1));
+  const bodyEndIndex = findSwiftBlockEndOffset(text, bodyDelimiterIndex);
+  if (bodyEndIndex === -1) return undefined;
+  const bodyLines = text.slice(bodyDelimiterIndex + 1, bodyEndIndex).split(/\r?\n/);
   return {
     bodyLines,
     startLine: startIndex + countLineBreaks(text.slice(0, bodyDelimiterIndex)) + 1,
-    endLine: startIndex + endIndex + 1,
+    endLine: startIndex + countLineBreaks(text.slice(0, bodyEndIndex)) + 1,
   };
+}
+
+function findSwiftBlockEndOffset(text: string, bodyDelimiterIndex: number): number {
+  const code = maskSwiftTrivia(text);
+  let depth = 0;
+  let seenBlock = false;
+
+  for (let index = bodyDelimiterIndex; index < code.length; index += 1) {
+    const char = code[index] ?? "";
+    if (char === "{") {
+      seenBlock = true;
+      depth += 1;
+    } else if (char === "}" && seenBlock) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+
+  return -1;
 }
 
 function extractStructPropertyDeclarations(textLines: string[]): string[] {
@@ -440,7 +480,7 @@ function extractStructPropertyDeclarations(textLines: string[]): string[] {
   const memberText = text.slice(bodyStart + 1, bodyEnd);
   const maskedMemberText = maskSwiftTrivia(memberText);
   const bodyStartLine = countLineBreaks(text.slice(0, bodyStart + 1));
-  const declarationPattern = /(?:^|[\n;])\s*((?:@\w+\s*)*(?:private|fileprivate|internal|public|open)?\s*(?:var|let)\s+[\s\S]*?)(?=[\n;]|$)/g;
+  const declarationPattern = /(?:^|[\n;])\s*((?:@[A-Za-z_][\w.]*\b(?:\([^)]*\))?\s*)*(?:private|fileprivate|internal|public|open)?\s*(?:var|let)\s+[\s\S]*?)(?=[\n;]|$)/g;
 
   for (const match of maskedMemberText.matchAll(declarationPattern)) {
     const declaration = match[1]?.replace(/\s+/g, " ").trim() ?? "";
@@ -574,11 +614,18 @@ function scanSwift(text: string, callbacks: SwiftScannerCallbacks): void {
       const start = index;
       const commentLine = line;
       index += 2;
-      while (index < text.length) {
+      let depth = 1;
+      while (index < text.length && depth > 0) {
         if (text[index] === "\n") line += 1;
-        if (text[index] === "*" && text[index + 1] === "/") {
+        if (text[index] === "/" && text[index + 1] === "*") {
+          depth += 1;
           index += 2;
-          break;
+          continue;
+        }
+        if (text[index] === "*" && text[index + 1] === "/") {
+          depth -= 1;
+          index += 2;
+          continue;
         }
         index += 1;
       }

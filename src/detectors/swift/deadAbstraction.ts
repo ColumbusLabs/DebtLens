@@ -52,13 +52,18 @@ function describeSwiftWrapper(fn: SwiftFunction): { description: string; confide
   const callee = match[1] ?? "";
   const args = splitSwiftArgs(match[2] ?? "");
   const params = fn.params;
-  if (args.length !== params.length || !args.every((arg, index) => arg === params[index])) return undefined;
+  if (args.length !== params.length || !args.every((arg, index) => normalizeSwiftCallArgument(arg) === params[index])) return undefined;
   return { description: `it only delegates to ${callee}(...)`, confidence: fn.expressionBody ? 0.86 : 0.82 };
 }
 
 function shouldSkipWrapper(fn: SwiftFunction): boolean {
   return fn.modifiers.includes("override")
-    || Boolean(fn.parentViewStruct)
     || fn.isViewBody
-    || fn.attributes.some((attribute) => /@(?:State|Binding|ObservedObject|StateObject|FocusState|Preview)\b/.test(attribute));
+    || fn.attributes.some((attribute) => /@(?:State|Binding|ObservedObject|StateObject|FocusState|ViewBuilder|Preview)\b/.test(attribute));
+}
+
+function normalizeSwiftCallArgument(rawArg: string): string {
+  const trimmed = rawArg.trim();
+  const labeled = trimmed.match(/^[A-Za-z_]\w*\s*:\s*(.+)$/s);
+  return (labeled?.[1] ?? trimmed).replace(/^&/, "").trim();
 }

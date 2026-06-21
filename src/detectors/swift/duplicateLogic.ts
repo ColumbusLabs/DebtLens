@@ -31,7 +31,7 @@ export const swiftDuplicateLogicDetector: Detector = {
 
     for (const file of context.files) {
       for (const fn of extractSwiftFunctions(file)) {
-        if (fn.parentViewStruct) continue;
+        if (fn.isViewBody || fn.attributes.some((attribute) => /@ViewBuilder\b/.test(attribute))) continue;
         const lines = fn.endLine - fn.startLine + 1;
         if (lines < minLines || lines > 240) continue;
         const normalized = normalizeSwiftSnippet(fn.text);

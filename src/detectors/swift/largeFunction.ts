@@ -16,7 +16,7 @@ export const swiftLargeFunctionDetector: Detector = {
 
     for (const file of context.files) {
       for (const fn of extractSwiftFunctions(file)) {
-        if (fn.parentViewStruct || fn.isViewBody || fn.attributes.some((attribute) => /@ViewBuilder\b/.test(attribute))) continue;
+        if (fn.isViewBody || fn.attributes.some((attribute) => /@ViewBuilder\b/.test(attribute))) continue;
         const lines = fn.endLine - fn.startLine + 1;
         const branches = countSwiftBranches(fn);
         if (lines <= maxLines && branches <= maxBranches) continue;

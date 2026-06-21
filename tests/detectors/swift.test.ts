@@ -93,6 +93,26 @@ func blockComment() -> String { "block" }
     assert.deepEqual(issues.map((issue) => issue.location?.startLine), [7, 10]);
   });
 
+  it("keeps nested Swift block comments masked as one comment", async () => {
+    const issues = await runDetector(swiftTodoCommentDetector, {
+      "src/Service.swift": `
+/*
+ FIXME(PROJ-1): replace this nested sample.
+ /*
+  TODO(PROJ-2): inner marker stays inside the outer comment.
+ */
+ if false { fatalError("commented code") }
+*/
+func clean() -> String {
+    return "ok"
+}
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.location?.startLine, 2);
+  });
+
   it("detects Swift duplicate logic and ignores dissimilar functions", async () => {
     const issues = await runDetector(swiftDuplicateLogicDetector, {
       "src/Service.swift": `
@@ -166,6 +186,61 @@ func routeInvoice(invoice: Invoice) -> String {
     assert.match(issues[0]?.message ?? "", /routeInvoice/);
   });
 
+  it("parses generic Swift functions for function-based rules", async () => {
+    const duplicateIssues = await runDetector(swiftDuplicateLogicDetector, {
+      "src/Service.swift": `
+func normalizeInvoice<T>(invoice: T, paid: Bool, total: Double, customer: String) -> String {
+    let status = paid ? "paid" : "open"
+    let bucket: String
+    if total > 1000 {
+        bucket = "enterprise"
+    } else if total > 100 {
+        bucket = "midmarket"
+    } else {
+        bucket = "standard"
+    }
+    return "\\(customer):\\(status):\\(bucket)"
+}
+
+func normalizeReceipt<U>(receipt: U, paid: Bool, total: Double, customer: String) -> String {
+    let status = paid ? "paid" : "open"
+    let bucket: String
+    if total > 1000 {
+        bucket = "enterprise"
+    } else if total > 100 {
+        bucket = "midmarket"
+    } else {
+        bucket = "standard"
+    }
+    return "\\(customer):\\(status):\\(bucket)"
+}
+`,
+    });
+    const largeIssues = await runDetector(swiftLargeFunctionDetector, {
+      "src/Service.swift": `
+func routeInvoice<T>(_ invoice: T, total: Double, paid: Bool, customer: String) -> String {
+    if total > 1000 { return "enterprise" }
+    if !paid { return "collections" }
+    if customer.isEmpty { return "unknown" }
+    return "standard"
+}
+`,
+    }, {
+      thresholds: { "large-function.maxBranches": 2 },
+    });
+    const wrapperIssues = await runDetector(swiftDeadAbstractionDetector, {
+      "src/Service.swift": `
+func renderInvoice<T>(for invoice: T) -> String {
+    return buildInvoiceView(invoice: invoice)
+}
+`,
+    });
+
+    assert.equal(duplicateIssues.length, 1);
+    assert.equal(largeIssues.length, 1);
+    assert.equal(wrapperIssues.length, 1);
+  });
+
   it("handles default parameters and skips SwiftUI view bodies and ViewBuilder functions", async () => {
     const largeIssues = await runDetector(swiftLargeFunctionDetector, {
       "src/Service.swift": `
@@ -190,6 +265,14 @@ struct InvoiceCard: View {
         if true { Text("branches") }
         if false { Text("ignored") }
     }
+
+    func routeInvoice(invoice: Invoice) -> String {
+        if invoice.total > 1000 { return "enterprise" }
+        if !invoice.paid { return "collections" }
+        if invoice.customer.isEmpty { return "unknown" }
+        if invoice.overdue { return "review" }
+        return "standard"
+    }
 }
 
 @ViewBuilder
@@ -211,8 +294,9 @@ func renderInvoices(prefix: String = defaultPrefix()) -> String {
 `,
     });
 
-    assert.equal(largeIssues.length, 1);
-    assert.ok((largeIssues[0]?.location?.endLine ?? 0) > (largeIssues[0]?.location?.startLine ?? 0));
+    assert.equal(largeIssues.length, 2);
+    assert.ok(largeIssues.some((issue) => issue.message.includes("routeInvoice")));
+    assert.ok(largeIssues.every((issue) => (issue.location?.endLine ?? 0) > (issue.location?.startLine ?? 0)));
     assert.equal(wrapperIssues.length, 1);
     assert.match(wrapperIssues[0]?.message ?? "", /renderInvoices/);
   });
@@ -228,11 +312,11 @@ func renderInvoices(prefix: String = defaultPrefix()) -> String {
     const issues = await runDetector(swiftDeadAbstractionDetector, {
       "src/Service.swift": `
 func renderInvoice(invoice: Invoice) -> String {
-    buildInvoiceView(invoice)
+    buildInvoiceView(invoice: invoice)
 }
 
 func renderReceipt(receipt: Receipt) -> String {
-    return buildReceiptView(receipt)
+    return buildReceiptView(receipt: receipt)
 }
 
 func renderTransformed(invoice: Invoice) -> String {

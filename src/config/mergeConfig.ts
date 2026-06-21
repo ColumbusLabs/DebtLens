@@ -95,9 +95,12 @@ function resolveIncludeGlobs(
   if (cliOptions.include?.length) return cliOptions.include;
   const base = resolveBaseIncludeGlobs(fileConfig, languageDiscovery);
   const discoveryLanguages = languageDiscovery.languages.filter((language) => language !== DEFAULT_SOURCE_LANGUAGE);
+  const packIncludeGlobs = parsePackIds(cliOptions.pack ?? fileConfig.pack)
+    .flatMap((packId) => getRulePack(packId).includeGlobs ?? []);
   return unique([
     ...base,
     ...includeGlobsForLanguages(discoveryLanguages),
+    ...packIncludeGlobs,
   ]);
 }
 

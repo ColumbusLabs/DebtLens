@@ -23,6 +23,6 @@ Action behavior are language-neutral; only file discovery and detectors are pack
 | Mixed TS/Python/SFC/Kotlin/Swift monorepo | `core,python,vue,svelte,kotlin,swift` | `debtlens scan . --pack core,python,vue,svelte,kotlin,swift --format json` | Use package or path-scoped baselines; add `compose` or `swiftui` for UI modules. |
 | Open-source library | `oss-maintainer` | `debtlens scan . --pack oss-maintainer --min-severity medium` | Prefer reports and issues before hard CI gates. |
 | Ruby service or Rails app | `ruby` / `rails` | `debtlens scan . --pack rails --min-severity low` | Advisory first; review route and controller ownership before gating. |
+| Agent-heavy repo with instruction files | `ai-workflow-drift` | `debtlens scan . --pack ai-workflow-drift --min-severity medium` | Review duplicated/contradictory guidance; not authorship detection. |
 
-Future packs such as AI workflow instruction drift should reuse this same chooser shape
-once their MVPs land.
+Future packs should reuse this same chooser shape once their MVPs land.

@@ -127,6 +127,7 @@ describe("config JSON schema", () => {
       "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",
+      "ai-workflow-drift",
     ]);
     assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /compose/);
     assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /svelte/);

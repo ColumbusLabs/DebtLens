@@ -1028,3 +1028,41 @@ When this is a false positive:
 - the competing names belong to separate concepts rather than one overloaded domain term
 
 Confidence: **0.62**. Co-occurring domain synonyms are often legitimate vocabulary, so this rule stays advisory.
+
+## `ai-instruction-duplication`
+
+Flags the same normalized instruction block repeated across assistant instruction files such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/**`, and `.github/copilot-instructions.md`.
+
+Why it matters: duplicated guidance creates maintenance overhead and makes it unclear which file is canonical when assistants load multiple instruction sources.
+
+Good fixes:
+
+- keep one canonical instruction file and link to it from tool-specific files
+- tailor each file to tool-specific context instead of copy-pasting shared blocks
+
+When this is a false positive:
+
+- the repeated text is intentionally mirrored while one file is being migrated
+- short boilerplate headers are duplicated but substantive guidance differs elsewhere in the file
+
+Confidence: **0.82**. Normalized text equality is direct evidence, but some duplication may be deliberate during transitions.
+
+## `ai-instruction-contradiction`
+
+Flags conservative opposing directives across assistant instruction files, such as "always run tests" versus "skip tests".
+
+Why it matters: contradictory assistant guidance produces inconsistent edits, failed CI expectations, and review churn.
+
+Good fixes:
+
+- reconcile policies into one canonical instruction
+- scope exceptions explicitly ("skip tests only for docs-only edits") in the same section as the base rule
+
+When this is a false positive:
+
+- the policies apply to different contexts and are not actually opposing
+- one file is deprecated and scheduled for removal
+
+Confidence: **0.80**. Pattern matching is intentionally conservative and may miss nuanced conflicts or over-flag during migrations.
+
+This pack does **not** detect AI-authored code. It inspects instruction markdown only and performs local analysis without external telemetry.

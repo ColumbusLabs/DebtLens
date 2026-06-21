@@ -1,10 +1,13 @@
 import type { SourceLanguage } from "../core/types.js";
+import { INSTRUCTION_FILE_GLOBS } from "../detectors/aiWorkflow/parse.js";
 
 export interface RulePack {
   id: string;
   description: string;
   rules: string[];
   languages: SourceLanguage[];
+  /** Extra include globs merged into scan discovery when this pack is selected. */
+  includeGlobs?: string[];
   thresholds?: Record<string, number>;
   duplicatedLiteral?: {
     ignoreStrings?: string[];
@@ -54,6 +57,11 @@ const NODE_RULES = [
   ...CORE_RULES,
   "handler-depth",
   "route-sprawl",
+] as const;
+
+const AI_WORKFLOW_DRIFT_RULES = [
+  "ai-instruction-duplication",
+  "ai-instruction-contradiction",
 ] as const;
 
 const AI_ASSISTED_MAINTAINER_RULES = [
@@ -303,6 +311,13 @@ export const RULE_PACKS: Record<string, RulePack> = {
       "barrel-file.maxReExports": 5,
       "weak-test-boundary.allowTypeOnly": 1,
     },
+  },
+  "ai-workflow-drift": {
+    id: "ai-workflow-drift",
+    description: "Flags duplicated or contradictory AI assistant instruction files; does not detect AI-authored code.",
+    rules: [...AI_WORKFLOW_DRIFT_RULES],
+    languages: ["tsjs"],
+    includeGlobs: [...INSTRUCTION_FILE_GLOBS],
   },
 };
 

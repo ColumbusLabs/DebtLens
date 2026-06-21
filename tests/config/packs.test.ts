@@ -7,17 +7,17 @@ describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
     assert.equal(packs.length, 19);
-    assert.equal(getRulePack("core").rules.length, 13);
+    assert.equal(getRulePack("core").rules.length, 17);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
-    assert.equal(getRulePack("react").rules.length, 20);
-    assert.equal(getRulePack("react-native").rules.length, 21);
+    assert.equal(getRulePack("react").rules.length, 24);
+    assert.equal(getRulePack("react-native").rules.length, 25);
     assert.ok(getRulePack("react-native").rules.includes("rn-host-forwarding"));
-    assert.equal(getRulePack("next").rules.length, 23);
+    assert.equal(getRulePack("next").rules.length, 27);
     assert.ok(getRulePack("next").rules.includes("server-client-boundary"));
     assert.ok(getRulePack("next").rules.includes("route-handler-size"));
     assert.ok(getRulePack("next").rules.includes("data-loader-sprawl"));
     assert.deepEqual(getRulePack("next").duplicatedLiteral?.ignoreStrings, ["use client", "use server"]);
-    assert.equal(getRulePack("expo").rules.length, 21);
+    assert.equal(getRulePack("expo").rules.length, 25);
     assert.ok(getRulePack("node").rules.includes("handler-depth"));
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
     assert.deepEqual(getRulePack("python").rules, [
@@ -26,6 +26,7 @@ describe("rule packs", () => {
       "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
+      "python-error-handling",
     ]);
     assert.deepEqual(getRulePack("python").languages, ["python"]);
     assert.deepEqual(getRulePack("python-web").rules, [
@@ -34,6 +35,7 @@ describe("rule packs", () => {
       "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
+      "python-error-handling",
       "python-route-sprawl",
     ]);
     assert.deepEqual(getRulePack("python-web").languages, ["python"]);
@@ -57,6 +59,7 @@ describe("rule packs", () => {
       "kotlin-large-function",
       "kotlin-dead-abstraction",
       "kotlin-todo-comment",
+      "kotlin-empty-catch",
     ]);
     assert.deepEqual(getRulePack("kotlin").languages, ["kotlin"]);
     assert.deepEqual(getRulePack("compose").rules, [
@@ -208,6 +211,7 @@ describe("rule packs", () => {
       "python-complex-control-flow",
       "python-dead-abstraction",
       "python-todo-comment",
+      "python-error-handling",
       "python-route-sprawl",
       "vue-todo-comment",
       "vue-large-script",

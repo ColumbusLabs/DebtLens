@@ -15,6 +15,7 @@ import {
   pythonRouteSprawlDetector,
   pythonTodoCommentDetector,
 } from "../../src/detectors/python/index.js";
+import { pythonErrorHandlingDetector } from "../../src/detectors/python/errorHandling.js";
 import { extractPythonFunctions, extractPythonModule } from "../../src/detectors/python/parse.js";
 import { renderReport } from "../../src/reporters/index.js";
 import { runDetector } from "../helpers/runDetector.js";
@@ -605,6 +606,84 @@ def render_invoice(invoice):
     enriched = dict(invoice)
     enriched["rendered"] = True
     return build_invoice_view(enriched)
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+});
+
+describe("python-error-handling detector", () => {
+  it("flags pass-only except blocks including bare except", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+def load(path):
+    try:
+        return open(path).read()
+    except:
+        pass
+
+def parse(value):
+    try:
+        return int(value)
+    except ValueError:
+        pass
+`,
+    });
+
+    assert.equal(issues.length, 2);
+    assert.ok(issues.every((issue) => issue.ruleId === "python-error-handling"));
+    assert.ok(issues.some((issue) => issue.message.includes("pass or comments")));
+  });
+
+  it("flags bare except and broad Exception handlers that only log", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+import logging
+
+logger = logging.getLogger(__name__)
+
+def load(path):
+    try:
+        return open(path).read()
+    except:
+        logger.exception("failed to read")
+
+def parse(value):
+    try:
+        return int(value)
+    except Exception:
+        print("parse failed")
+`,
+    });
+
+    assert.equal(issues.length, 2);
+    assert.ok(issues.every((issue) => issue.message.includes("logs the error")));
+  });
+
+  it("does not flag specific except blocks that rethrow", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+def parse(value):
+    try:
+        return int(value)
+    except ValueError as error:
+        raise error
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("honors disable directives on the except line", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+def load(path):
+    try:
+        return open(path).read()
+    # debtlens-disable-next-line python-error-handling -- vendor SDK throws benign noise
+    except:
+        pass
 `,
     });
 

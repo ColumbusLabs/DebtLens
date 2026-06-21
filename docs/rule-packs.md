@@ -38,6 +38,10 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `barrel-file` | **core** | Re-export-only barrels that obscure import graphs | Low |
 | `weak-test-boundary` | **core** | Production imports from test-only modules | Medium |
 | `api-surface-sprawl` | **core** | Files exporting too many public symbols | Medium |
+| `empty-catch` | **core** | Empty or comment-only catch blocks that silently ignore errors | Medium |
+| `swallowed-error` | **core** | Catch blocks that only log without rethrowing or returning | Medium |
+| `floating-promise` | **core** | Unawaited promise-returning calls and effect fire-and-forget | Medium |
+| `commented-out-code` | **core** | Contiguous comment lines that look like dead code | Low |
 | `large-component` | **react** | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | **react** | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | **react** | Long or overloaded React effect hooks | Medium |
@@ -56,6 +60,7 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `python-complex-control-flow` | **python** | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
+| `python-error-handling` | **python** | Empty/bare except blocks and log-only Python error handlers | Medium |
 | `python-route-sprawl` | **python-web** | Flask/Blueprint or Django URL modules registering too many routes | Medium |
 | `vue-todo-comment` | **vue** | TODO/FIXME/HACK/temporary comments inside Vue SFC script blocks | Low |
 | `vue-large-script` | **vue** | Oversized Vue SFC scripts or script functions | Medium |
@@ -67,6 +72,7 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
 | `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
 | `kotlin-todo-comment` | **kotlin** | TODO/FIXME/HACK/temporary implementation comments in Kotlin files | Low |
+| `kotlin-empty-catch` | **kotlin** | Empty or comment-only Kotlin catch blocks | Medium |
 | `swift-duplicate-logic` | **swift** | Near-duplicate Swift functions using normalized function-body similarity | Medium |
 | `swift-large-function` | **swift** | Swift functions over line or branch-count budgets | Medium |
 | `swift-dead-abstraction` | **swift** | Thin Swift functions that only pass arguments through | Low |

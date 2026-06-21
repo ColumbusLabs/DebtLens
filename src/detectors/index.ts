@@ -7,14 +7,17 @@ import { contextProviderSprawlDetector } from "./contextProviderSprawl.js";
 import { complexControlFlowDetector } from "./complexControlFlow.js";
 import { configDriftDetector } from "./configDrift.js";
 import { dataLoaderSprawlDetector } from "./dataLoaderSprawl.js";
+import { commentedOutCodeDetector } from "./commentedOutCode.js";
 import { deadAbstractionDetector } from "./deadAbstraction.js";
+import { emptyCatchDetector, swallowedErrorDetector } from "./errorHandling.js";
+import { floatingPromiseDetector } from "./floatingPromise.js";
 import { duplicateLogicDetector } from "./duplicateLogic.js";
 import { duplicatedLiteralDetector } from "./duplicatedLiteral.js";
 import { effectComplexityDetector } from "./effectComplexity.js";
 import { handlerDepthDetector } from "./handlerDepth.js";
 import { hookDependencySmellDetector } from "./hookDependencySmell.js";
 import { importCycleDetector } from "./importCycle.js";
-import { kotlinDeadAbstractionDetector, kotlinDuplicateLogicDetector, kotlinLargeFunctionDetector, kotlinTodoCommentDetector } from "./kotlin/index.js";
+import { kotlinDeadAbstractionDetector, kotlinDuplicateLogicDetector, kotlinEmptyCatchDetector, kotlinLargeFunctionDetector, kotlinTodoCommentDetector } from "./kotlin/index.js";
 import { swiftDeadAbstractionDetector, swiftDuplicateLogicDetector, swiftLargeFunctionDetector, swiftTodoCommentDetector } from "./swift/index.js";
 import { swiftuiLargeViewDetector, swiftuiStateSprawlDetector } from "./swiftui/index.js";
 import { largeComponentDetector } from "./largeComponent.js";
@@ -25,6 +28,7 @@ import {
   pythonComplexControlFlowDetector,
   pythonDeadAbstractionDetector,
   pythonDuplicateLogicDetector,
+  pythonErrorHandlingDetector,
   pythonLargeFunctionDetector,
   pythonRouteSprawlDetector,
   pythonTodoCommentDetector,
@@ -73,6 +77,10 @@ export const allDetectors: Detector[] = [
   namingDriftDetector,
   barrelFileDetector,
   weakTestBoundaryDetector,
+  emptyCatchDetector,
+  swallowedErrorDetector,
+  floatingPromiseDetector,
+  commentedOutCodeDetector,
   apiSurfaceSprawlDetector,
   storyOnlyComponentDetector,
   pythonTodoCommentDetector,
@@ -80,6 +88,7 @@ export const allDetectors: Detector[] = [
   pythonComplexControlFlowDetector,
   pythonDuplicateLogicDetector,
   pythonDeadAbstractionDetector,
+  pythonErrorHandlingDetector,
   pythonRouteSprawlDetector,
   vueTodoCommentDetector,
   vueLargeScriptDetector,
@@ -91,6 +100,7 @@ export const allDetectors: Detector[] = [
   kotlinLargeFunctionDetector,
   kotlinDuplicateLogicDetector,
   kotlinDeadAbstractionDetector,
+  kotlinEmptyCatchDetector,
   swiftTodoCommentDetector,
   swiftLargeFunctionDetector,
   swiftDuplicateLogicDetector,

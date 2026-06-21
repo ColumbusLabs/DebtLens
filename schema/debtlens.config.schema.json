@@ -95,6 +95,10 @@
               "naming-drift",
               "barrel-file",
               "weak-test-boundary",
+              "empty-catch",
+              "swallowed-error",
+              "floating-promise",
+              "commented-out-code",
               "api-surface-sprawl",
               "story-only-component",
               "python-todo-comment",
@@ -102,6 +106,7 @@
               "python-complex-control-flow",
               "python-duplicate-logic",
               "python-dead-abstraction",
+              "python-error-handling",
               "python-route-sprawl",
               "vue-todo-comment",
               "vue-large-script",
@@ -113,6 +118,7 @@
               "kotlin-large-function",
               "kotlin-duplicate-logic",
               "kotlin-dead-abstraction",
+              "kotlin-empty-catch",
               "swift-todo-comment",
               "swift-large-function",
               "swift-duplicate-logic",
@@ -318,6 +324,21 @@
           "type": "number"
         },
         "compose-state-hoisting.maxLocalState": {
+          "type": "number"
+        },
+        "empty-catch.allowCommentOnly": {
+          "type": "number"
+        },
+        "floating-promise.allowVoid": {
+          "type": "number"
+        },
+        "floating-promise.maxPerFile": {
+          "type": "number"
+        },
+        "commented-out-code.minLines": {
+          "type": "number"
+        },
+        "commented-out-code.maxPerFile": {
           "type": "number"
         },
         "swiftui-large-view.maxLines": {
@@ -549,6 +570,38 @@
             "high"
           ]
         },
+        "empty-catch": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "swallowed-error": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "floating-promise": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "commented-out-code": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "api-surface-sprawl": {
           "enum": [
             "info",
@@ -598,6 +651,14 @@
           ]
         },
         "python-dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "python-error-handling": {
           "enum": [
             "info",
             "low",
@@ -686,6 +747,14 @@
           ]
         },
         "kotlin-dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "kotlin-empty-catch": {
           "enum": [
             "info",
             "low",
@@ -955,6 +1024,26 @@
           "minimum": 0,
           "maximum": 1
         },
+        "empty-catch": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "swallowed-error": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "floating-promise": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "commented-out-code": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "api-surface-sprawl": {
           "type": "number",
           "minimum": 0,
@@ -986,6 +1075,11 @@
           "maximum": 1
         },
         "python-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "python-error-handling": {
           "type": "number",
           "minimum": 0,
           "maximum": 1
@@ -1041,6 +1135,11 @@
           "maximum": 1
         },
         "kotlin-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "kotlin-empty-catch": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

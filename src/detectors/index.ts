@@ -15,6 +15,7 @@ import { hookDependencySmellDetector } from "./hookDependencySmell.js";
 import { importCycleDetector } from "./importCycle.js";
 import { kotlinDeadAbstractionDetector, kotlinDuplicateLogicDetector, kotlinLargeFunctionDetector, kotlinTodoCommentDetector } from "./kotlin/index.js";
 import { swiftDeadAbstractionDetector, swiftDuplicateLogicDetector, swiftLargeFunctionDetector, swiftTodoCommentDetector } from "./swift/index.js";
+import { swiftuiLargeViewDetector, swiftuiStateSprawlDetector } from "./swiftui/index.js";
 import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
 import { namingDriftDetector } from "./namingDrift.js";
@@ -86,6 +87,8 @@ export const allDetectors: Detector[] = [
   swiftLargeFunctionDetector,
   swiftDuplicateLogicDetector,
   swiftDeadAbstractionDetector,
+  swiftuiLargeViewDetector,
+  swiftuiStateSprawlDetector,
   composeLargeComposableDetector,
   composeStateHoistingDetector,
 ];

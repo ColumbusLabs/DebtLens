@@ -52,7 +52,7 @@ for the current support matrix, future languages, and contribution paths.
 ## v0.5 — Additional language packs
 
 - **Swift core pack** — duplicate/large-function/dead-abstraction/TODO rules for `.swift` files ([#194](https://github.com/ColumbusLabs/DebtLens/issues/194)).
-- **SwiftUI** — oversized views and state sprawl (planned framework pack).
+- **SwiftUI pack** — oversized views and state sprawl ([#195](https://github.com/ColumbusLabs/DebtLens/issues/195)).
 - Language packs reuse baselines, `--changed`, reporters, and CI; only AST parsing and detectors are language-specific.
 - Documented process for proposing and shipping a new language pack.
 

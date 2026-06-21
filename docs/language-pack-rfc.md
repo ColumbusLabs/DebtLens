@@ -179,11 +179,14 @@ Current implementation:
 - `swift-large-function` counts function lines and conservative branch tokens while skipping SwiftUI `body` properties and `@ViewBuilder` functions.
 - `swift-dead-abstraction` flags simple single-return or implicit-return pass-through wrappers.
 - `--pack swift` widens discovery to `.swift` files and rewrites the default `ios/**` exclude so Swift sources under iOS app trees remain visible.
+- `swiftui-large-view` flags oversized or branch-heavy SwiftUI `View` bodies.
+- `swiftui-state-sprawl` flags views that own many local property-wrapper state holders.
+- `--pack swiftui` also widens discovery to `.swift`, but selects only SwiftUI view rules unless combined with `swift`.
 
 Known limitations:
 
 - The extractor is not a Swift compiler. It intentionally avoids type resolution, import graphs, and trailing-closure semantics.
-- SwiftUI view sizing and state sprawl remain separate framework-pack work.
+- UIKit view-controller sizing remains future framework-pack work separate from SwiftUI.
 
 ## Vue and Svelte SFC script packs
 

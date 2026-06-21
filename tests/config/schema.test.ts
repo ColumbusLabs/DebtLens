@@ -110,6 +110,7 @@ describe("config JSON schema", () => {
       "svelte",
       "kotlin",
       "swift",
+      "swiftui",
       "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",

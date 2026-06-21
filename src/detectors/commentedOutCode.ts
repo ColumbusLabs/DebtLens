@@ -35,7 +35,7 @@ export const commentedOutCodeDetector: Detector = {
       for (const run of runs) {
         if (run.lines.length < minLines) continue;
         if (isExcludedRun(run, todoPatterns)) continue;
-        if (!runHasCodeLikeLine(run)) continue;
+        if (!runLooksLikeCommentedCode(run)) continue;
 
         issues.push(createIssue({
           detector: commentedOutCodeDetector,
@@ -179,8 +179,16 @@ function isLicenseOrCopyrightLine(rawLine: string, text: string): boolean {
     || /\bAll rights reserved\b/i.test(combined);
 }
 
-function runHasCodeLikeLine(run: CommentRun): boolean {
-  return run.lines.some((line) => isCodeLikeComment(line.text));
+function runLooksLikeCommentedCode(run: CommentRun): boolean {
+  const meaningful = run.lines
+    .map((line) => line.text.trim())
+    .filter(Boolean);
+  if (meaningful.length === 0) return false;
+
+  const codeLikeCount = meaningful.filter((line) => isCodeLikeComment(line)).length;
+  if (codeLikeCount === 0) return false;
+  if (codeLikeCount === meaningful.length) return true;
+  return codeLikeCount >= 2 && codeLikeCount / meaningful.length >= 0.5;
 }
 
 function isDocumentationRun(run: CommentRun): boolean {
@@ -191,17 +199,32 @@ function isDocumentationRun(run: CommentRun): boolean {
 
   const looksLikeBlockDoc = run.lines.some((line) => /^\s*\/\*\*/.test(line.rawLine));
   const hasDocTag = meaningful.some((line) => /^@[A-Za-z][\w-]*/.test(line));
+  if (looksLikeBlockDoc && meaningful.some((line) => isDocumentationSignalLine(line))) {
+    return true;
+  }
   if (!looksLikeBlockDoc && !hasDocTag) return false;
 
   return meaningful.every((line) => isDocumentationLine(line));
 }
 
+function isDocumentationSignalLine(text: string): boolean {
+  if (isBlockDelimiterLine(text)) return false;
+  if (/^@[A-Za-z][\w-]*/.test(text)) return true;
+  if (/^\{?@[A-Za-z][\w-]*/.test(text)) return true;
+  if (/^\s*[-*]\s+/.test(text)) return true;
+  return isProseSentence(text);
+}
+
 function isDocumentationLine(text: string): boolean {
   if (/^@[A-Za-z][\w-]*/.test(text)) return true;
   if (/^\{?@[A-Za-z][\w-]*/.test(text)) return true;
-  if (/^(?:\/?\*\*?\/?|\/)$/.test(text)) return true;
+  if (isBlockDelimiterLine(text)) return true;
   if (isSeparatorLine(text)) return true;
   return isProseOnly(text) || /^[A-Za-z0-9_`'"()[\]\s.,:;!?/@{}|&<>#-]+$/.test(text);
+}
+
+function isBlockDelimiterLine(text: string): boolean {
+  return /^(?:\/?\*\*?\/?|\/)$/.test(text);
 }
 
 function isSeparatorRun(run: CommentRun): boolean {
@@ -232,17 +255,27 @@ function isCodeLikeComment(text: string): boolean {
 }
 
 function looksLikeCode(text: string): boolean {
-  if (/[;{})\]]$/.test(text)) return true;
-  return /\b(?:const|let|var|function|import|return|class|export|async|await)\b/.test(text)
-    || /\bif\s*\(/.test(text)
-    || /\bfor\s*\(/.test(text)
-    || /\bwhile\s*\(/.test(text);
+  if (/^[})\]]\s*[;,]?$/.test(text)) return true;
+  if (/^(?:const|let|var|function|import|export|return|throw|class|type|interface|enum|await)\b/.test(text)) return true;
+  if (/^(?:async\s+function|async\s*\(|async\s+[A-Za-z_$][\w$]*\s*=>)\b/.test(text)) return true;
+  if (/^(?:if|for|while|switch|catch|with)\s*\(/.test(text)) return true;
+  if (/^(?:try|else|finally)\b/.test(text)) return true;
+  if (/=>/.test(text)) return true;
+  if (/\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=/.test(text)) return true;
+  if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\([^)]*\)\s*;?$/.test(text)) return true;
+  return /[;{}]$/.test(text) && /[A-Za-z_$][\w$]*\s*(?:=|\(|=>)|\b(?:return|import|export)\b/.test(text);
 }
 
 function isProseOnly(text: string): boolean {
   if (looksLikeCode(text)) return false;
   if (/[;{}()[\]=<>]/.test(text)) return false;
   return /^[\s"A-Za-z0-9_,.'!?-]+$/.test(text) && /\s/.test(text);
+}
+
+function isProseSentence(text: string): boolean {
+  if (looksLikeCode(text)) return false;
+  return /^[A-Z`"'][\s\w`'"()[\].,:;!?/@{}|&<>=#-]+[.!?:)]?$/.test(text)
+    && /\s/.test(text);
 }
 
 function confidenceForRunLength(runLength: number, minLines: number): number {

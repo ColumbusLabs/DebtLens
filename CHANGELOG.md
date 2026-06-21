@@ -25,6 +25,8 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 - `commented-out-code` ignores JSDoc/TSDoc-style documentation runs and separator-only
   comment banners while still reporting real commented imports, functions, and returns.
+- `commented-out-code` now treats doc blocks with embedded code examples and prose
+  comment paragraphs as documentation unless the run has dense code-like statements.
 - Kotlin duplicate/dead-abstraction detection ignores semantic no-op `Unit` hook bodies
   so public API listener surfaces do not dominate reports.
 - Python dead-abstraction detection skips obvious decorated endpoint and framework

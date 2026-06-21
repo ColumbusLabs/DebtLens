@@ -66,6 +66,50 @@ export function keepAlive(options: Options) {
     assert.equal(issues.length, 0);
   });
 
+  it("does not flag JSDoc blocks that include code examples", async () => {
+    const src = `
+/**
+ * Read a client-reference manifest and extract the JSON blob.
+ *
+ * The file is a JS module that assigns a JSON object to a global:
+ *   globalThis.__RSC_MANIFEST = globalThis.__RSC_MANIFEST || {};
+ *   globalThis.__RSC_MANIFEST["/page"] = {...};
+ *
+ * Rather than evaluating user-bundled code, walk the JS string literal.
+ */
+export function parseClientReferenceManifest(filePath: string) {
+  return filePath;
+}
+`;
+    const issues = await runDetector(commentedOutCodeDetector, { "x.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("does not flag prose comments that mention code identifiers", async () => {
+    const src = `
+export function submit(event: SubmitEvent) {
+  // if the user called event.preventDefault(), do nothing.
+  // (this matches what Link does for \`onClick\`)
+  if (event.defaultPrevented) {
+    return;
+  }
+}
+`;
+    const issues = await runDetector(commentedOutCodeDetector, { "x.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("still flags commented-out control flow", async () => {
+    const src = `
+// if (enabled) {
+//   return runLegacyPath();
+// }
+export const enabled = true;
+`;
+    const issues = await runDetector(commentedOutCodeDetector, { "x.ts": src });
+    assert.equal(issues.length, 1);
+  });
+
   it("does not flag separator comment banners as commented-out code", async () => {
     const src = `
 // ---------------------------------------------------------------------------

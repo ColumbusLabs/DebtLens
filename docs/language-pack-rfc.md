@@ -1,6 +1,6 @@
 # Language Pack RFC
 
-Status: **Python, Vue/Svelte SFC script, Kotlin core, and Jetpack Compose packs shipped**
+Status: **Python, Vue/Svelte SFC script, Kotlin core, Swift core, and Jetpack Compose packs shipped**
 
 DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
 CI workflows, and GitHub Action are language-neutral, and the Python, Vue/Svelte SFC script, Kotlin, and Compose packs now
@@ -165,6 +165,25 @@ Known limitations:
 - The extractor is not a Kotlin compiler. It intentionally avoids type resolution, import graphs, and trailing-lambda semantics.
 - Compose checks are lexical UI-shape signals; they do not claim ViewModel ownership, navigation ownership, or type-aware state-flow analysis.
 - Compose remains a separate pack so core Kotlin does not overclaim UI expertise.
+
+## Swift parser recommendation
+
+Recommendation: keep the Swift pack dependency-free with a conservative lexical
+extractor, then revisit `tree-sitter-swift` or SourceKit tooling only when deeper
+type-aware rules justify it.
+
+Current implementation:
+
+- `swift-todo-comment` scans Swift line and block comments with shared TODO marker patterns.
+- `swift-duplicate-logic` extracts block-bodied functions, normalizes comments, strings, numbers, and identifiers, and reuses duplicate-pair pruning.
+- `swift-large-function` counts function lines and conservative branch tokens while skipping SwiftUI `body` properties and `@ViewBuilder` functions.
+- `swift-dead-abstraction` flags simple single-return or implicit-return pass-through wrappers.
+- `--pack swift` widens discovery to `.swift` files and rewrites the default `ios/**` exclude so Swift sources under iOS app trees remain visible.
+
+Known limitations:
+
+- The extractor is not a Swift compiler. It intentionally avoids type resolution, import graphs, and trailing-closure semantics.
+- SwiftUI view sizing and state sprawl remain separate framework-pack work.
 
 ## Vue and Svelte SFC script packs
 

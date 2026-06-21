@@ -33,6 +33,7 @@ jobs:
           node dist/cli/index.js scan examples/vue --pack vue --format json --output debtlens-vue-report.json
           node dist/cli/index.js scan examples/svelte --pack svelte --format json --output debtlens-svelte-report.json
           node dist/cli/index.js scan examples/kotlin --pack kotlin --format json --output debtlens-kotlin-report.json
+          node dist/cli/index.js scan examples/swift --pack swift --format json --output debtlens-swift-report.json
           node dist/cli/index.js scan examples/compose --pack compose --format json --output debtlens-compose-report.json
       - name: Benchmark regression gate
         run: npm run benchmark:ci
@@ -46,4 +47,5 @@ jobs:
       - run: node dist/cli/index.js scan examples/vue --pack vue --min-severity info --format markdown --output debtlens-vue-report.md
       - run: node dist/cli/index.js scan examples/svelte --pack svelte --min-severity info --format markdown --output debtlens-svelte-report.md
       - run: node dist/cli/index.js scan examples/kotlin --pack kotlin --min-severity info --format markdown --output debtlens-kotlin-report.md
+      - run: node dist/cli/index.js scan examples/swift --pack swift --min-severity info --format markdown --output debtlens-swift-report.md
       - run: node dist/cli/index.js scan examples/compose --pack compose --min-severity info --format markdown --output debtlens-compose-report.md

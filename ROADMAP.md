@@ -1,8 +1,8 @@
 # DebtLens Roadmap
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, and Jetpack Compose today,
-with additional languages (Swift, Ruby, …) planned as language packs.
-React was the first framework pack; React Native, Next.js, Expo, Node, Python, Vue/Svelte SFC scripts, Kotlin,
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose today,
+with additional languages (Ruby, …) planned as language packs.
+React was the first framework pack; React Native, Next.js, Expo, Node, Python, Vue/Svelte SFC scripts, Kotlin, Swift,
 Jetpack Compose, and plain TS/JS projects are current supported targets, not the product identity. See
 [`docs/rule-packs.md`](./docs/rule-packs.md) and [`docs/pack-chooser.md`](./docs/pack-chooser.md)
 for the current support matrix, future languages, and contribution paths.
@@ -51,7 +51,8 @@ for the current support matrix, future languages, and contribution paths.
 
 ## v0.5 — Additional language packs
 
-- **Swift** — core maintainability rules plus optional SwiftUI/UIKit packs (large views, state sprawl, thin wrappers).
+- **Swift core pack** — duplicate/large-function/dead-abstraction/TODO rules for `.swift` files ([#194](https://github.com/ColumbusLabs/DebtLens/issues/194)).
+- **SwiftUI** — oversized views and state sprawl (planned framework pack).
 - Language packs reuse baselines, `--changed`, reporters, and CI; only AST parsing and detectors are language-specific.
 - Documented process for proposing and shipping a new language pack.
 

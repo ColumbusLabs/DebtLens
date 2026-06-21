@@ -11,6 +11,10 @@ All notable changes to DebtLens are documented here. This project adheres to
   `swift-dead-abstraction`, and `swift-duplicate-logic` for `.swift` files ([#194](https://github.com/ColumbusLabs/DebtLens/issues/194)).
 - **SwiftUI pack** (`--pack swiftui`) with `swiftui-large-view` and `swiftui-state-sprawl`
   ([#195](https://github.com/ColumbusLabs/DebtLens/issues/195)).
+- **Ruby core language pack** (`ruby`) with `ruby-duplicate-logic`, `ruby-large-function`,
+  `ruby-dead-abstraction`, and `ruby-todo-comment` ([#198](https://github.com/ColumbusLabs/DebtLens/issues/198)).
+- **Rails framework pack** (`rails`) combining Ruby core rules with `rails-route-sprawl`
+  and `rails-controller-sprawl` ([#198](https://github.com/ColumbusLabs/DebtLens/issues/198)).
 
 ### Changed
 

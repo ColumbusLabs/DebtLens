@@ -49,6 +49,8 @@
             "kotlin",
             "swift",
             "swiftui",
+            "ruby",
+            "rails",
             "compose",
             "ai-assisted-maintainer",
             "oss-maintainer"
@@ -56,7 +58,7 @@
         },
         {
           "type": "string",
-          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer))*\\s*$"
         }
       ],
       "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
@@ -116,6 +118,12 @@
               "swift-dead-abstraction",
               "swiftui-large-view",
               "swiftui-state-sprawl",
+              "ruby-todo-comment",
+              "ruby-large-function",
+              "ruby-duplicate-logic",
+              "ruby-dead-abstraction",
+              "rails-route-sprawl",
+              "rails-controller-sprawl",
               "compose-large-composable",
               "compose-state-hoisting"
             ]
@@ -724,6 +732,54 @@
             "high"
           ]
         },
+        "ruby-todo-comment": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "ruby-large-function": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "ruby-duplicate-logic": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "ruby-dead-abstraction": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "rails-route-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "rails-controller-sprawl": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
         "compose-large-composable": {
           "enum": [
             "info",
@@ -990,6 +1046,36 @@
           "maximum": 1
         },
         "swiftui-state-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ruby-todo-comment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ruby-large-function": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ruby-duplicate-logic": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "ruby-dead-abstraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rails-route-sprawl": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rails-controller-sprawl": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

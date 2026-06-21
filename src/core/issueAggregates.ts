@@ -14,6 +14,7 @@ const duplicateLogicRuleIds = new Set([
   "svelte-duplicate-logic",
   "kotlin-duplicate-logic",
   "swift-duplicate-logic",
+  "ruby-duplicate-logic",
 ]);
 
 export function summarizeIssues(issues: DebtIssue[]): ScanCountSummary {

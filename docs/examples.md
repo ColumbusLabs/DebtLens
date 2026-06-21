@@ -14,6 +14,10 @@ these commands when evaluating output, writing docs, or checking a reporter chan
 | Vue SFC scripts | `debtlens scan examples/vue --pack vue --min-severity info` | Vue script TODO and duplicate-logic signals with `.vue` line mapping. |
 | Svelte SFC scripts | `debtlens scan examples/svelte --pack svelte --min-severity info` | Svelte script TODO and duplicate-logic signals without React rules. |
 | Kotlin service | `debtlens scan examples/kotlin --pack kotlin --min-severity info` | Kotlin duplicate, large-function, thin-wrapper, and TODO rules. |
+| Swift service | `debtlens scan examples/swift --pack swift --min-severity info` | Swift duplicate, large-function, thin-wrapper, and TODO rules. |
+| SwiftUI screen | `debtlens scan examples/swiftui --pack swiftui --min-severity info` | SwiftUI large-view and state-sprawl rules. |
+| Ruby service | `debtlens scan examples/ruby --pack ruby --min-severity info` | Ruby duplicate, large-method, thin-wrapper, and TODO rules. |
+| Rails app | `debtlens scan examples/rails --pack rails --min-severity info` | Rails route/controller sprawl plus Ruby core rules. |
 | Jetpack Compose screen | `debtlens scan examples/compose --pack compose --min-severity info` | Compose large-composable and state-hoisting rules. |
 | Local plugin | `debtlens scan examples/plugin --config examples/plugin/debtlens.config.json --min-severity info` | Trusted local plugin loading and plugin rule output. |
 | False-positive playground | `debtlens scan examples/false-positives --pack react --min-severity info` | Calibrated near-misses that should stay quiet. |

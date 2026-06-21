@@ -28,6 +28,13 @@ import {
   pythonRouteSprawlDetector,
   pythonTodoCommentDetector,
 } from "./python/index.js";
+import {
+  rubyDeadAbstractionDetector,
+  rubyDuplicateLogicDetector,
+  rubyLargeFunctionDetector,
+  rubyTodoCommentDetector,
+} from "./ruby/index.js";
+import { railsControllerSprawlDetector, railsRouteSprawlDetector } from "./rails/index.js";
 import { rnHostForwardingDetector } from "./rnHostForwarding.js";
 import { routeHandlerSizeDetector } from "./routeHandlerSize.js";
 import { routeSprawlDetector } from "./routeSprawl.js";
@@ -89,6 +96,12 @@ export const allDetectors: Detector[] = [
   swiftDeadAbstractionDetector,
   swiftuiLargeViewDetector,
   swiftuiStateSprawlDetector,
+  rubyTodoCommentDetector,
+  rubyLargeFunctionDetector,
+  rubyDuplicateLogicDetector,
+  rubyDeadAbstractionDetector,
+  railsRouteSprawlDetector,
+  railsControllerSprawlDetector,
   composeLargeComposableDetector,
   composeStateHoistingDetector,
 ];

@@ -1,6 +1,6 @@
 # Language Pack RFC
 
-Status: **Python, Vue/Svelte SFC script, Kotlin core, Swift core, and Jetpack Compose packs shipped**
+Status: **Python, Vue/Svelte SFC script, Kotlin core, Swift core, Jetpack Compose, SwiftUI, Ruby core, and Rails framework packs shipped**
 
 DebtLens began as a TypeScript/JavaScript scanner. The reporting contract, baselines,
 CI workflows, and GitHub Action are language-neutral, and the Python, Vue/Svelte SFC script, Kotlin, and Compose packs now
@@ -187,6 +187,28 @@ Known limitations:
 
 - The extractor is not a Swift compiler. It intentionally avoids type resolution, import graphs, and trailing-closure semantics.
 - UIKit view-controller sizing remains future framework-pack work separate from SwiftUI.
+
+## Ruby parser recommendation
+
+Recommendation: keep Ruby and Rails packs dependency-free with a conservative lexical
+extractor, then revisit Ripper or `parser` gem sidecars only when deeper type-aware rules
+justify an optional subprocess.
+
+Current implementation:
+
+- `ruby-todo-comment` scans Ruby `#` line comments and `=begin`/`=end` block comments with shared TODO marker patterns.
+- `ruby-duplicate-logic` extracts `def` methods, normalizes comments, strings, numbers, and identifiers, and reuses duplicate-pair pruning.
+- `ruby-large-function` counts method lines and conservative branch tokens.
+- `ruby-dead-abstraction` flags simple single-call pass-through wrappers and skips non-public methods.
+- `--pack ruby` widens discovery to `.rb` files without changing TS/JS defaults.
+- `rails-route-sprawl` heuristically counts route entries in `routes.rb`.
+- `rails-controller-sprawl` counts public actions in `*_controller.rb` files.
+- `--pack rails` selects Ruby core rules plus both Rails framework sprawl rules.
+
+Known limitations:
+
+- The extractor is not a Ruby interpreter. It intentionally avoids constant resolution, `eval`, metaprogramming, and Rails engine mount analysis.
+- Route counting expands `resources` conservatively; member/collection blocks need richer parsing later.
 
 ## Vue and Svelte SFC script packs
 

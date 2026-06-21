@@ -122,6 +122,8 @@ describe("config JSON schema", () => {
       "kotlin",
       "swift",
       "swiftui",
+      "ruby",
+      "rails",
       "compose",
       "ai-assisted-maintainer",
       "oss-maintainer",

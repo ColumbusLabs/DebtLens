@@ -6,7 +6,7 @@ import { getRulePack, listRulePacks } from "../../src/config/packs.js";
 describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
-    assert.equal(packs.length, 16);
+    assert.equal(packs.length, 18);
     assert.equal(getRulePack("core").rules.length, 13);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
     assert.equal(getRulePack("react").rules.length, 20);
@@ -77,6 +77,24 @@ describe("rule packs", () => {
     ]);
     assert.deepEqual(getRulePack("swiftui").languages, ["swift"]);
     assert.equal(getRulePack("swiftui").thresholds?.["swiftui-state-sprawl.maxStateHolders"], 4);
+    assert.deepEqual(getRulePack("ruby").rules, [
+      "ruby-duplicate-logic",
+      "ruby-large-function",
+      "ruby-dead-abstraction",
+      "ruby-todo-comment",
+    ]);
+    assert.deepEqual(getRulePack("ruby").languages, ["ruby"]);
+    assert.deepEqual(getRulePack("rails").rules, [
+      "ruby-duplicate-logic",
+      "ruby-large-function",
+      "ruby-dead-abstraction",
+      "ruby-todo-comment",
+      "rails-route-sprawl",
+      "rails-controller-sprawl",
+    ]);
+    assert.deepEqual(getRulePack("rails").languages, ["ruby"]);
+    assert.equal(getRulePack("rails").thresholds?.["rails-route-sprawl.maxRoutes"], 8);
+    assert.equal(getRulePack("rails").thresholds?.["rails-controller-sprawl.maxActions"], 8);
     assert.ok(getRulePack("ai-assisted-maintainer").rules.includes("duplicated-literal"));
     assert.ok(getRulePack("oss-maintainer").rules.includes("api-surface-sprawl"));
   });

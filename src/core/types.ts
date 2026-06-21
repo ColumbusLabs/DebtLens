@@ -38,7 +38,7 @@ export interface SourceFileInfo {
   sourceFile: SourceFile;
 }
 
-export type SourceLanguage = "tsjs" | "python" | "kotlin" | "swift" | "vue" | "svelte";
+export type SourceLanguage = "tsjs" | "python" | "kotlin" | "swift" | "ruby" | "vue" | "svelte";
 
 export interface ScanThresholds {
   [key: string]: number;

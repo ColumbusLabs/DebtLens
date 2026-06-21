@@ -5,8 +5,6 @@ import { createIssue } from "../utils/createIssue.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
 const MAX_FINDINGS_PER_FILE = 12;
-const disableNextLinePattern = /debtlens-disable-next-line\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
-const disableFilePattern = /debtlens-disable-file\s+([a-z0-9-]+)(?:\s+--\s+(.+))?/i;
 
 export const emptyCatchDetector: Detector = {
   id: "empty-catch",
@@ -20,14 +18,10 @@ export const emptyCatchDetector: Detector = {
 
     for (const file of context.files) {
       let countForFile = 0;
-      const suppressedRules = parseFileSuppressions(file.content);
 
       for (const tryStatement of file.sourceFile.getDescendantsOfKind(SyntaxKind.TryStatement)) {
         const catchClause = tryStatement.getCatchClause();
         if (!catchClause) continue;
-
-        const span = nodeLineSpan(catchClause);
-        if (isSuppressed(suppressedRules, "empty-catch", span.startLine)) continue;
 
         const classification = classifyCatchBody(catchClause);
         if (classification === "handled") continue;
@@ -54,14 +48,11 @@ export const swallowedErrorDetector: Detector = {
 
     for (const file of context.files) {
       let countForFile = 0;
-      const suppressedRules = parseFileSuppressions(file.content);
 
       for (const tryStatement of file.sourceFile.getDescendantsOfKind(SyntaxKind.TryStatement)) {
         const catchClause = tryStatement.getCatchClause();
         if (!catchClause) continue;
 
-        const span = nodeLineSpan(catchClause);
-        if (isSuppressed(suppressedRules, "swallowed-error", span.startLine)) continue;
         if (!isSwallowedErrorCatch(catchClause)) continue;
 
         issues.push(createSwallowedErrorIssue(file.relativePath, catchClause));
@@ -162,54 +153,6 @@ function isWithinLoggingCallArgument(identifier: MorphNode, logCalls: MorphNode[
       if (identifier.getAncestors().some((ancestor) => ancestor === argument)) return true;
     }
   }
-  return false;
-}
-
-interface FileSuppressionRules {
-  fileRules: Set<string>;
-  nextLineRules: Map<number, Set<string>>;
-  inlineLineRules: Map<number, Set<string>>;
-}
-
-function parseFileSuppressions(content: string): FileSuppressionRules {
-  const fileRules = new Set<string>();
-  const nextLineRules = new Map<number, Set<string>>();
-  const inlineLineRules = new Map<number, Set<string>>();
-  const lines = content.split(/\r?\n/);
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const lineNumber = index + 1;
-
-    const fileMatch = line.match(disableFilePattern);
-    if (fileMatch?.[1] && fileMatch[2]?.trim()) {
-      fileRules.add(fileMatch[1].toLowerCase());
-      inlineLineRules.set(lineNumber, addRule(inlineLineRules.get(lineNumber), fileMatch[1]));
-      continue;
-    }
-
-    const nextLineMatch = line.match(disableNextLinePattern);
-    if (!nextLineMatch?.[1] || !nextLineMatch[2]?.trim()) continue;
-
-    const ruleId = nextLineMatch[1].toLowerCase();
-    inlineLineRules.set(lineNumber, addRule(inlineLineRules.get(lineNumber), ruleId));
-    nextLineRules.set(lineNumber + 1, addRule(nextLineRules.get(lineNumber + 1), ruleId));
-  }
-
-  return { fileRules, nextLineRules, inlineLineRules };
-}
-
-function addRule(existing: Set<string> | undefined, ruleId: string): Set<string> {
-  const rules = existing ?? new Set<string>();
-  rules.add(ruleId.toLowerCase());
-  return rules;
-}
-
-function isSuppressed(rules: FileSuppressionRules, ruleId: string, line: number): boolean {
-  const normalizedRuleId = ruleId.toLowerCase();
-  if (rules.fileRules.has(normalizedRuleId)) return true;
-  if (rules.nextLineRules.get(line)?.has(normalizedRuleId)) return true;
-  if (rules.inlineLineRules.get(line)?.has(normalizedRuleId)) return true;
   return false;
 }
 

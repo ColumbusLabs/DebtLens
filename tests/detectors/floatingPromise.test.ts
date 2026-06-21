@@ -116,7 +116,7 @@ export function load() {
     assert.equal(issues.length, 0);
   });
 
-  it("honors debtlens-disable-next-line", async () => {
+  it("emits raw findings when a central suppression directive is present", async () => {
     const src = `
 export function load() {
   // debtlens-disable-next-line floating-promise -- intentional fire-and-forget
@@ -124,7 +124,8 @@ export function load() {
 }
 `;
     const issues = await runDetector(floatingPromiseDetector, { "load.ts": src });
-    assert.equal(issues.length, 0);
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "floating-promise");
   });
 
   it("caps findings per file", async () => {

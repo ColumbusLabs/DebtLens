@@ -107,6 +107,10 @@ These apply to any TypeScript or JavaScript codebase:
 - **`barrel-file`** — wide re-export-only files that hide local import graph shape.
 - **`weak-test-boundary`** — production code importing from test-only fixtures or mocks.
 - **`api-surface-sprawl`** — files with too many public exports.
+- **`empty-catch`** — empty or comment-only catch blocks that silently ignore errors.
+- **`swallowed-error`** — catch blocks that only log without rethrowing or returning a handled result.
+- **`floating-promise`** — promise-returning calls that are not awaited, returned, void-marked, or error-handled.
+- **`commented-out-code`** — contiguous comment blocks that look like dead code.
 
 Future core rules may expand these signals into language-specific packs or richer project graph analysis.
 
@@ -149,6 +153,7 @@ to `.py` files and emits the same `ScanResult` shape as TS/JS rules:
 - **`python-complex-control-flow`**
 - **`python-dead-abstraction`**
 - **`python-todo-comment`**
+- **`python-error-handling`**
 
 Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 Python function-based rules use a stdlib-`ast` sidecar when `python3` or `python` is
@@ -204,6 +209,7 @@ and `.kts` files and emits the same `ScanResult` shape as TS/JS rules:
 - **`kotlin-large-function`**
 - **`kotlin-dead-abstraction`**
 - **`kotlin-todo-comment`**
+- **`kotlin-empty-catch`**
 
 Use `--pack core,python,kotlin` when one scan should cover mixed TS/JS, Python, and
 Kotlin paths. Jetpack Compose-specific UI debt lives in the separate `compose` pack.
@@ -222,7 +228,7 @@ and Compose UI debt.
 
 ### Maintainer packs
 
-- **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, and test-boundary signals. It is about maintainability review only; it does not claim to detect AI-generated authorship.
+- **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, test-boundary, empty/swallowed error, and commented-out-code signals. It intentionally leaves out `floating-promise` because promise-intent is more project-context-sensitive. It is about maintainability review only; it does not claim to detect AI-generated authorship.
 - **`oss-maintainer`** focuses on library health: public API size, barrels, duplicate exports/logic, test-boundary leaks, and deferred TODO debt.
 
 ## Pack status matrix
@@ -233,11 +239,11 @@ and Compose UI debt.
 | `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN host forwarding) |
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
-| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO debt | **Shipped** |
+| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, TODO debt, and error-handling smells | **Shipped** |
 | `python-web` | Flask/Blueprint and Django URL route ownership | **Shipped** |
 | `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals | **Shipped** |
 | `svelte` | Svelte component script TODO, large-script, and duplicate-logic signals | **Shipped** |
-| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
+| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, TODO debt, and empty catch blocks | **Shipped** |
 | `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `swiftui` | SwiftUI oversized views and local state sprawl | **Shipped** |
 | `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO debt | **Shipped** |
@@ -259,10 +265,10 @@ follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
+| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt, error-handling smells | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
 | **Vue SFC** | script TODOs, large scripts/functions, duplicate script functions | Vue template-specific rules | **Shipped** for script-block MVP |
 | **Svelte SFC** | script TODOs, large scripts/functions, duplicate script functions | SvelteKit routing and markup-specific rules | **Shipped** for script-block MVP |
-| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
+| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt, empty catch blocks | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | **Shipped** for core Swift and SwiftUI rules |
 | **Ruby** | duplicate logic, large methods, dead abstractions, TODO debt | Rails (`rails-route-sprawl`, `rails-controller-sprawl`) | **Shipped** for core Ruby and Rails framework rules |
 

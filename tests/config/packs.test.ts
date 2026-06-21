@@ -111,6 +111,15 @@ describe("rule packs", () => {
     assert.throws(() => getRulePack("ember"), /Unknown rule pack "ember"/);
   });
 
+  it("keeps ai-assisted-maintainer code-smell coverage explicit", () => {
+    const rules = getRulePack("ai-assisted-maintainer").rules;
+
+    assert.ok(rules.includes("empty-catch"));
+    assert.ok(rules.includes("swallowed-error"));
+    assert.ok(rules.includes("commented-out-code"));
+    assert.equal(rules.includes("floating-promise"), false);
+  });
+
   it("applies pack rules when no explicit rules are configured", () => {
     const options = mergeConfig(".", { pack: "core" }, { cwd: process.cwd() });
     assert.equal(options.pack, "core");

@@ -2,11 +2,9 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { CallExpression, Expression, ExpressionStatement, Node as MorphNode } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
 import { createIssue } from "../utils/createIssue.js";
-import { lineAt, nodeLineSpan } from "../utils/lines.js";
+import { nodeLineSpan } from "../utils/lines.js";
 
 const EFFECT_HOOKS = new Set(["useEffect", "useLayoutEffect", "useInsertionEffect"]);
-const disableNextLinePattern = /debtlens-disable-next-line\s+floating-promise(?:\s+--\s+.+)?.*/i;
-const disableFilePattern = /debtlens-disable-file\s+floating-promise(?:\s+--\s+.+)?.*/i;
 
 export const floatingPromiseDetector: Detector = {
   id: "floating-promise",
@@ -20,12 +18,9 @@ export const floatingPromiseDetector: Detector = {
     const issues: DebtIssue[] = [];
 
     for (const file of context.files) {
-      if (isFileSuppressed(file.content)) continue;
-
       let countForFile = 0;
       for (const statement of file.sourceFile.getDescendantsOfKind(SyntaxKind.ExpressionStatement)) {
         if (countForFile >= maxPerFile) break;
-        if (isLineSuppressed(file.content, statement)) continue;
 
         const call = extractFloatingCall(statement, allowVoid);
         if (!call) continue;
@@ -271,16 +266,6 @@ function unwrapParentheses(expression: Expression): Expression {
     current = current.getExpression();
   }
   return current;
-}
-
-function isFileSuppressed(content: string): boolean {
-  return content.split(/\r?\n/).some((line) => disableFilePattern.test(line));
-}
-
-function isLineSuppressed(content: string, node: MorphNode): boolean {
-  const lineNumber = nodeLineSpan(node).startLine;
-  if (lineNumber <= 1) return false;
-  return disableNextLinePattern.test(lineAt(content, lineNumber - 1));
 }
 
 function truncate(text: string, maxLength = 120): string {

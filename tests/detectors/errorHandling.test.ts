@@ -42,7 +42,7 @@ describe("empty-catch detector", () => {
     assert.equal(allowed.length, 0);
   });
 
-  it("honors disable directives on the catch line", async () => {
+  it("emits raw findings when a central suppression directive is present", async () => {
     const issues = await runDetector(emptyCatchDetector, {
       "src/worker.ts": `
         export function run() {
@@ -55,7 +55,8 @@ describe("empty-catch detector", () => {
       `,
     });
 
-    assert.equal(issues.length, 0);
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "empty-catch");
   });
 });
 
@@ -95,7 +96,7 @@ describe("swallowed-error detector", () => {
     assert.equal(issues.length, 0);
   });
 
-  it("honors disable directives on the catch line", async () => {
+  it("emits raw findings when a central suppression directive is present", async () => {
     const issues = await runDetector(swallowedErrorDetector, {
       "src/worker.ts": `
         export function run() {
@@ -109,6 +110,7 @@ describe("swallowed-error detector", () => {
       `,
     });
 
-    assert.equal(issues.length, 0);
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "swallowed-error");
   });
 });

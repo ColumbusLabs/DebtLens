@@ -264,7 +264,49 @@ fun parse(value: String): Int {
     assert.equal(issues.length, 0);
   });
 
-  it("honors disable directives on the catch line", async () => {
+  it("does not flag catch examples inside normal or triple-quoted strings", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+fun docs(): String {
+    val inline = "try { read(path) } catch (error: Exception) { }"
+    val block = """
+        try {
+            read(path)
+        } catch (error: Exception) {
+        }
+    """
+    return inline + block
+}
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("still flags real catch blocks after ignored examples", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+val docs = """
+try {
+    read(path)
+} catch (error: Exception) {
+}
+"""
+
+fun load(path: String): String {
+    try {
+        return read(path)
+    } catch (error: Exception) {
+    }
+}
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "kotlin-empty-catch");
+  });
+
+  it("emits raw findings when a central suppression directive is present", async () => {
     const issues = await runDetector(kotlinEmptyCatchDetector, {
       "src/Service.kt": `
 fun load(path: String): String {
@@ -277,6 +319,7 @@ fun load(path: String): String {
 `,
     });
 
-    assert.equal(issues.length, 0);
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "kotlin-empty-catch");
   });
 });

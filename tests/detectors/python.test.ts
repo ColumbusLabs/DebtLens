@@ -675,7 +675,51 @@ def parse(value):
     assert.equal(issues.length, 0);
   });
 
-  it("honors disable directives on the except line", async () => {
+  it("does not flag try/except examples inside strings, docstrings, or comments", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+def docs():
+    example = "try:\\n    risky()\\nexcept:\\n    pass"
+    """
+    try:
+        risky()
+    except Exception:
+        logger.exception("ignored")
+    """
+    # try:
+    #     risky()
+    # except:
+    #     pass
+    return example
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("still flags real try/except blocks after ignored examples", async () => {
+    const issues = await runDetector(pythonErrorHandlingDetector, {
+      "src/service.py": `
+DOCS = """
+try:
+    risky()
+except:
+    pass
+"""
+
+def load(path):
+    try:
+        return open(path).read()
+    except:
+        pass
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-error-handling");
+  });
+
+  it("emits raw findings when a central suppression directive is present", async () => {
     const issues = await runDetector(pythonErrorHandlingDetector, {
       "src/service.py": `
 def load(path):
@@ -687,6 +731,7 @@ def load(path):
 `,
     });
 
-    assert.equal(issues.length, 0);
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "python-error-handling");
   });
 });

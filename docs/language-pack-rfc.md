@@ -116,6 +116,8 @@ Current implementation:
   nesting depth for review-heavy functions.
 - `python-dead-abstraction` flags single-statement pass-through functions such as
   `def f(x): return g(x)`.
+- `python-error-handling` flags bare/empty except blocks and broad log-only handlers
+  while ignoring examples inside comments and strings.
 - `--pack python` widens discovery to `.py` files. Use `--pack core,python` for one merged TS/JS + Python scan.
 
 Possible future sidecar command:

@@ -86,16 +86,28 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | --- | --- | --- | --- |
 | `duplicate-logic` | core | Near-duplicate functions/components using normalized AST/text similarity | Medium |
 | `test-duplication` | core | Structurally identical test cases across test files | Medium |
+| `large-function` | core | Non-component functions over line or branch budgets | Medium |
 | `import-cycle` | core | Circular relative import graphs | Medium |
 | `complex-control-flow` | core | Branch-heavy or deeply nested functions | Medium |
 | `config-drift` | core | Conflicting repeated values across JSON config files | Medium |
 | `dead-abstraction` | core | Thin wrappers that add little behavior | Low |
+| `duplicated-literal` | core | Repeated string/number literals across files | Low |
 | `todo-comment` | core | TODO/FIXME/HACK/temporary implementation comments | Low |
 | `naming-drift` | core | Files with multiple competing names for the same domain concept | Info |
+| `barrel-file` | core | Re-export-only barrels that obscure import graphs | Low |
+| `weak-test-boundary` | core | Production imports from test-only modules | Medium |
+| `api-surface-sprawl` | core | Files exporting too many public symbols | Medium |
+| `empty-catch` | core | Empty or comment-only catch blocks that silently ignore errors | Medium |
+| `swallowed-error` | core | Catch blocks that only log without rethrowing or returning | Medium |
+| `floating-promise` | core | Unawaited promise-returning calls and effect fire-and-forget | Medium |
+| `commented-out-code` | core | Contiguous comment lines that look like dead code | Low |
 | `large-component` | react | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | react | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | react | Long or overloaded React effect hooks | Medium |
+| `hook-dependency-smell` | react | Inline object/array/function literals in hook dependency arrays | Low |
+| `context-provider-sprawl` | react | Components wrapping many unrelated Context providers | Medium |
 | `prop-drilling` | react | Components that forward many props to children | Medium |
+| `story-only-component` | react | Exported components whose known consumers are only Storybook stories | Low |
 | `rn-host-forwarding` | react-native | RN wrappers forwarding many props into host primitives | Medium |
 | `server-client-boundary` | next | App Router server/client boundary mistakes | High |
 | `route-handler-size` | next | Oversized Next route/page modules | Medium |
@@ -107,6 +119,7 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `python-complex-control-flow` | python | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | python | Thin Python pass-through functions | Low |
 | `python-todo-comment` | python | TODO/FIXME/HACK comments in Python files | Low |
+| `python-error-handling` | python | Empty/bare except blocks and log-only Python error handlers | Medium |
 | `python-route-sprawl` | python-web | Flask/Blueprint or Django URL modules registering too many routes | Medium |
 | `vue-todo-comment` | vue | TODO/FIXME/HACK comments inside Vue script blocks | Low |
 | `vue-large-script` | vue | Oversized Vue SFC scripts or script functions | Medium |
@@ -118,6 +131,7 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `kotlin-large-function` | kotlin | Oversized or branch-heavy Kotlin functions | Medium |
 | `kotlin-dead-abstraction` | kotlin | Thin Kotlin pass-through functions | Low |
 | `kotlin-todo-comment` | kotlin | TODO/FIXME/HACK comments in Kotlin files | Low |
+| `kotlin-empty-catch` | kotlin | Empty or comment-only Kotlin catch blocks | Medium |
 | `compose-large-composable` | compose | Oversized or branch-heavy Jetpack Compose functions | Medium |
 | `compose-state-hoisting` | compose | Composables owning too many local state holders | Medium |
 
@@ -459,23 +473,23 @@ also declare their discovery metadata, so selecting `python`, `vue`, `svelte`, `
 
 | Pack | Rules |
 | --- | --- |
-| `core` | framework-neutral maintainability rules: duplication, large functions, barrels, test boundaries, API surface, TODOs, naming drift |
+| `core` | framework-neutral maintainability rules: duplication, large functions, barrels, test boundaries, API surface, TODOs, naming drift, silent failures, floating promises, and dead commented code |
 | `react` | core + component, hook, provider, prop, and Storybook signals |
 | `react-native` | react + RN host primitive forwarding |
 | `next` | react + App Router boundary, route size, and data-loader checks |
 | `node` | core + Express/Fastify handler depth and route sprawl |
-| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO comments |
+| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, TODO comments, and error-handling smells |
 | `python-web` | python + Flask/Blueprint and Django URL route sprawl |
 | `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals |
 | `svelte` | Svelte SFC script TODO, large-script, and duplicate-logic signals |
-| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO comments |
+| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, TODO comments, and empty catch blocks |
 | `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO comments |
 | `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO comments |
 | `rails` | Ruby core rules plus Rails route and controller sprawl checks |
 | `compose` | Jetpack Compose oversized composables and local state-hoisting smells |
 | `swiftui` | SwiftUI oversized views and local state-sprawl checks |
 | `expo` | React Native tuning for Expo Router projects |
-| `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases; no authorship claims |
+| `ai-assisted-maintainer` | high-signal maintainability checks for assistant-heavy codebases, including silent failures and commented-out code but excluding floating-promise; no authorship claims |
 | `oss-maintainer` | library API surface, barrels, duplication, tests, and TODO debt |
 | `ai-workflow-drift` | duplicated or contradictory AI assistant instruction files; no AI-authorship claims |
 

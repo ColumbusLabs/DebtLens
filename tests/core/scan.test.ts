@@ -98,6 +98,124 @@ describe("scan integration", () => {
     }
   });
 
+  it("uses central suppression accounting for valid suppressions on new detectors", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-new-rule-suppress-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(
+        join(dir, "src", "worker.ts"),
+        `
+export function load() {
+  // debtlens-disable-next-line floating-promise -- intentional fire-and-forget startup ping
+  fetch("/api/startup");
+}
+`,
+      );
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: ["**/*.{ts,tsx,js,jsx}"],
+        exclude: [],
+        minSeverity: "info",
+        rules: ["floating-promise"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        auditSuppressions: true,
+      });
+
+      assert.equal(result.summary.totalIssues, 0);
+      assert.equal(result.summary.filterStats?.suppressedByInline, 1);
+      assert.equal(result.suppressions?.[0]?.ruleId, "floating-promise");
+      assert.equal(result.suppressionDirectives?.[0]?.status, "used");
+      assert.equal(result.suppressionDirectives?.[0]?.suppressedIssueCount, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps new detector findings when suppression reasons are missing", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-new-rule-missing-reason-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(
+        join(dir, "src", "worker.ts"),
+        `
+export function load() {
+  // debtlens-disable-next-line floating-promise
+  fetch("/api/startup");
+}
+`,
+      );
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: ["**/*.{ts,tsx,js,jsx}"],
+        exclude: [],
+        minSeverity: "info",
+        rules: ["floating-promise"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        auditSuppressions: true,
+      });
+
+      assert.equal(result.summary.totalIssues, 1);
+      assert.equal(result.issues[0]?.ruleId, "floating-promise");
+      assert.equal(result.summary.filterStats?.suppressedByInline, undefined);
+      assert.ok(result.summary.warnings?.some((warning) => /reason is missing/.test(warning)));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("applies file-level suppressions to every matching new error-handling finding", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-new-rule-file-suppress-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(
+        join(dir, "src", "worker.ts"),
+        `
+// debtlens-disable-file empty-catch -- legacy SDK throws harmless telemetry errors
+export function one() {
+  try {
+    risky();
+  } catch (error) {
+  }
+}
+
+export function two() {
+  try {
+    risky();
+  } catch (error) {
+  }
+}
+`,
+      );
+
+      const result = await scan({
+        cwd: dir,
+        target: dir,
+        include: ["**/*.{ts,tsx,js,jsx}"],
+        exclude: [],
+        minSeverity: "info",
+        rules: ["empty-catch"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        auditSuppressions: true,
+      });
+
+      assert.equal(result.summary.totalIssues, 0);
+      assert.equal(result.summary.filterStats?.suppressedByInline, 2);
+      assert.equal(result.suppressions?.length, 2);
+      assert.equal(result.suppressionDirectives?.[0]?.kind, "file");
+      assert.equal(result.suppressionDirectives?.[0]?.status, "used");
+      assert.equal(result.suppressionDirectives?.[0]?.suppressedIssueCount, 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("applies Next pack duplicated-literal ignores during a scan", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-next-literals-"));
     try {

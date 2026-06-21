@@ -28,6 +28,10 @@ const CORE_RULES = [
   "barrel-file",
   "weak-test-boundary",
   "api-surface-sprawl",
+  "empty-catch",
+  "swallowed-error",
+  "floating-promise",
+  "commented-out-code",
 ] as const;
 
 const REACT_RULES = [
@@ -73,6 +77,9 @@ const AI_ASSISTED_MAINTAINER_RULES = [
   "naming-drift",
   "weak-test-boundary",
   "test-duplication",
+  "empty-catch",
+  "swallowed-error",
+  "commented-out-code",
 ] as const;
 
 const OSS_MAINTAINER_RULES = [
@@ -93,6 +100,7 @@ const PYTHON_RULES = [
   "python-complex-control-flow",
   "python-dead-abstraction",
   "python-todo-comment",
+  "python-error-handling",
 ] as const;
 
 const PYTHON_WEB_RULES = [
@@ -117,6 +125,7 @@ const KOTLIN_RULES = [
   "kotlin-large-function",
   "kotlin-dead-abstraction",
   "kotlin-todo-comment",
+  "kotlin-empty-catch",
 ] as const;
 
 const SWIFT_RULES = [

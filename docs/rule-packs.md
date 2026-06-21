@@ -38,6 +38,10 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `barrel-file` | **core** | Re-export-only barrels that obscure import graphs | Low |
 | `weak-test-boundary` | **core** | Production imports from test-only modules | Medium |
 | `api-surface-sprawl` | **core** | Files exporting too many public symbols | Medium |
+| `empty-catch` | **core** | Empty or comment-only catch blocks that silently ignore errors | Medium |
+| `swallowed-error` | **core** | Catch blocks that only log without rethrowing or returning | Medium |
+| `floating-promise` | **core** | Unawaited promise-returning calls and effect fire-and-forget | Medium |
+| `commented-out-code` | **core** | Contiguous comment lines that look like dead code | Low |
 | `large-component` | **react** | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | **react** | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | **react** | Long or overloaded React effect hooks | Medium |
@@ -56,6 +60,7 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `python-complex-control-flow` | **python** | Branch-heavy or deeply nested Python functions | Medium |
 | `python-dead-abstraction` | **python** | Thin Python functions that only pass arguments through | Low |
 | `python-todo-comment` | **python** | TODO/FIXME/HACK/temporary implementation comments in Python files | Low |
+| `python-error-handling` | **python** | Empty/bare except blocks and log-only Python error handlers | Medium |
 | `python-route-sprawl` | **python-web** | Flask/Blueprint or Django URL modules registering too many routes | Medium |
 | `vue-todo-comment` | **vue** | TODO/FIXME/HACK/temporary comments inside Vue SFC script blocks | Low |
 | `vue-large-script` | **vue** | Oversized Vue SFC scripts or script functions | Medium |
@@ -67,6 +72,7 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `kotlin-large-function` | **kotlin** | Kotlin functions over line or branch-count budgets | Medium |
 | `kotlin-dead-abstraction` | **kotlin** | Thin Kotlin functions that only pass arguments through | Low |
 | `kotlin-todo-comment` | **kotlin** | TODO/FIXME/HACK/temporary implementation comments in Kotlin files | Low |
+| `kotlin-empty-catch` | **kotlin** | Empty or comment-only Kotlin catch blocks | Medium |
 | `swift-duplicate-logic` | **swift** | Near-duplicate Swift functions using normalized function-body similarity | Medium |
 | `swift-large-function` | **swift** | Swift functions over line or branch-count budgets | Medium |
 | `swift-dead-abstraction` | **swift** | Thin Swift functions that only pass arguments through | Low |
@@ -101,6 +107,10 @@ These apply to any TypeScript or JavaScript codebase:
 - **`barrel-file`** — wide re-export-only files that hide local import graph shape.
 - **`weak-test-boundary`** — production code importing from test-only fixtures or mocks.
 - **`api-surface-sprawl`** — files with too many public exports.
+- **`empty-catch`** — empty or comment-only catch blocks that silently ignore errors.
+- **`swallowed-error`** — catch blocks that only log without rethrowing or returning a handled result.
+- **`floating-promise`** — promise-returning calls that are not awaited, returned, void-marked, or error-handled.
+- **`commented-out-code`** — contiguous comment blocks that look like dead code.
 
 Future core rules may expand these signals into language-specific packs or richer project graph analysis.
 
@@ -143,6 +153,7 @@ to `.py` files and emits the same `ScanResult` shape as TS/JS rules:
 - **`python-complex-control-flow`**
 - **`python-dead-abstraction`**
 - **`python-todo-comment`**
+- **`python-error-handling`**
 
 Use `--pack core,python` when one scan should cover both TS/JS and Python paths.
 Python function-based rules use a stdlib-`ast` sidecar when `python3` or `python` is
@@ -198,6 +209,7 @@ and `.kts` files and emits the same `ScanResult` shape as TS/JS rules:
 - **`kotlin-large-function`**
 - **`kotlin-dead-abstraction`**
 - **`kotlin-todo-comment`**
+- **`kotlin-empty-catch`**
 
 Use `--pack core,python,kotlin` when one scan should cover mixed TS/JS, Python, and
 Kotlin paths. Jetpack Compose-specific UI debt lives in the separate `compose` pack.
@@ -216,7 +228,7 @@ and Compose UI debt.
 
 ### Maintainer packs
 
-- **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, and test-boundary signals. It is about maintainability review only; it does not claim to detect AI-generated authorship.
+- **`ai-assisted-maintainer`** combines high-signal duplication, literal, function-size, wrapper, TODO, naming, test-boundary, empty/swallowed error, and commented-out-code signals. It intentionally leaves out `floating-promise` because promise-intent is more project-context-sensitive. It is about maintainability review only; it does not claim to detect AI-generated authorship.
 - **`oss-maintainer`** focuses on library health: public API size, barrels, duplicate exports/logic, test-boundary leaks, and deferred TODO debt.
 
 ## Pack status matrix
@@ -227,11 +239,11 @@ and Compose UI debt.
 | `react-native` | RN host components, platform UI patterns | **Shipped** (React pack plus RN host forwarding) |
 | `next` | App Router boundaries, server/client splits, data loading | **Shipped** (React pack plus Next-specific rules) |
 | `node` | Express/Fastify handlers, middleware depth, route sprawl | **Shipped** |
-| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, and TODO debt | **Shipped** |
+| `python` | Python duplicate functions, large and branch-heavy functions, thin wrappers, TODO debt, and error-handling smells | **Shipped** |
 | `python-web` | Flask/Blueprint and Django URL route ownership | **Shipped** |
 | `vue` | Vue SFC script TODO, large-script, and duplicate-logic signals | **Shipped** |
 | `svelte` | Svelte component script TODO, large-script, and duplicate-logic signals | **Shipped** |
-| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
+| `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, TODO debt, and empty catch blocks | **Shipped** |
 | `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `swiftui` | SwiftUI oversized views and local state sprawl | **Shipped** |
 | `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO debt | **Shipped** |
@@ -253,10 +265,10 @@ follow the same shared result contract.
 
 | Language | Core rules (examples) | Optional UI / framework packs | Status |
 | --- | --- | --- | --- |
-| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
+| **Python** | duplicate logic, large functions, complex control flow, dead abstractions, TODO debt, error-handling smells | Python web (`python-route-sprawl`) | **Shipped** for core Python and Python web route rules |
 | **Vue SFC** | script TODOs, large scripts/functions, duplicate script functions | Vue template-specific rules | **Shipped** for script-block MVP |
 | **Svelte SFC** | script TODOs, large scripts/functions, duplicate script functions | SvelteKit routing and markup-specific rules | **Shipped** for script-block MVP |
-| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
+| **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt, empty catch blocks | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | **Shipped** for core Swift and SwiftUI rules |
 | **Ruby** | duplicate logic, large methods, dead abstractions, TODO debt | Rails (`rails-route-sprawl`, `rails-controller-sprawl`) | **Shipped** for core Ruby and Rails framework rules |
 

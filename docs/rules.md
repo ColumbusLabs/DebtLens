@@ -978,6 +978,136 @@ When this is a false positive:
 
 Confidence: **0.86**. Test-only path conventions are strong signals.
 
+## `empty-catch`
+
+Flags `try/catch` blocks whose handler body is empty or contains only comments, silently ignoring errors.
+
+Default thresholds:
+
+- `empty-catch.allowCommentOnly`: `0` (set to `1` to allow comment-only catch bodies)
+
+Why it matters: empty catch blocks hide failures, make debugging harder, and are a common artifact of quick fixes or assistant-generated code.
+
+Good fixes:
+
+- handle the error explicitly and return a typed result
+- rethrow or wrap the error with context
+- document why ignoring the error is safe, or use an inline suppression with a reason
+
+When this is a false positive:
+
+- best-effort cleanup where failure is intentionally ignored and documented
+- catch blocks that delegate to a shared error handler in a macro or generated wrapper
+
+Confidence: **0.88** for empty or comment-only bodies.
+
+## `swallowed-error`
+
+Flags catch blocks that only log an error (`console.error`, `logger.*`, etc.) without rethrowing, returning a handled result, or otherwise acting on the failure.
+
+Why it matters: logging alone often looks like handling but still leaves callers unaware that work failed.
+
+Good fixes:
+
+- rethrow or return a typed error result
+- escalate to monitoring with structured context
+- handle the failure path the caller depends on
+
+When this is a false positive:
+
+- catch blocks that log and then return a fallback value or error object
+- catch blocks that reference the error binding for metrics beyond the log call
+
+Confidence: **0.72**. Log-only handlers are advisory because some teams intentionally log-and-continue at boundaries.
+
+## `floating-promise`
+
+Flags promise-returning calls used as standalone expression statements without `await`, `return`, `void`, or `.catch(...)` handling.
+
+Default thresholds:
+
+- `floating-promise.allowVoid`: `1` (treat `void expr` as intentional fire-and-forget)
+- `floating-promise.maxPerFile`: `12`
+
+Why it matters: unawaited promises can fail silently, race, or trigger unhandled rejections — especially inside React effects.
+
+Good fixes:
+
+- `await` the call inside an async function
+- return the promise to the caller
+- use `void fn()` only when fire-and-forget is intentional
+- add `.catch(...)` or effect cleanup when starting async work in hooks
+
+When this is a false positive:
+
+- deliberate fire-and-forget marked with `void`
+- callbacks passed directly to APIs that manage promise lifecycle
+
+Confidence: **0.65–0.82**. Higher when the callee is clearly async or returns `Promise<...>`.
+
+## `commented-out-code`
+
+Flags contiguous comment lines that look like executable code rather than prose or debt markers.
+
+Default thresholds:
+
+- `commented-out-code.minLines`: `2`
+- `commented-out-code.maxPerFile`: `12`
+
+Why it matters: commented-out code rots, confuses readers, and duplicates history that version control already preserves.
+
+Good fixes:
+
+- delete dead code and rely on git history
+- restore the code if it is still needed
+- replace with a short comment explaining why something was removed, if context matters
+
+When this is a false positive:
+
+- commented examples in documentation blocks
+- license or SPDX header comments
+- short comment fragments that happen to look code-like
+
+Confidence: **0.60–0.80**, scaling with run length. This rule is intentionally conservative.
+
+## `python-error-handling`
+
+Flags Python `try/except` handlers that are empty (`pass` only), bare `except:`, or broad `except Exception:` blocks that only log without meaningful handling.
+
+Why it matters: silently swallowed Python exceptions are hard to diagnose in production and common in fast edits.
+
+Good fixes:
+
+- catch specific exception types
+- rethrow or wrap with context
+- return an explicit error result instead of logging alone
+
+When this is a false positive:
+
+- intentional best-effort cleanup with documented rationale
+- handlers that log and then return a fallback value
+
+Confidence: **0.82–0.90** for empty/bare handlers; lower for log-only broad handlers.
+
+## `kotlin-empty-catch`
+
+Flags Kotlin `try/catch` blocks whose catch body is empty or contains only comments.
+
+Why it matters: empty catch blocks hide runtime failures and make Android or server Kotlin code harder to debug.
+
+Good fixes:
+
+- handle the exception explicitly
+- rethrow or wrap with context
+- document intentional suppression
+
+When this is a false positive:
+
+- generated or framework boilerplate with documented suppression
+- catch blocks that delegate to shared error handling
+
+Confidence: **0.88** for empty or comment-only catch bodies.
+
 ## `api-surface-sprawl`
 
 Flags files exporting too many public symbols.

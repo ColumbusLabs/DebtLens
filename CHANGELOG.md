@@ -7,6 +7,12 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- **Code smell detectors** for silent failures and dead code: `empty-catch`, `swallowed-error`,
+  `floating-promise`, and `commented-out-code` in the core TS/JS pack; `python-error-handling`
+  in the Python pack; and `kotlin-empty-catch` in the Kotlin pack
+  ([#257](https://github.com/ColumbusLabs/DebtLens/issues/257),
+  [#258](https://github.com/ColumbusLabs/DebtLens/issues/258),
+  [#259](https://github.com/ColumbusLabs/DebtLens/issues/259)).
 - **Swift core pack** (`--pack swift`) with `swift-todo-comment`, `swift-large-function`,
   `swift-dead-abstraction`, and `swift-duplicate-logic` for `.swift` files ([#194](https://github.com/ColumbusLabs/DebtLens/issues/194)).
 - **SwiftUI pack** (`--pack swiftui`) with `swiftui-large-view` and `swiftui-state-sprawl`

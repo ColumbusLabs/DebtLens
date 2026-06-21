@@ -7,6 +7,7 @@ import { scan } from "../../src/core/scan.js";
 import {
   kotlinDeadAbstractionDetector,
   kotlinDuplicateLogicDetector,
+  kotlinEmptyCatchDetector,
   kotlinLargeFunctionDetector,
   kotlinTodoCommentDetector,
 } from "../../src/detectors/kotlin/index.js";
@@ -217,5 +218,108 @@ fun RenderInvoice(invoice: Invoice) = InvoiceCard(invoice)
     assert.equal(issues.length, 2);
     assert.ok(issues.some((issue) => issue.message.includes("renderInvoice")));
     assert.ok(issues.some((issue) => issue.message.includes("renderReceipt")));
+  });
+});
+
+describe("kotlin-empty-catch detector", () => {
+  it("flags empty and comment-only catch blocks", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+fun load(path: String): String {
+    try {
+        return read(path)
+    } catch (error: Exception) {
+    }
+}
+
+fun parse(value: String): Int {
+    try {
+        return value.toInt()
+    } catch (error: NumberFormatException) {
+        // ignored on purpose
+    }
+}
+`,
+    });
+
+    assert.equal(issues.length, 2);
+    assert.ok(issues.every((issue) => issue.ruleId === "kotlin-empty-catch"));
+    assert.ok(issues.some((issue) => issue.message.includes("empty")));
+    assert.ok(issues.some((issue) => issue.message.includes("comment")));
+  });
+
+  it("does not flag catch blocks that handle errors", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+fun parse(value: String): Int {
+    try {
+        return value.toInt()
+    } catch (error: NumberFormatException) {
+        throw error
+    }
+}
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("does not flag catch examples inside normal or triple-quoted strings", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+fun docs(): String {
+    val inline = "try { read(path) } catch (error: Exception) { }"
+    val block = """
+        try {
+            read(path)
+        } catch (error: Exception) {
+        }
+    """
+    return inline + block
+}
+`,
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("still flags real catch blocks after ignored examples", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+val docs = """
+try {
+    read(path)
+} catch (error: Exception) {
+}
+"""
+
+fun load(path: String): String {
+    try {
+        return read(path)
+    } catch (error: Exception) {
+    }
+}
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "kotlin-empty-catch");
+  });
+
+  it("emits raw findings when a central suppression directive is present", async () => {
+    const issues = await runDetector(kotlinEmptyCatchDetector, {
+      "src/Service.kt": `
+fun load(path: String): String {
+    try {
+        return read(path)
+    // debtlens-disable-next-line kotlin-empty-catch -- vendor SDK throws benign noise
+    } catch (error: Exception) {
+    }
+}
+`,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "kotlin-empty-catch");
   });
 });

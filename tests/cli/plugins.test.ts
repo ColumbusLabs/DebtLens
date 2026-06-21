@@ -127,7 +127,7 @@ describe("debtlens scan with plugins", () => {
       const parsed = JSON.parse(result.stdout);
 
       assert.equal(result.status, 0);
-      assert.equal(parsed.summary.rulesRun, 14);
+      assert.equal(parsed.summary.rulesRun, 18);
       assert.ok(parsed.issues.some((issue: { ruleId: string }) => issue.ruleId === "no-console"));
     });
   });
@@ -146,7 +146,7 @@ describe("debtlens scan with plugins", () => {
       const parsed = JSON.parse(result.stdout);
 
       assert.equal(result.status, 0);
-      assert.equal(parsed.summary.rulesRun, 14);
+      assert.equal(parsed.summary.rulesRun, 18);
       assert.ok(parsed.issues.some((issue: { ruleId: string; file: string }) =>
         issue.ruleId === "python-marker" && issue.file === "src/service.py"));
     });

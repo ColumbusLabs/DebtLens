@@ -123,6 +123,19 @@ const SWIFTUI_RULES = [
   "swiftui-state-sprawl",
 ] as const;
 
+const RUBY_RULES = [
+  "ruby-duplicate-logic",
+  "ruby-large-function",
+  "ruby-dead-abstraction",
+  "ruby-todo-comment",
+] as const;
+
+const RAILS_RULES = [
+  ...RUBY_RULES,
+  "rails-route-sprawl",
+  "rails-controller-sprawl",
+] as const;
+
 const COMPOSE_RULES = [
   "compose-large-composable",
   "compose-state-hoisting",
@@ -246,6 +259,22 @@ export const RULE_PACKS: Record<string, RulePack> = {
       "swiftui-large-view.maxBranches": 12,
       "swiftui-large-view.maxLocalState": 6,
       "swiftui-state-sprawl.maxStateHolders": 4,
+    },
+  },
+  ruby: {
+    id: "ruby",
+    description: "Core Ruby maintainability rules for duplicate methods, large methods, thin wrappers, and debt comments.",
+    rules: [...RUBY_RULES],
+    languages: ["ruby"],
+  },
+  rails: {
+    id: "rails",
+    description: "Ruby core rules plus Rails route and controller ownership checks for routes.rb and controller classes.",
+    rules: [...RAILS_RULES],
+    languages: ["ruby"],
+    thresholds: {
+      "rails-route-sprawl.maxRoutes": 8,
+      "rails-controller-sprawl.maxActions": 8,
     },
   },
   compose: {

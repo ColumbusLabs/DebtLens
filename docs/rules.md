@@ -2,7 +2,7 @@
 
 DebtLens rules are heuristics. They should produce review prompts, not absolute judgments. Every issue includes confidence, evidence, and a suggested maintainer action.
 
-Rules are grouped into **core**, language packs such as **python**, **kotlin**, and **swift**, SFC script packs such as **vue** and **svelte**, and framework packs such as **react**, **next**, **react-native**, **node**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
+Rules are grouped into **core**, language packs such as **python**, **kotlin**, **swift**, and **ruby**, SFC script packs such as **vue** and **svelte**, and framework packs such as **react**, **next**, **react-native**, **node**, **rails**, and **compose**. See [`rule-packs.md`](./rule-packs.md) for the full taxonomy.
 
 > **Core pack migration:** Recent releases added `import-cycle`, `config-drift`, and `complex-control-flow` to the default **core** pack. Existing configs that pin `rules` or use an older init template may not include them until you re-run `debtlens init` or add the ids manually. `debtlens init --from-eslint` maps ESLint `complexity` / `max-depth` thresholds into `complex-control-flow` when no framework pack is inferred.
 
@@ -827,6 +827,54 @@ When this is a false positive:
 - the view owns only a small amount of ephemeral UI state
 - a single `uiState` value plus an event callback already represents hoisted state
 - commented or stringified property-wrapper examples in docs or samples should stay quiet
+
+## Ruby core rules
+
+The `ruby` pack ports the core maintainability signals to `.rb` files while reusing the
+same `ScanResult`, SARIF, baseline, and reporter contracts.
+
+### `ruby-duplicate-logic`
+
+Finds structurally similar Ruby methods after comments, identifiers, strings, and numeric
+literals are normalized. It reuses `duplicate-logic.minSimilarity`, `duplicate-logic.minLines`,
+and `duplicate-logic.maxSnippets`.
+
+### `ruby-large-function`
+
+Flags Ruby methods that exceed line or branch-count budgets. It reuses
+`large-function.maxLines` and `large-function.maxBranches`.
+
+### `ruby-dead-abstraction`
+
+Flags simple Ruby wrappers such as one-line pass-through methods and thin delegation
+helpers. It reuses `dead-abstraction.maxWrapperLines` and skips `private` methods.
+
+### `ruby-todo-comment`
+
+Flags TODO/FIXME/HACK-style markers in Ruby `#` comments and `=begin`/`=end` blocks. It uses
+the same `todoComment` configuration as the TS/JS, Python, and Kotlin TODO rules.
+
+## Rails framework rules
+
+The `rails` pack scans `.rb` files for Rails route and controller ownership debt. It
+includes the Ruby core rules: use `--pack ruby` for plain Ruby without Rails framework
+checks, or `--pack rails` for Rails apps.
+
+### `rails-route-sprawl`
+
+Flags `config/routes.rb` modules that register too many routes via `get`/`post`/`resources`/`root`/`match`.
+
+Default threshold:
+
+- `rails-route-sprawl.maxRoutes`: 8
+
+### `rails-controller-sprawl`
+
+Flags Rails controllers with too many public action methods.
+
+Default threshold:
+
+- `rails-controller-sprawl.maxActions`: 8
 
 ## Jetpack Compose rules
 

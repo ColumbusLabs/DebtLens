@@ -1,6 +1,6 @@
 # Rule packs
 
-DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, Swift, and Jetpack Compose
+DebtLens is a **maintainability scanner** for TypeScript, JavaScript, Python, Vue/Svelte SFC scripts, Kotlin, Swift, Ruby, and Jetpack Compose
 codebases. React and React Native were the first serious framework targets, but the
 scanner identity is the shared maintainability contract, not a single UI stack.
 
@@ -73,6 +73,12 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `swift-todo-comment` | **swift** | TODO/FIXME/HACK/temporary implementation comments in Swift files | Low |
 | `swiftui-large-view` | **swiftui** | Oversized or branch-heavy SwiftUI `View` bodies | Medium |
 | `swiftui-state-sprawl` | **swiftui** | SwiftUI views with many local property-wrapper state holders | Medium |
+| `ruby-duplicate-logic` | **ruby** | Near-duplicate Ruby methods using normalized method-body similarity | Medium |
+| `ruby-large-function` | **ruby** | Ruby methods over line or branch-count budgets | Medium |
+| `ruby-dead-abstraction` | **ruby** | Thin Ruby methods that only pass arguments through | Low |
+| `ruby-todo-comment` | **ruby** | TODO/FIXME/HACK/temporary implementation comments in Ruby files | Low |
+| `rails-route-sprawl` | **rails** | Rails `routes.rb` modules registering too many routes | Medium |
+| `rails-controller-sprawl` | **rails** | Rails controllers with too many public actions | Medium |
 | `compose-large-composable` | **compose** | Oversized or branch-heavy Jetpack Compose functions | Medium |
 | `compose-state-hoisting` | **compose** | Composables that own many local state holders instead of hoisting state | Medium |
 
@@ -226,6 +232,8 @@ and Compose UI debt.
 | `kotlin` | Kotlin duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `swift` | Swift duplicate functions, large functions, thin wrappers, and TODO debt | **Shipped** |
 | `swiftui` | SwiftUI oversized views and local state sprawl | **Shipped** |
+| `ruby` | Ruby duplicate methods, large methods, thin wrappers, and TODO debt | **Shipped** |
+| `rails` | Ruby core rules plus Rails route and controller sprawl | **Shipped** |
 | `compose` | Jetpack Compose oversized composables and state-hoisting smells | **Shipped** |
 | `expo` | Expo Router and RN app shell boundaries | **Shipped** (React Native tuning plus barrel tolerance) |
 | `ai-assisted-maintainer` | Maintainability signals common in assistant-heavy codebases | **Shipped** |
@@ -247,6 +255,7 @@ follow the same shared result contract.
 | **Svelte SFC** | script TODOs, large scripts/functions, duplicate script functions | SvelteKit routing and markup-specific rules | **Shipped** for script-block MVP |
 | **Kotlin** | duplicate logic, large functions, dead abstractions, TODO debt | Jetpack Compose (`compose-large-composable`, `compose-state-hoisting`) | **Shipped** for core Kotlin and Compose UI rules |
 | **Swift** | duplicate logic, large types/functions, dead abstractions, TODO debt | SwiftUI (oversized views, state sprawl), UIKit (large view controllers) | **Shipped** for core Swift and SwiftUI rules |
+| **Ruby** | duplicate logic, large methods, dead abstractions, TODO debt | Rails (`rails-route-sprawl`, `rails-controller-sprawl`) | **Shipped** for core Ruby and Rails framework rules |
 
 Each language needs its own parser/AST path. Rules that map well across languages —
 duplication, thin wrappers, deferred TODOs, naming inconsistency — ship first;

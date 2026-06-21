@@ -86,6 +86,14 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
       "ios/**": ["ios/**/*.{ts,tsx,js,jsx}"],
     },
   },
+  ruby: {
+    id: "ruby",
+    label: "Ruby",
+    extensions: [".rb"],
+    includeGlobs: ["**/*.rb"],
+    ruleIdPrefixes: ["ruby-", "rails-"],
+    parseSourceFile: parseWithTsMorph,
+  },
   vue: {
     id: "vue",
     label: "Vue",

@@ -88,11 +88,11 @@ export default {
 
       await assert.rejects(
         loadPlugins(dir, { plugins: ["./bad-shape.mjs"] }, builtInIds),
-        /"languages" must be a non-empty array of registered source languages: tsjs, python, kotlin, swift, vue, svelte/,
+        /"languages" must be a non-empty array of registered source languages: tsjs, python, kotlin, swift, ruby, vue, svelte/,
       );
       await assert.rejects(
         loadPlugins(dir, { plugins: ["./bad-id.mjs"] }, builtInIds),
-        /"languages" must contain registered source languages: tsjs, python, kotlin, swift, vue, svelte; received "go"/,
+        /"languages" must contain registered source languages: tsjs, python, kotlin, swift, ruby, vue, svelte; received "go"/,
       );
     });
   });

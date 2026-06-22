@@ -11,6 +11,8 @@ All notable changes to DebtLens are documented here. This project adheres to
 - Payoff ranking via `--sort payoff`, JSON `payoffScore`, and top-payoff report sections.
 - `debtlens calibrate` for percentile-based threshold suggestions with optional `--write`.
 - Interactive `debtlens triage` for keep/baseline/suppress workflows.
+- `--ownership-report` scorecards with count and payoff leaderboards.
+- HTML reports now include import-graph SVG and directory debt treemap views.
 - Core rules: `long-parameter-list`, `god-file`, and `cognitive-complexity` for function/module
   design smells beyond single-axis size checks.
 - Config `budgets` block and `debtlens scan --budget-report` for per-area debt SLO gating.

@@ -1,5 +1,6 @@
 import { buildDebtHeatmap, buildFixTargets } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
+import { renderDebtTreemapSvg, renderImportGraphSvg } from "./graphReporter.js";
 import { renderPayoffSectionHtml } from "./payoffSection.js";
 import { formatFilterStats } from "./filterStats.js";
 import {
@@ -30,6 +31,10 @@ export function renderHtml(result: ScanResult): string {
   )).join("\n");
   const suppressionAudit = renderSuppressionAudit(result);
   const payoffSection = renderPayoffSectionHtml(result.issues);
+  const importGraphSection = result.summary.importGraph
+    ? `<h2>Import graph</h2>${renderImportGraphSvg(result.summary.importGraph)}`
+    : "";
+  const treemapSection = `<h2>Debt treemap</h2>${renderDebtTreemapSvg(result.issues)}`;
 
   return `<!doctype html>
 <html lang="en">
@@ -106,6 +111,8 @@ ${heatmap.map((entry) => `<tr><td><code>${escapeHtml(entry.file)}</code></td><td
     </tbody>
   </table>` : ""}
   ${payoffSection}
+  ${importGraphSection}
+  ${treemapSection}
   ${correlations ? `<h2>Rule Correlations</h2>
   <table>
     <thead><tr><th>File</th><th>Issues</th><th>Rules</th></tr></thead>

@@ -7,6 +7,7 @@ import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
 import { evaluateBudgets, renderBudgetReport } from "../../core/budgets.js";
+import { buildOwnershipReport, renderOwnershipReportTerminal } from "../../core/ownershipReport.js";
 import { enrichIssuesWithPayoffScores, sortIssuesByPayoff } from "../../core/priority.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
@@ -86,6 +87,8 @@ export function registerScanCommand(program: Command): void {
     .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
     .option("--churn-days <count>", "with --hotspots, look back this many days", parseInteger)
     .option("--churn-range <range>", "with --hotspots, use this git revision range instead of --churn-days")
+    .option("--ownership-report", "render CODEOWNERS ownership scorecards instead of a scan report")
+    .option("--owner <pattern>", "with --ownership-report, filter to one owner team")
     .option("--ownership", "attach CODEOWNERS-based ownership summaries to reports")
     .option("--codeowners <path>", "with --ownership, read ownership rules from this CODEOWNERS file")
     .option("--group-by <group>", "terminal grouping: severity, rule, or file", "severity")
@@ -265,6 +268,28 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   if (budgetReportOnly && budgetEvaluation) {
     return {
       report: renderBudgetReport(budgetEvaluation),
+      exitCode: 0,
+      stderr: stderrChunks.join(""),
+    };
+  }
+
+  if (rawOptions.ownershipReport === true) {
+    enrichIssuesWithPayoffScores(reported.issues, {
+      hotspots: reported.summary.hotspots,
+      weights: fileConfig.priority,
+    });
+    const ownershipReport = buildOwnershipReport({
+      result: reported,
+      cwd,
+      codeownersPath: typeof rawOptions.codeowners === "string" ? rawOptions.codeowners : undefined,
+      ownerFilter: typeof rawOptions.owner === "string" ? rawOptions.owner : undefined,
+    });
+    if (!ownershipReport) {
+      writeStderr("DebtLens: --ownership-report ignored (CODEOWNERS not found).\n");
+      return { report: "", exitCode: 1, stderr: stderrChunks.join("") };
+    }
+    return {
+      report: renderOwnershipReportTerminal(ownershipReport),
       exitCode: 0,
       stderr: stderrChunks.join(""),
     };

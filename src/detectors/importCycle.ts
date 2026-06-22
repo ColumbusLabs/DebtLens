@@ -1,5 +1,5 @@
-import { dirname, extname, join, normalize } from "node:path";
-import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
+import type { DebtIssue, Detector, DetectorContext } from "../core/types.js";
+import { buildImportGraphFromFiles } from "../core/importGraph.js";
 import { createIssue } from "../utils/createIssue.js";
 
 export const importCycleDetector: Detector = {
@@ -11,12 +11,11 @@ export const importCycleDetector: Detector = {
   detect(context: DetectorContext): DebtIssue[] {
     const minCycleSize = context.getThreshold("import-cycle.minCycleSize", 2);
     const allowTypeOnly = context.getThreshold("import-cycle.allowTypeOnly", 1) >= 1;
-    const graph = buildImportGraph(context.files, allowTypeOnly);
-    const cycles = findCycles(graph).filter((cycle) => cycleSize(cycle) >= minCycleSize);
+    const graph = buildImportGraphFromFiles(context.files, allowTypeOnly);
     const issues: DebtIssue[] = [];
     const seen = new Set<string>();
 
-    for (const cycle of cycles) {
+    for (const cycle of graph.cycles.filter((candidate) => cycleSize(candidate) >= minCycleSize)) {
       const key = canonicalCycleKey(cycle);
       if (seen.has(key)) continue;
       seen.add(key);
@@ -38,78 +37,6 @@ export const importCycleDetector: Detector = {
     return issues.slice(0, 50);
   },
 };
-
-function buildImportGraph(files: SourceFileInfo[], allowTypeOnly: boolean): Map<string, Set<string>> {
-  const byRelative = new Map(files.map((file) => [file.relativePath, file]));
-  const graph = new Map<string, Set<string>>();
-  for (const file of files) {
-    graph.set(file.relativePath, new Set());
-  }
-
-  for (const file of files) {
-    const edges = graph.get(file.relativePath);
-    if (!edges) continue;
-    for (const importDeclaration of file.sourceFile.getImportDeclarations()) {
-      if (allowTypeOnly && importDeclaration.isTypeOnly()) continue;
-      const specifier = importDeclaration.getModuleSpecifierValue();
-      if (!specifier.startsWith(".")) continue;
-      const resolved = resolveRelativeModule(file.relativePath, specifier, byRelative);
-      if (resolved) edges.add(resolved);
-    }
-    for (const exportDeclaration of file.sourceFile.getExportDeclarations()) {
-      if (allowTypeOnly && exportDeclaration.isTypeOnly()) continue;
-      const specifier = exportDeclaration.getModuleSpecifierValue();
-      if (!specifier?.startsWith(".")) continue;
-      const resolved = resolveRelativeModule(file.relativePath, specifier, byRelative);
-      if (resolved) edges.add(resolved);
-    }
-  }
-
-  return graph;
-}
-
-function resolveRelativeModule(
-  fromRelativePath: string,
-  specifier: string,
-  files: Map<string, SourceFileInfo>,
-): string | undefined {
-  const base = normalize(join(dirname(fromRelativePath), specifier)).replaceAll("\\", "/");
-  const candidates = extname(base)
-    ? [base]
-    : [
-        `${base}.ts`,
-        `${base}.tsx`,
-        `${base}.js`,
-        `${base}.jsx`,
-        `${base}/index.ts`,
-        `${base}/index.tsx`,
-        `${base}/index.js`,
-        `${base}/index.jsx`,
-      ];
-  return candidates.find((candidate) => files.has(candidate));
-}
-
-function findCycles(graph: Map<string, Set<string>>): string[][] {
-  const cycles: string[][] = [];
-  const visit = (start: string, current: string, path: string[], seen: Set<string>) => {
-    for (const next of graph.get(current) ?? []) {
-      if (next === start) {
-        cycles.push([...path, next]);
-        continue;
-      }
-      if (seen.has(next)) continue;
-      seen.add(next);
-      visit(start, next, [...path, next], seen);
-      seen.delete(next);
-    }
-  };
-
-  for (const file of graph.keys()) {
-    visit(file, file, [file], new Set([file]));
-  }
-
-  return cycles;
-}
 
 function canonicalCycleKey(cycleWithRepeat: string[]): string {
   const cycle = cycleWithRepeat.slice(0, -1);

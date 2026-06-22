@@ -1,4 +1,5 @@
 import type { Project, SourceFile } from "ts-morph";
+import type { ImportGraph } from "./importGraph.js";
 
 export type Severity = "info" | "low" | "medium" | "high";
 export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit" | "gitlab-codequality" | "badge";
@@ -504,6 +505,7 @@ export interface ScanSummary {
   ownership?: ScanOwnershipSummary;
   profile?: ScanProfile;
   performance?: ScanPerformance;
+  importGraph?: ImportGraph;
 }
 
 export interface ScanResult {

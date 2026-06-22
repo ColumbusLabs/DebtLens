@@ -7,17 +7,17 @@ describe("rule packs", () => {
   it("lists built-in packs with expected rule counts", () => {
     const packs = listRulePacks();
     assert.equal(packs.length, 19);
-    assert.equal(getRulePack("core").rules.length, 17);
+    assert.equal(getRulePack("core").rules.length, 20);
     assert.deepEqual(getRulePack("core").languages, ["tsjs"]);
-    assert.equal(getRulePack("react").rules.length, 24);
-    assert.equal(getRulePack("react-native").rules.length, 25);
+    assert.equal(getRulePack("react").rules.length, 27);
+    assert.equal(getRulePack("react-native").rules.length, 28);
     assert.ok(getRulePack("react-native").rules.includes("rn-host-forwarding"));
-    assert.equal(getRulePack("next").rules.length, 27);
+    assert.equal(getRulePack("next").rules.length, 30);
     assert.ok(getRulePack("next").rules.includes("server-client-boundary"));
     assert.ok(getRulePack("next").rules.includes("route-handler-size"));
     assert.ok(getRulePack("next").rules.includes("data-loader-sprawl"));
     assert.deepEqual(getRulePack("next").duplicatedLiteral?.ignoreStrings, ["use client", "use server"]);
-    assert.equal(getRulePack("expo").rules.length, 25);
+    assert.equal(getRulePack("expo").rules.length, 28);
     assert.ok(getRulePack("node").rules.includes("handler-depth"));
     assert.ok(getRulePack("node").rules.includes("route-sprawl"));
     assert.deepEqual(getRulePack("python").rules, [

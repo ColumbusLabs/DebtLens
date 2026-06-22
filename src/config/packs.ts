@@ -32,6 +32,9 @@ const CORE_RULES = [
   "swallowed-error",
   "floating-promise",
   "commented-out-code",
+  "long-parameter-list",
+  "god-file",
+  "cognitive-complexity",
 ] as const;
 
 const REACT_RULES = [

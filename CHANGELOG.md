@@ -7,6 +7,10 @@ All notable changes to DebtLens are documented here. This project adheres to
 
 ### Added
 
+- Core rules: `long-parameter-list`, `god-file`, and `cognitive-complexity` for function/module
+  design smells beyond single-axis size checks.
+- Config `budgets` block and `debtlens scan --budget-report` for per-area debt SLO gating.
+- `debtlens scan --format badge` emits a self-contained SVG badge plus shields.io endpoint JSON.
 - Scan results now warn when matched files exceed `maxFiles`; terminal output prints the
   advisory and JSON reports include it in `summary.warnings` while keeping
   `summary.filesScanned` as the actual scanned count.

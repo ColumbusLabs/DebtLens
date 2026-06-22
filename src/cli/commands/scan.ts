@@ -6,6 +6,7 @@ import { mergeConfig } from "../../config/mergeConfig.js";
 import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
+import { evaluateBudgets, renderBudgetReport } from "../../core/budgets.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
@@ -14,6 +15,7 @@ import { parseSeverity } from "../../core/severity.js";
 import type { DebtIssue, OutputFormat, ScanOptions, ScanResult } from "../../core/types.js";
 import { detectorIds } from "../../detectors/index.js";
 import { renderReport } from "../../reporters/index.js";
+import { renderBadgeEndpoint, parseBadgeThresholds } from "../../reporters/badgeReporter.js";
 import { applyGatePresetDefaults, gatePresets } from "../../core/gatePresets.js";
 import {
   formatProfileReport,
@@ -57,7 +59,7 @@ export function registerScanCommand(program: Command): void {
     .option("--rules <rules>", `comma-separated rule ids. Available: ${detectorIds.join(", ")}`)
     .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
     .option("--max-files <count>", "maximum files to scan", parseInteger)
-    .option("--format <format>", "terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality", "terminal")
+    .option("--format <format>", "terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality, or badge", "terminal")
     .option("-o, --output <path>", "write the report to a file instead of stdout")
     .option("--fail-on <severity>", "exit with code 1 when any issue meets this severity")
     .option("--fail-on-confidence <0-1>", "with --fail-on, require at least this confidence to fail", parseConfidence)
@@ -93,6 +95,7 @@ export function registerScanCommand(program: Command): void {
     .option("--pr-comment-max-findings <count>", "with --format pr-comment, cap detailed findings and summarize omitted findings", parseNonNegativeInteger)
     .option("--pr-comment-max-bytes <count>", "with --format pr-comment, cap the rendered comment body in bytes", parseInteger)
     .option("--pr-comment-full-report-url <url>", "with --format pr-comment, link omitted findings to a full report artifact")
+    .option("--budget-report", "print per-area budget usage without failing the gate")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
         const result = await runScanCommand(target, rawOptions);
@@ -241,6 +244,19 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   enrichWithHotspots(cwd, options, reported, rawOptions, writeStderr);
   enrichWithOwnership(cwd, options, reported, rawOptions, writeStderr);
 
+  const budgetEvaluation = evaluateBudgets(reported, options.budgets);
+  const budgetReportOnly = rawOptions.budgetReport === true;
+
+  if (budgetReportOnly && budgetEvaluation) {
+    return {
+      report: renderBudgetReport(budgetEvaluation),
+      exitCode: 0,
+      stderr: stderrChunks.join(""),
+    };
+  }
+
+  const badgeThresholds = parseBadgeThresholds(fileConfig.badge);
+
   const report = renderReport(reported, format, {
     color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
     quiet: rawOptions.quiet === true,
@@ -253,13 +269,31 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     prCommentMaxFindings: rawOptions.prCommentMaxFindings as number | undefined,
     prCommentMaxBytes: rawOptions.prCommentMaxBytes as number | undefined,
     prCommentArtifactLink: rawOptions.prCommentFullReportUrl ? String(rawOptions.prCommentFullReportUrl) : undefined,
+    badgeThresholds,
   });
+
+  if (format === "badge" && rawOptions.output) {
+    const outputPath = resolve(cwd, String(rawOptions.output));
+    const jsonPath = outputPath.endsWith(".json")
+      ? outputPath
+      : outputPath.endsWith(".svg")
+        ? outputPath.replace(/\.svg$/, ".json")
+        : `${outputPath.replace(/\.(svg|json)$/i, "")}.json`;
+    mkdirSync(dirname(jsonPath), { recursive: true });
+    writeFileSync(jsonPath, renderBadgeEndpoint(reported, { thresholds: badgeThresholds }), "utf8");
+  }
 
   let exitCode = 0;
   if (failOn && reported.issues.some((issue) => shouldFailOnIssue(issue, failOn, failOnConfidence))) {
     exitCode = 1;
   }
   if (rawOptions.failOnRegression === true && shouldFailOnRegression(reported)) {
+    exitCode = 1;
+  }
+  if (budgetEvaluation?.breached && !budgetReportOnly) {
+    for (const message of budgetEvaluation.messages) {
+      writeStderr(`DebtLens budget breach: ${message}\n`);
+    }
     exitCode = 1;
   }
 

@@ -1,4 +1,5 @@
 import type { OutputFormat, ScanResult, Severity } from "../core/types.js";
+import { renderBadgeEndpoint, renderBadgeSvg } from "./badgeReporter.js";
 import { renderGitLabCodeQuality } from "./gitlabCodeQualityReporter.js";
 import { renderHtml } from "./htmlReporter.js";
 import { renderJson } from "./jsonReporter.js";
@@ -22,6 +23,8 @@ export interface RenderReportOptions {
   prCommentMaxBytes?: number;
   prCommentArtifactLink?: string;
   previousResult?: ScanResult;
+  badgeThresholds?: { greenMax: number; yellowMax: number };
+  badgeTrend?: "up" | "down" | "flat";
 }
 
 export function renderReport(result: ScanResult, format: OutputFormat, options: RenderReportOptions = {}): string {
@@ -40,6 +43,12 @@ export function renderReport(result: ScanResult, format: OutputFormat, options: 
   if (format === "html") return renderHtml(result);
   if (format === "junit") return renderJunit(result, { failOn: options.junitFailOn });
   if (format === "gitlab-codequality") return renderGitLabCodeQuality(result);
+  if (format === "badge") {
+    return renderBadgeSvg(result, {
+      thresholds: options.badgeThresholds,
+      trend: options.badgeTrend,
+    });
+  }
   if (format === "terminal") return renderTerminal(result, { color: options.color ?? true, quiet: options.quiet, groupBy: options.groupBy });
-  throw new Error(`Invalid format "${format}". Expected terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality.`);
+  throw new Error(`Invalid format "${format}". Expected terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality, or badge.`);
 }

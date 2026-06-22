@@ -4,6 +4,7 @@ import { composeLargeComposableDetector, composeStateHoistingDetector } from "./
 import { apiSurfaceSprawlDetector } from "./apiSurfaceSprawl.js";
 import { barrelFileDetector } from "./barrelFile.js";
 import { contextProviderSprawlDetector } from "./contextProviderSprawl.js";
+import { cognitiveComplexityDetector } from "./cognitiveComplexity.js";
 import { complexControlFlowDetector } from "./complexControlFlow.js";
 import { configDriftDetector } from "./configDrift.js";
 import { dataLoaderSprawlDetector } from "./dataLoaderSprawl.js";
@@ -14,6 +15,7 @@ import { floatingPromiseDetector } from "./floatingPromise.js";
 import { duplicateLogicDetector } from "./duplicateLogic.js";
 import { duplicatedLiteralDetector } from "./duplicatedLiteral.js";
 import { effectComplexityDetector } from "./effectComplexity.js";
+import { godFileDetector } from "./godFile.js";
 import { handlerDepthDetector } from "./handlerDepth.js";
 import { hookDependencySmellDetector } from "./hookDependencySmell.js";
 import { importCycleDetector } from "./importCycle.js";
@@ -22,6 +24,7 @@ import { swiftDeadAbstractionDetector, swiftDuplicateLogicDetector, swiftLargeFu
 import { swiftuiLargeViewDetector, swiftuiStateSprawlDetector } from "./swiftui/index.js";
 import { largeComponentDetector } from "./largeComponent.js";
 import { largeFunctionDetector } from "./largeFunction.js";
+import { longParameterListDetector } from "./longParameterList.js";
 import { namingDriftDetector } from "./namingDrift.js";
 import { propDrillingDetector } from "./propDrilling.js";
 import {
@@ -81,6 +84,9 @@ export const allDetectors: Detector[] = [
   swallowedErrorDetector,
   floatingPromiseDetector,
   commentedOutCodeDetector,
+  longParameterListDetector,
+  godFileDetector,
+  cognitiveComplexityDetector,
   apiSurfaceSprawlDetector,
   storyOnlyComponentDetector,
   pythonTodoCommentDetector,

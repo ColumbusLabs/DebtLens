@@ -99,6 +99,9 @@
               "swallowed-error",
               "floating-promise",
               "commented-out-code",
+              "long-parameter-list",
+              "god-file",
+              "cognitive-complexity",
               "api-surface-sprawl",
               "story-only-component",
               "python-todo-comment",
@@ -339,6 +342,27 @@
           "type": "number"
         },
         "commented-out-code.maxPerFile": {
+          "type": "number"
+        },
+        "long-parameter-list.maxParams": {
+          "type": "number"
+        },
+        "long-parameter-list.maxBooleans": {
+          "type": "number"
+        },
+        "god-file.maxLines": {
+          "type": "number"
+        },
+        "god-file.maxExports": {
+          "type": "number"
+        },
+        "god-file.maxTopLevelDecls": {
+          "type": "number"
+        },
+        "god-file.minAxes": {
+          "type": "number"
+        },
+        "cognitive-complexity.max": {
           "type": "number"
         },
         "swiftui-large-view.maxLines": {
@@ -595,6 +619,30 @@
           ]
         },
         "commented-out-code": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "long-parameter-list": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "god-file": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "cognitive-complexity": {
           "enum": [
             "info",
             "low",
@@ -1044,6 +1092,21 @@
           "minimum": 0,
           "maximum": 1
         },
+        "long-parameter-list": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "god-file": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "cognitive-complexity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "api-surface-sprawl": {
           "type": "number",
           "minimum": 0,
@@ -1341,6 +1404,43 @@
         "legacy-baseline"
       ],
       "description": "Named quality-gate rollout preset. Explicit CLI flags override preset defaults."
+    },
+    "budgets": {
+      "type": "object",
+      "description": "Per-path debt budgets. Keys are path globs; values cap issue counts per area.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "maxIssues": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxHigh": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxMedium": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "badge": {
+      "type": "object",
+      "description": "Color thresholds for badge output.",
+      "additionalProperties": false,
+      "properties": {
+        "greenMax": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "yellowMax": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     }
   }
 }

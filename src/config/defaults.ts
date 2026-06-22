@@ -1,7 +1,7 @@
 import type { DebtLensConfig } from "../core/types.js";
 import { getLanguageDefinition } from "../core/languages.js";
 
-export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "failOnConfidence" | "gatePreset" | "pluginApiVersion" | "plugins" | "ruleSeverities" | "ruleConfidenceFloors">> = {
+export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "failOnConfidence" | "gatePreset" | "pluginApiVersion" | "plugins" | "ruleSeverities" | "ruleConfidenceFloors" | "budgets" | "badge">> = {
   include: getLanguageDefinition("tsjs").includeGlobs,
   exclude: [
     "node_modules/**",
@@ -90,6 +90,13 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
     "floating-promise.maxPerFile": 12,
     "commented-out-code.minLines": 2,
     "commented-out-code.maxPerFile": 12,
+    "long-parameter-list.maxParams": 5,
+    "long-parameter-list.maxBooleans": 2,
+    "god-file.maxLines": 400,
+    "god-file.maxExports": 10,
+    "god-file.maxTopLevelDecls": 12,
+    "god-file.minAxes": 3,
+    "cognitive-complexity.max": 15,
   },
   maxFiles: 2000,
   respectGitignore: false,

@@ -1,5 +1,6 @@
 import { buildDebtHeatmap, buildFixTargets } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
+import { renderPayoffSectionMarkdown } from "./payoffSection.js";
 import { formatFilterStats } from "./filterStats.js";
 import { escapeMarkdownTableCell } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
@@ -43,6 +44,7 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
 
   renderHotspots(lines, result);
   renderOwnership(lines, result);
+  lines.push(...renderPayoffSectionMarkdown(result.issues));
   renderFixTargets(lines, result);
 
   for (const severity of severityOrder) {

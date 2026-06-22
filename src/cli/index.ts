@@ -13,6 +13,9 @@ import { registerPacksCommand } from "./commands/packs.js";
 import { registerRulesCommand } from "./commands/rules.js";
 import { registerScanCommand } from "./commands/scan.js";
 import { registerSuppressCommand } from "./commands/suppress.js";
+import { registerHistoryCommand } from "./commands/history.js";
+import { registerCalibrateCommand } from "./commands/calibrate.js";
+import { registerTriageCommand } from "./commands/triage.js";
 import { registerWatchCommand } from "./commands/watch.js";
 
 const program = new Command();
@@ -35,6 +38,9 @@ registerExplainCommand(program);
 registerSuppressCommand(program);
 registerInitCommand(program);
 registerAdoptCommand(program);
+registerHistoryCommand(program);
+registerCalibrateCommand(program);
+registerTriageCommand(program);
 
 if (process.argv.length <= 2) {
   program.help();

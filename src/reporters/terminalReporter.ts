@@ -1,6 +1,7 @@
 import { groupIssuesByFile, groupIssuesByRule } from "../core/issueAggregates.js";
 import type { DebtIssue, ScanResult, Severity, TerminalGroupBy } from "../core/types.js";
 import { createColorizer } from "../utils/color.js";
+import { renderPayoffSectionTerminal } from "./payoffSection.js";
 import { formatFilterStats } from "./filterStats.js";
 import {
   formatSuppressionAuditSummary,
@@ -41,6 +42,7 @@ export function renderTerminal(
 
   renderHotspots(lines, result, color);
   renderOwnership(lines, result, color);
+  lines.push(...renderPayoffSectionTerminal(result.issues));
 
   if (options.groupBy === "rule") {
     renderGroups(lines, result.issues, groupIssuesByRule(result.issues), "rule", color);

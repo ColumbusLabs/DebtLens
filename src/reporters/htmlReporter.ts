@@ -1,5 +1,6 @@
 import { buildDebtHeatmap, buildFixTargets } from "../core/issueAggregates.js";
 import type { ScanResult, Severity } from "../core/types.js";
+import { renderPayoffSectionHtml } from "./payoffSection.js";
 import { formatFilterStats } from "./filterStats.js";
 import {
   formatSuppressionAuditSummary,
@@ -28,6 +29,7 @@ export function renderHtml(result: ScanResult): string {
     `<tr><td><code>${escapeHtml(entry.file)}</code></td><td>${entry.totalIssues}</td><td>${escapeHtml(entry.rules.map((rule) => `${rule.ruleId} (${rule.count})`).join(", "))}</td></tr>`
   )).join("\n");
   const suppressionAudit = renderSuppressionAudit(result);
+  const payoffSection = renderPayoffSectionHtml(result.issues);
 
   return `<!doctype html>
 <html lang="en">
@@ -103,6 +105,7 @@ ${findings}
 ${heatmap.map((entry) => `<tr><td><code>${escapeHtml(entry.file)}</code></td><td>${entry.totalIssues}</td><td>${entry.distinctRules}</td><td>${entry.bySeverity.high}</td><td>${entry.bySeverity.medium}</td><td>${entry.bySeverity.low}</td><td>${entry.bySeverity.info}</td></tr>`).join("\n")}
     </tbody>
   </table>` : ""}
+  ${payoffSection}
   ${correlations ? `<h2>Rule Correlations</h2>
   <table>
     <thead><tr><th>File</th><th>Issues</th><th>Rules</th></tr></thead>

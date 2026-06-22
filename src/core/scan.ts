@@ -34,7 +34,8 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
         ...(cached.summary.performance ?? {}),
         cache: { enabled: true, hit: true, path: cachePath },
         ...(options.batchSize ? { batchSize: options.batchSize } : {}),
-        ...(options.parallel ? { parallel: true } : {}),
+        ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
+        ...(options.concurrency ? { concurrency: options.concurrency } : {}),
       };
       return cached;
     }
@@ -150,11 +151,12 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       ...(duplicateClusters.length > 0 ? { duplicateClusters } : {}),
       importGraph,
       ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
-      ...(cachePath || options.batchSize || options.parallel ? {
+      ...(cachePath || options.batchSize || options.parallel || (options.concurrency ?? 0) > 1 ? {
         performance: {
           ...(cachePath ? { cache: { enabled: true, hit: false, path: cachePath } } : {}),
           ...(options.batchSize ? { batchSize: options.batchSize } : {}),
-          ...(options.parallel ? { parallel: true } : {}),
+          ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
+        ...(options.concurrency ? { concurrency: options.concurrency } : {}),
         },
       } : {}),
     },
@@ -246,7 +248,7 @@ async function runDetectors(
     };
   };
 
-  if (contextBase.options.parallel) {
+  if (contextBase.options.parallel || (contextBase.options.concurrency ?? 0) > 1) {
     return Promise.all(detectors.map((detector) => runOne(detector)));
   }
 

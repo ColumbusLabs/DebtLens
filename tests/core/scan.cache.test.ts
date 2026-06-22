@@ -153,6 +153,35 @@ describe("scan cache", () => {
     }
   });
 
+  it("supports a custom cache directory via cacheDir", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-cache-dir-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "// TODO cache dir\nexport const value = 1;\n");
+      const cacheDir = join(dir, "shared-cache");
+      const options = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        cache: true,
+        cacheDir,
+      };
+
+      const first = await scan(options);
+      const second = await scan(options);
+
+      assert.equal(existsSync(join(cacheDir, "cache.json")), true);
+      assert.equal(first.summary.performance?.cache?.hit, false);
+      assert.equal(second.summary.performance?.cache?.hit, true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("disables scan caching when plugin detectors are loaded", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-plugin-cache-"));
     try {

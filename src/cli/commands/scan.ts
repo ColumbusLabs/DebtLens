@@ -82,6 +82,8 @@ export function registerScanCommand(program: Command): void {
     .option("--audit-suppressions", "include used and unused inline suppression directives in scan output")
     .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
     .option("--parallel", "run detectors concurrently after source loading")
+    .option("--concurrency <count>", "worker-thread concurrency for large scans (1 disables)", parseInteger)
+    .option("--cache-dir <path>", "shared cache directory for CI artifact restore")
     .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
     .option("--blame-age", "add introducedDaysAgo metadata to JSON issues using git blame")
     .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
@@ -188,6 +190,8 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     cache: rawOptions.cache !== undefined ? true : undefined,
     cachePath: typeof rawOptions.cache === "string" ? rawOptions.cache : undefined,
     parallel: rawOptions.parallel === true ? true : undefined,
+    concurrency: rawOptions.concurrency as number | undefined,
+    cacheDir: typeof rawOptions.cacheDir === "string" ? rawOptions.cacheDir : undefined,
     batchSize: rawOptions.batchSize as number | undefined,
     respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
     changedFiles,

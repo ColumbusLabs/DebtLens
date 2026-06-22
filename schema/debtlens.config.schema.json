@@ -54,12 +54,13 @@
             "compose",
             "ai-assisted-maintainer",
             "oss-maintainer",
-            "ai-workflow-drift"
+            "ai-workflow-drift",
+            "feature-flags"
           ]
         },
         {
           "type": "string",
-          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer|ai-workflow-drift)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer|ai-workflow-drift))*\\s*$"
+          "pattern": "^\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer|ai-workflow-drift|feature-flags)(?:\\s*,\\s*(?:core|react|react-native|next|expo|node|python|python-web|vue|svelte|kotlin|swift|swiftui|ruby|rails|compose|ai-assisted-maintainer|oss-maintainer|ai-workflow-drift|feature-flags))*\\s*$"
         }
       ],
       "description": "Built-in rule pack preset, or a comma-separated list of presets. Explicit rules override the pack."
@@ -137,7 +138,8 @@
               "compose-large-composable",
               "compose-state-hoisting",
               "ai-instruction-duplication",
-              "ai-instruction-contradiction"
+              "ai-instruction-contradiction",
+              "stale-feature-flag"
             ]
           },
           {
@@ -937,6 +939,14 @@
             "medium",
             "high"
           ]
+        },
+        "stale-feature-flag": {
+          "enum": [
+            "info",
+            "low",
+            "medium",
+            "high"
+          ]
         }
       },
       "additionalProperties": {
@@ -1283,6 +1293,11 @@
           "maximum": 1
         },
         "ai-instruction-contradiction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "stale-feature-flag": {
           "type": "number",
           "minimum": 0,
           "maximum": 1

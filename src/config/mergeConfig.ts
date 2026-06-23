@@ -79,6 +79,7 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     pluginDetectors: cliOptions.pluginDetectors,
     ruleSeverities: validateRuleSeverities(fileConfig.ruleSeverities),
     ruleConfidenceFloors: validateRuleConfidenceFloors(fileConfig.ruleConfidenceFloors),
+    budgets: fileConfig.budgets,
   };
 }
 

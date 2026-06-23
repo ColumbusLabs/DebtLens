@@ -1070,6 +1070,49 @@ When this is a false positive:
 
 Confidence: **0.60–0.80**, scaling with run length. This rule is intentionally conservative.
 
+## `long-parameter-list`
+
+Flags functions with too many parameters or multiple boolean flag parameters.
+
+Default thresholds:
+
+- `long-parameter-list.maxParams`: `5`
+- `long-parameter-list.maxBooleans`: `2`
+
+When this is a false positive:
+
+- framework-conventional signatures such as `(props)` or `(state, action)`
+- generated or adapter glue that must mirror an external API
+
+## `god-file`
+
+Flags kitchen-sink modules that exceed multiple independent sprawl thresholds together (size, exports, top-level declarations, mixed concerns).
+
+Default thresholds:
+
+- `god-file.maxLines`: `400`
+- `god-file.maxExports`: `10`
+- `god-file.maxTopLevelDecls`: `12`
+- `god-file.minAxes`: `3`
+
+When this is a false positive:
+
+- large but cohesive single-purpose utility modules
+- generated index files (pair with `barrel-file` guidance)
+
+## `cognitive-complexity`
+
+Scores functions with a Sonar-style cognitive complexity model that penalizes nesting more than flat branching.
+
+Default thresholds:
+
+- `cognitive-complexity.max`: `15`
+
+When this is a false positive:
+
+- generated parsers or dispatch tables with intentionally flat `switch` blocks
+- compare with `complex-control-flow` when only cyclomatic count is high
+
 ## `python-error-handling`
 
 Flags Python `try/except` handlers that are empty (`pass` only), bare `except:`, or broad `except Exception:` blocks that only log without meaningful handling.

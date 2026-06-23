@@ -146,7 +146,7 @@ describe("debtlens scan output formats", () => {
     const result = runScan(["examples/react", "--format", "nope"]);
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, junit, or gitlab-codequality/);
+    assert.match(result.stderr, /Expected terminal, json, markdown, pr-comment, sarif, html, junit, gitlab-codequality, or badge/);
   });
 
   it("emits GitLab Code Quality JSON from CLI flags", () => {
@@ -291,6 +291,64 @@ describe("debtlens scan output formats", () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /configured 0-finding detail cap/);
     assert.doesNotMatch(result.stdout, /### Grouped annotations/);
+  });
+
+  it("emits badge SVG and writes shields endpoint JSON with --output", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-badge-"));
+    try {
+      const svgPath = join(dir, "debtlens-badge.svg");
+      const result = runScan([
+        "examples/react",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "badge",
+        "--output",
+        svgPath,
+      ]);
+
+      assert.equal(result.status, 0);
+      const svg = readFileSync(svgPath, "utf8");
+      assert.match(svg, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
+      const json = JSON.parse(readFileSync(join(dir, "debtlens-badge.json"), "utf8")) as { schemaVersion: number; color: string };
+      assert.equal(json.schemaVersion, 1);
+      assert.ok(["brightgreen", "yellow", "red"].includes(json.color));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails the gate when a configured budget is breached", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-budget-"));
+    try {
+      const configPath = join(dir, "debtlens.config.json");
+      writeFileSync(configPath, JSON.stringify({
+        rules: ["todo-comment"],
+        budgets: { "src": { maxIssues: 0 } },
+      }));
+      const result = runScan(["examples/react", "--config", configPath, "--format", "json"]);
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /DebtLens budget breach/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints budget report without failing when --budget-report is set", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-budget-report-"));
+    try {
+      const configPath = join(dir, "debtlens.config.json");
+      writeFileSync(configPath, JSON.stringify({
+        rules: ["todo-comment"],
+        budgets: { "src": { maxIssues: 0 } },
+      }));
+      const result = runScan(["examples/react", "--config", configPath, "--budget-report"]);
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /Area budget report/);
+      assert.match(result.stdout, /BREACH/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

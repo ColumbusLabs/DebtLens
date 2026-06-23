@@ -190,6 +190,28 @@ export function buildConfigSchema(): Record<string, unknown> {
         enum: [...gatePresets],
         description: "Named quality-gate rollout preset. Explicit CLI flags override preset defaults.",
       },
+      budgets: {
+        type: "object",
+        description: "Per-path debt budgets. Keys are path globs; values cap issue counts per area.",
+        additionalProperties: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            maxIssues: { type: "integer", minimum: 0 },
+            maxHigh: { type: "integer", minimum: 0 },
+            maxMedium: { type: "integer", minimum: 0 },
+          },
+        },
+      },
+      badge: {
+        type: "object",
+        description: "Color thresholds for badge output.",
+        additionalProperties: false,
+        properties: {
+          greenMax: { type: "integer", minimum: 0 },
+          yellowMax: { type: "integer", minimum: 0 },
+        },
+      },
     },
   };
 }

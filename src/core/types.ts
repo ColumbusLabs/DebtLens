@@ -1,7 +1,7 @@
 import type { Project, SourceFile } from "ts-morph";
 
 export type Severity = "info" | "low" | "medium" | "high";
-export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit" | "gitlab-codequality";
+export type OutputFormat = "terminal" | "json" | "markdown" | "pr-comment" | "sarif" | "html" | "junit" | "gitlab-codequality" | "badge";
 export type TerminalGroupBy = "severity" | "rule" | "file";
 export type GatePreset = "advisory" | "new-code" | "strict-new-code" | "legacy-baseline";
 
@@ -90,6 +90,17 @@ export interface DebtLensConfig {
   failOnConfidence?: number;
   /** Named quality-gate rollout preset. Explicit CLI/config gate flags can override its defaults. */
   gatePreset?: GatePreset;
+  /** Per-path debt budgets for area-level SLO gating. */
+  budgets?: Record<string, {
+    maxIssues?: number;
+    maxHigh?: number;
+    maxMedium?: number;
+  }>;
+  /** Badge color thresholds for `--format badge`. */
+  badge?: {
+    greenMax?: number;
+    yellowMax?: number;
+  };
   /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
   ruleSeverities?: Record<string, Severity>;
   /** Rule id -> minimum confidence; issues from that rule below the floor are not reported. */
@@ -141,6 +152,8 @@ export interface ScanOptions {
   ruleSeverities?: Record<string, Severity>;
   /** Rule id -> minimum confidence; issues from that rule below the floor are not reported. */
   ruleConfidenceFloors?: Record<string, number>;
+  /** Per-path debt budgets loaded from config. */
+  budgets?: DebtLensConfig["budgets"];
 }
 
 export interface CliOptions {
@@ -173,6 +186,10 @@ export interface CliOptions {
   pluginThresholds?: ScanThresholds;
   /** Naming-drift vocabulary contributed by plugins; user config groups override on id. */
   pluginVocabulary?: Record<string, string[]>;
+  /** Per-path debt budgets loaded from config. */
+  budgets?: DebtLensConfig["budgets"];
+  /** Badge color thresholds. */
+  badge?: DebtLensConfig["badge"];
 }
 
 export interface DetectorContext {

@@ -101,6 +101,9 @@ language packs. Full taxonomy: [`docs/rule-packs.md`](./docs/rule-packs.md).
 | `swallowed-error` | core | Catch blocks that only log without rethrowing or returning | Medium |
 | `floating-promise` | core | Unawaited promise-returning calls and effect fire-and-forget | Medium |
 | `commented-out-code` | core | Contiguous comment lines that look like dead code | Low |
+| `long-parameter-list` | core | Functions with too many parameters or boolean-trap signatures | Medium |
+| `god-file` | core | Kitchen-sink modules exceeding multiple sprawl thresholds | Medium |
+| `cognitive-complexity` | core | Sonar-style cognitive complexity in nested control flow | Medium |
 | `large-component` | react | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | react | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | react | Long or overloaded React effect hooks | Medium |

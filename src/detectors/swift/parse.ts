@@ -1,8 +1,8 @@
 import type { SourceFileInfo } from "../../core/types.js";
 import {
   countLineBreaks,
+  createMaskedBraceBlockFinder,
   extractBraceBodyLines,
-  findMaskedBraceBlockEnd,
   findMatchingDelimiter,
   fingerprintNormalizedSnippet,
   maskScannedRanges,
@@ -75,9 +75,16 @@ interface SwiftFunctionSignature {
   bodyDelimiter?: { char: "{" | "=>"; index: number };
 }
 
+const swiftFunctionCache = new WeakMap<SourceFileInfo, SwiftFunction[]>();
+const swiftViewStructCache = new WeakMap<SourceFileInfo, SwiftViewStruct[]>();
+
 export function extractSwiftFunctions(file: SourceFileInfo): SwiftFunction[] {
+  const cached = swiftFunctionCache.get(file);
+  if (cached) return cached;
+
   const lines = file.content.split(/\r?\n/);
   const viewStructs = extractSwiftViewStructs(file);
+  const findBlockEnd = createMaskedBraceBlockFinder(lines, maskSwiftTrivia);
   const viewRanges = viewStructs.map((view) => ({
     name: view.name,
     start: view.startLine,
@@ -128,7 +135,7 @@ export function extractSwiftFunctions(file: SourceFileInfo): SwiftFunction[] {
 
     if (signature.bodyDelimiter?.char !== "{") continue;
 
-    const endIndex = findSwiftBlockEnd(lines, index, signature.bodyDelimiter.index);
+    const endIndex = findBlockEnd(index, signature.bodyDelimiter.index);
     const textLines = lines.slice(index, endIndex + 1);
     functions.push({
       name: signature.name,
@@ -147,11 +154,16 @@ export function extractSwiftFunctions(file: SourceFileInfo): SwiftFunction[] {
     index = endIndex;
   }
 
+  swiftFunctionCache.set(file, functions);
   return functions;
 }
 
 export function extractSwiftViewStructs(file: SourceFileInfo): SwiftViewStruct[] {
+  const cached = swiftViewStructCache.get(file);
+  if (cached) return cached;
+
   const lines = file.content.split(/\r?\n/);
+  const findBlockEnd = createMaskedBraceBlockFinder(lines, maskSwiftTrivia);
   const views: SwiftViewStruct[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -159,7 +171,7 @@ export function extractSwiftViewStructs(file: SourceFileInfo): SwiftViewStruct[]
     if (!header) continue;
     if (!isViewConformance(header.conformsTo)) continue;
 
-    const endIndex = findSwiftBlockEnd(lines, index, header.bodyDelimiterIndex);
+    const endIndex = findBlockEnd(index, header.bodyDelimiterIndex);
     const textLines = lines.slice(index, endIndex + 1);
     const body = extractViewBody(textLines, index);
     if (!body) {
@@ -183,6 +195,7 @@ export function extractSwiftViewStructs(file: SourceFileInfo): SwiftViewStruct[]
     index = endIndex;
   }
 
+  swiftViewStructCache.set(file, views);
   return views;
 }
 
@@ -338,10 +351,6 @@ function findBodyDelimiter(text: string, start: number): SwiftFunctionSignature[
   return undefined;
 }
 
-function findSwiftBlockEnd(lines: string[], startIndex: number, bodyDelimiterIndex: number): number {
-  return findMaskedBraceBlockEnd(lines, startIndex, bodyDelimiterIndex, maskSwiftTrivia);
-}
-
 function parseSwiftParamName(rawParam: string): string {
   const declaration = rawParam
     .replace(/=.*/, "")
@@ -463,7 +472,9 @@ function collectInlineAttributes(line: string): string[] {
 function stripLeadingAttributes(text: string): string {
   let stripped = text.trimStart();
   while (stripped.startsWith("@") || stripped.startsWith("#")) {
-    stripped = stripped.replace(/^[@#][A-Za-z_][\w.]*\b(?:\([^)]*\))?\s*/, "");
+    const next = stripped.replace(/^[@#][A-Za-z_][\w.]*\b(?:\([^)]*\))?\s*/, "");
+    if (next === stripped) break;
+    stripped = next;
   }
   return stripped;
 }

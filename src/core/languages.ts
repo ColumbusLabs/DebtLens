@@ -32,6 +32,16 @@ function parseWithTsMorph(input: LanguageParseInput): SourceFileInfo {
   };
 }
 
+function parseTextOnly(input: LanguageParseInput): SourceFileInfo {
+  return {
+    absolutePath: input.absolutePath,
+    relativePath: input.relativePath,
+    content: input.content,
+    language: input.language,
+    sourceFile: input.project.createSourceFile(input.absolutePath, "", { overwrite: true }),
+  };
+}
+
 function parseSfcWithTsMorph(input: LanguageParseInput): SourceFileInfo {
   const virtualExtension = getSfcVirtualScriptExtension(input.content);
   return {
@@ -62,7 +72,7 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
     extensions: [".py"],
     includeGlobs: ["**/*.py"],
     ruleIdPrefixes: ["python-"],
-    parseSourceFile: parseWithTsMorph,
+    parseSourceFile: parseTextOnly,
   },
   kotlin: {
     id: "kotlin",
@@ -70,7 +80,7 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
     extensions: [".kt", ".kts"],
     includeGlobs: ["**/*.{kt,kts}"],
     ruleIdPrefixes: ["kotlin-", "compose-"],
-    parseSourceFile: parseWithTsMorph,
+    parseSourceFile: parseTextOnly,
     defaultExcludeRewrites: {
       "android/**": ["android/**/*.{ts,tsx,js,jsx}"],
     },
@@ -81,7 +91,7 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
     extensions: [".swift"],
     includeGlobs: ["**/*.swift"],
     ruleIdPrefixes: ["swift-", "swiftui-"],
-    parseSourceFile: parseWithTsMorph,
+    parseSourceFile: parseTextOnly,
     defaultExcludeRewrites: {
       "ios/**": ["ios/**/*.{ts,tsx,js,jsx}"],
     },
@@ -92,7 +102,7 @@ export const LANGUAGE_DEFINITIONS: Record<SourceLanguage, LanguageDefinition> = 
     extensions: [".rb"],
     includeGlobs: ["**/*.rb"],
     ruleIdPrefixes: ["ruby-", "rails-"],
-    parseSourceFile: parseWithTsMorph,
+    parseSourceFile: parseTextOnly,
   },
   vue: {
     id: "vue",

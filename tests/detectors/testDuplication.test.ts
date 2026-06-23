@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { defaultConfig } from "../../src/config/defaults.js";
 import { testDuplicationDetector } from "../../src/detectors/testDuplication.js";
 import { runDetector } from "../helpers/runDetector.js";
 
@@ -49,6 +50,33 @@ describe("test-duplication detector", () => {
     });
 
     assert.equal(issues.length, 0);
+  });
+
+  it("does not side-load nested dependency tests", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-test-duplication-deps-"));
+    try {
+      mkdirSync(join(dir, "packages", "sim", "tests"), { recursive: true });
+      mkdirSync(join(dir, "apps", "game", "node_modules", "@scope", "sim", "tests"), { recursive: true });
+      const testBody = `
+        test("replay command sequence is deterministic", () => {
+          const replay = runReplay(["start", "fund", "recover"]);
+          expect(replay.timeline).toHaveLength(3);
+          expect(replay.outcome).toBe("stable");
+        });
+      `;
+      writeFileSync(join(dir, "packages", "sim", "tests", "regression.test.ts"), testBody);
+      writeFileSync(join(dir, "apps", "game", "node_modules", "@scope", "sim", "tests", "regression.test.ts"), testBody);
+
+      const issues = await runDetector(testDuplicationDetector, {}, {
+        target: dir,
+        exclude: defaultConfig.exclude,
+        thresholds: { "test-duplication.minLines": 2 },
+      });
+
+      assert.equal(issues.length, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("anchors changed-mode findings to changed tests without leaking unrelated duplicate pairs", async () => {

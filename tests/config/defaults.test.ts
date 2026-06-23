@@ -7,6 +7,8 @@ describe("default config", () => {
     for (const pattern of [
       "**/*.test.{ts,tsx,js,jsx}",
       "**/*.spec.{ts,tsx,js,jsx}",
+      "**/*_test.{ts,tsx,js,jsx}",
+      "**/*_test.node.{ts,tsx,js,jsx}",
       "**/__tests__/**",
       "**/__mocks__/**",
     ]) {
@@ -16,6 +18,8 @@ describe("default config", () => {
 
   it("excludes generated, dependency, and virtualenv caches by default", () => {
     for (const pattern of [
+      "node_modules/**",
+      "**/node_modules/**",
       "out/**",
       ".output/**",
       ".venv/**",

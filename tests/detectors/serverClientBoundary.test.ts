@@ -55,6 +55,21 @@ export function Counter() {
     assert.equal(issues.length, 0);
   });
 
+  it("does NOT treat Expo Router screens as Next server components", async () => {
+    const src = `
+import { Stack } from "expo-router";
+import { useState } from "react";
+import { View } from "react-native";
+
+export default function HomeScreen() {
+  const [ready] = useState(true);
+  return <View>{ready ? <Stack.Screen options={{ title: "Home" }} /> : null}</View>;
+}
+`;
+    const issues = await runDetector(serverClientBoundaryDetector, { "apps/mobile/app/(tabs)/home.tsx": src });
+    assert.equal(issues.length, 0);
+  });
+
   it("does NOT flag server components without client hooks", async () => {
     const src = `
 import { cookies } from "next/headers";

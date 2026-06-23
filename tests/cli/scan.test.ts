@@ -1586,6 +1586,33 @@ describe("debtlens scan git modes", () => {
     }
   });
 
+  it("uses the target repository gitignore for absolute targets", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-absolute-gitignore-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+      writeFileSync(join(dir, "src", "ignored.ts"), "// TODO ignored\nexport const ignored = 1;\n");
+      writeFileSync(join(dir, "src", "kept.ts"), "// TODO kept\nexport const kept = 1;\n");
+
+      const result = runScan([
+        dir,
+        "--respect-gitignore",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 1);
+      assert.equal(parsed.issues[0].file, "src/kept.ts");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("supports gitignore filtering from config", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-config-gitignore-"));
     try {

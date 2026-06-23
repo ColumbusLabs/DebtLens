@@ -99,23 +99,61 @@ export function findMaskedBraceBlockEnd(
   bodyDelimiterIndex: number,
   maskTrivia: (text: string) => string,
 ): number {
-  const text = lines.slice(startIndex).join("\n");
-  const code = maskTrivia(text);
-  let depth = 0;
-  let seenBlock = false;
+  return createMaskedBraceBlockFinder(lines, maskTrivia)(startIndex, bodyDelimiterIndex);
+}
 
-  for (let index = bodyDelimiterIndex; index < code.length; index += 1) {
-    const char = code[index] ?? "";
-    if (char === "{") {
-      seenBlock = true;
-      depth += 1;
-    } else if (char === "}" && seenBlock) {
-      depth -= 1;
-      if (depth === 0) return startIndex + countLineBreaks(text.slice(0, index));
+export function createMaskedBraceBlockFinder(
+  lines: string[],
+  maskTrivia: (text: string) => string,
+): (startIndex: number, bodyDelimiterIndex: number) => number {
+  const text = lines.join("\n");
+  const code = maskTrivia(text);
+  const lineStarts = buildLineStartOffsets(lines);
+
+  return (startIndex, bodyDelimiterIndex) => {
+    const startOffset = (lineStarts[startIndex] ?? 0) + bodyDelimiterIndex;
+    let depth = 0;
+    let seenBlock = false;
+
+    for (let index = startOffset; index < code.length; index += 1) {
+      const char = code[index] ?? "";
+      if (char === "{") {
+        seenBlock = true;
+        depth += 1;
+      } else if (char === "}" && seenBlock) {
+        depth -= 1;
+        if (depth === 0) return lineIndexForOffset(lineStarts, index);
+      }
     }
+
+    return startIndex;
+  };
+}
+
+function buildLineStartOffsets(lines: string[]): number[] {
+  const offsets: number[] = [];
+  let offset = 0;
+  for (const line of lines) {
+    offsets.push(offset);
+    offset += line.length + 1;
+  }
+  return offsets;
+}
+
+function lineIndexForOffset(lineStarts: number[], offset: number): number {
+  let low = 0;
+  let high = lineStarts.length - 1;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const current = lineStarts[mid] ?? 0;
+    const next = lineStarts[mid + 1] ?? Number.POSITIVE_INFINITY;
+    if (offset >= current && offset < next) return mid;
+    if (offset < current) high = mid - 1;
+    else low = mid + 1;
   }
 
-  return startIndex;
+  return Math.max(0, lineStarts.length - 1);
 }
 
 export function countLineBreaks(text: string): number {

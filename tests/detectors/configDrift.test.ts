@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { defaultConfig } from "../../src/config/defaults.js";
 import { configDriftDetector } from "../../src/detectors/configDrift.js";
 import { runDetector } from "../helpers/runDetector.js";
 
@@ -68,6 +69,29 @@ describe("config-drift detector", () => {
       assert.equal(issues.length, 1);
       assert.match(issues[0]?.message ?? "", /scripts\.build/);
       assert.equal(issues[0]?.evidence?.length, 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores nested dependency configs during filesystem discovery", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-config-drift-deps-"));
+    try {
+      mkdirSync(join(dir, "packages", "app"), { recursive: true });
+      mkdirSync(join(dir, "apps", "mobile", "node_modules", "expo-splash-screen", "plugin"), { recursive: true });
+      writeFileSync(join(dir, "packages", "app", "tsconfig.json"), JSON.stringify({
+        compilerOptions: { strict: true },
+      }), "utf8");
+      writeFileSync(join(dir, "apps", "mobile", "node_modules", "expo-splash-screen", "plugin", "tsconfig.json"), JSON.stringify({
+        compilerOptions: { strict: false },
+      }), "utf8");
+
+      const issues = await runDetector(configDriftDetector, {}, {
+        target: dir,
+        exclude: defaultConfig.exclude,
+      });
+
+      assert.equal(issues.length, 0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

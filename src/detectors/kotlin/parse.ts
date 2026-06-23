@@ -1,7 +1,7 @@
 import type { SourceFileInfo } from "../../core/types.js";
 import {
+  createMaskedBraceBlockFinder,
   extractBraceBodyLines,
-  findMaskedBraceBlockEnd,
   findMatchingDelimiter,
   fingerprintNormalizedSnippet,
   maskScannedRanges,
@@ -56,8 +56,14 @@ interface KotlinFunctionSignature {
   bodyDelimiter?: { char: "{" | "="; index: number };
 }
 
+const kotlinFunctionCache = new WeakMap<SourceFileInfo, KotlinFunction[]>();
+
 export function extractKotlinFunctions(file: SourceFileInfo): KotlinFunction[] {
+  const cached = kotlinFunctionCache.get(file);
+  if (cached) return cached;
+
   const lines = file.content.split(/\r?\n/);
+  const findBlockEnd = createMaskedBraceBlockFinder(lines, maskKotlinTrivia);
   const functions: KotlinFunction[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -91,7 +97,7 @@ export function extractKotlinFunctions(file: SourceFileInfo): KotlinFunction[] {
 
     if (signature.bodyDelimiter?.char !== "{") continue;
 
-    const endIndex = findKotlinBlockEnd(lines, index, signature.bodyDelimiter.index);
+    const endIndex = findBlockEnd(index, signature.bodyDelimiter.index);
     const textLines = lines.slice(index, endIndex + 1);
     functions.push({
       name: signature.name,
@@ -108,6 +114,7 @@ export function extractKotlinFunctions(file: SourceFileInfo): KotlinFunction[] {
     index = endIndex;
   }
 
+  kotlinFunctionCache.set(file, functions);
   return functions;
 }
 
@@ -249,10 +256,6 @@ function findBodyDelimiter(text: string, start: number): KotlinFunctionSignature
     }
   }
   return undefined;
-}
-
-function findKotlinBlockEnd(lines: string[], startIndex: number, bodyDelimiterIndex: number): number {
-  return findMaskedBraceBlockEnd(lines, startIndex, bodyDelimiterIndex, maskKotlinTrivia);
 }
 
 function isIgnorableFunctionPrefix(line: string): boolean {

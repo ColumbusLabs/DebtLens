@@ -5,6 +5,7 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
   include: getLanguageDefinition("tsjs").includeGlobs,
   exclude: [
     "node_modules/**",
+    "**/node_modules/**",
     "dist/**",
     "build/**",
     "out/**",
@@ -27,6 +28,8 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
     "**/*.min.js",
     "**/*.test.{ts,tsx,js,jsx}",
     "**/*.spec.{ts,tsx,js,jsx}",
+    "**/*_test.{ts,tsx,js,jsx}",
+    "**/*_test.node.{ts,tsx,js,jsx}",
     "**/__tests__/**",
     "**/__mocks__/**"
   ],

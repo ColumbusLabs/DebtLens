@@ -11,7 +11,7 @@ import { SCHEMA_ID } from "./schema.js";
 export const configTemplate: DebtLensConfig & { $schema: string } = {
   $schema: SCHEMA_ID,
   include: ["src/**/*.{ts,tsx,js,jsx}"],
-  exclude: ["node_modules/**", "dist/**", "build/**", "out/**", ".next/**", ".output/**", "coverage/**", ".venv/**", "venv/**", "**/__generated__/**"],
+  exclude: ["node_modules/**", "**/node_modules/**", "dist/**", "build/**", "out/**", ".next/**", ".output/**", "coverage/**", ".venv/**", "venv/**", "**/__generated__/**", "**/*_test.{ts,tsx,js,jsx}", "**/*_test.node.{ts,tsx,js,jsx}"],
   minSeverity: "low",
   respectGitignore: false,
   rules: [

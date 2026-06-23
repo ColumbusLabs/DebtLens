@@ -114,6 +114,27 @@ func clean() -> String {
     assert.equal(issues[0]?.location?.startLine, 2);
   });
 
+  it("does not treat Swift script shebangs as unconsumed attributes", async () => {
+    const issues = await runDetector(swiftLargeFunctionDetector, {
+      "Scripts/survey.swift": `#!/usr/bin/env swift
+
+import Foundation
+
+func routeInvoice(invoice: Invoice) -> String {
+    if invoice.total > 1000 { return "enterprise" }
+    if !invoice.paid { return "collections" }
+    if invoice.customer.isEmpty { return "unknown" }
+    return "standard"
+}
+`,
+    }, {
+      thresholds: { "large-function.maxBranches": 2 },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /routeInvoice/);
+  });
+
   it("detects Swift duplicate logic and ignores dissimilar functions", async () => {
     const issues = await runDetector(swiftDuplicateLogicDetector, {
       "src/Service.swift": `

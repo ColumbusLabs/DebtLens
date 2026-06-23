@@ -1,5 +1,5 @@
 import { realpathSync, statSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import fg from "fast-glob";
 import type { ScanOptions } from "./types.js";
 import { getIgnoredFiles } from "../utils/git.js";
@@ -20,10 +20,11 @@ export async function resolveFileSelection(options: ScanOptions): Promise<FileSe
   const changed = options.changedFiles
     ? new Set(options.changedFiles.map(canonicalize))
     : undefined;
+  const gitignoreCwd = isFile ? dirname(options.target) : options.target;
 
   if (isFile) {
     if (changed && !changed.has(canonicalize(options.target))) return emptySelection();
-    if (options.respectGitignore && isIgnoredByGit(options.cwd, options.target)) return emptySelection();
+    if (options.respectGitignore && isIgnoredByGit(gitignoreCwd, options.target)) return emptySelection();
     return { paths: [options.target], totalMatchedFiles: 1, maxFilesApplied: false };
   }
 
@@ -43,7 +44,7 @@ export async function resolveFileSelection(options: ScanOptions): Promise<FileSe
   }
 
   if (options.respectGitignore) {
-    const ignored = getIgnoredFiles(options.cwd, paths);
+    const ignored = getIgnoredFiles(gitignoreCwd, paths);
     if (ignored !== null) {
       paths = paths.filter((path) => !ignored.has(canonicalize(path)));
     }

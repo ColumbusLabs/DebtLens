@@ -70,6 +70,34 @@ describe("scan integration", () => {
     }
   });
 
+  it("filters gitignored files for absolute targets outside the caller cwd", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-absolute-gitignore-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, ".gitignore"), "src/ignored.ts\n");
+      writeFileSync(join(dir, "src", "ignored.ts"), "// TODO ignored\nexport const ignored = 1;\n");
+      writeFileSync(join(dir, "src", "kept.ts"), "// TODO kept\nexport const kept = 1;\n");
+
+      const result = await scan({
+        cwd: process.cwd(),
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low",
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        maxFiles: defaultConfig.maxFiles,
+        respectGitignore: true,
+      });
+
+      assert.equal(result.summary.totalIssues, 1);
+      assert.deepEqual(result.issues.map((issue) => issue.file), ["src/kept.ts"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("applies maxFiles after deterministic path ordering", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-maxfiles-order-"));
     try {

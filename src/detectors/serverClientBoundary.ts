@@ -58,6 +58,8 @@ export const serverClientBoundaryDetector: Detector = {
     const issues: DebtIssue[] = [];
 
     for (const file of context.files) {
+      if (isExpoOrReactNativeSurface(file)) continue;
+
       const isClientFile = hasUseClientDirective(file);
       if (isClientFile) {
         const serverImports = collectServerOnlyImports(file);
@@ -101,6 +103,16 @@ export const serverClientBoundaryDetector: Detector = {
     return issues;
   },
 };
+
+function isExpoOrReactNativeSurface(file: SourceFileInfo): boolean {
+  return file.sourceFile.getImportDeclarations().some((declaration) => {
+    const moduleName = declaration.getModuleSpecifierValue();
+    return moduleName === "expo-router"
+      || moduleName === "react-native"
+      || moduleName.startsWith("expo-")
+      || moduleName.startsWith("@react-navigation/");
+  });
+}
 
 function collectServerOnlyImports(file: SourceFileInfo): Array<{ moduleName: string; location: { startLine: number; endLine: number } }> {
   const imports: Array<{ moduleName: string; location: { startLine: number; endLine: number } }> = [];

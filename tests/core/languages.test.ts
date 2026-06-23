@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { Project } from "ts-morph";
 import { defaultConfig } from "../../src/config/defaults.js";
 import {
   detectSourceLanguage,
   getLanguageDefinition,
   includeGlobsForLanguages,
   languagesForDetector,
+  parseSourceFile,
   rewriteDefaultExcludesForLanguages,
 } from "../../src/core/languages.js";
 import type { Detector } from "../../src/core/types.js";
@@ -43,5 +45,19 @@ describe("language registry", () => {
       rewriteDefaultExcludesForLanguages(["kotlin"], defaultConfig.exclude).filter((pattern) => pattern.startsWith("android/")),
       ["android/**/*.{ts,tsx,js,jsx}"],
     );
+  });
+
+  it("uses text-only placeholders for languages with custom parsers", () => {
+    const project = new Project({ useInMemoryFileSystem: true });
+    const file = parseSourceFile({
+      project,
+      absolutePath: "/src/Feature.swift",
+      relativePath: "src/Feature.swift",
+      content: "func render() { print(\"ok\") }\n",
+      language: "swift",
+    });
+
+    assert.equal(file.content, "func render() { print(\"ok\") }\n");
+    assert.equal(file.sourceFile.getFullText(), "");
   });
 });

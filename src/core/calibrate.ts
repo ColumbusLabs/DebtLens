@@ -18,7 +18,7 @@ export function buildCalibrateSuggestions(
   const base = buildThresholdSuggestions(result, options);
   const percentile = clampPercentile(calibrateOptions.percentile);
   const suggestions = base.map((suggestion) => {
-    const observed = interpolatePercentile(suggestion.observedP90, percentile);
+    const observed = percentileValue(suggestion.observedValues ?? [suggestion.observedP90], percentile / 100);
     const suggested = Math.max(Math.ceil(observed * 1.05), Math.ceil(suggestion.current));
     return {
       ...suggestion,
@@ -58,7 +58,9 @@ function clampPercentile(value: number): number {
   return Math.min(99, Math.max(50, Math.round(value)));
 }
 
-function interpolatePercentile(observedP90: number, percentile: number): number {
-  const scale = percentile / 90;
-  return observedP90 * scale;
+function percentileValue(values: number[], quantile: number): number {
+  const sorted = [...values].filter(Number.isFinite).sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const index = Math.ceil(sorted.length * quantile) - 1;
+  return sorted[Math.max(0, Math.min(sorted.length - 1, index))] ?? 0;
 }

@@ -318,6 +318,29 @@ describe("debtlens scan output formats", () => {
     }
   });
 
+  it("writes shields endpoint JSON when badge output path ends in .json", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-badge-json-"));
+    try {
+      const jsonPath = join(dir, "debtlens-badge.json");
+      const result = runScan([
+        "examples/react",
+        "--rules",
+        "todo-comment",
+        "--format",
+        "badge",
+        "--output",
+        jsonPath,
+      ]);
+
+      assert.equal(result.status, 0);
+      const json = JSON.parse(readFileSync(jsonPath, "utf8")) as { schemaVersion: number; label: string };
+      assert.equal(json.schemaVersion, 1);
+      assert.equal(json.label, "debt");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("fails the gate when a configured budget is breached", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-budget-"));
     try {

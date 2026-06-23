@@ -30,11 +30,20 @@ export function renderPayoffSectionHtml(issues: DebtIssue[], limit = 10): string
   if (!hasPayoffScores(issues)) return "";
   const rows = topPayoffIssues(issues, limit).map((issue) => {
     const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
-    return `<tr><td>${issue.payoffScore?.toFixed(2)}</td><td>${issue.severity}</td><td>${issue.ruleName}</td><td><code>${location}</code></td><td>${issue.message}</td></tr>`;
+    return `<tr><td>${issue.payoffScore?.toFixed(2)}</td><td>${escapeHtml(issue.severity)}</td><td>${escapeHtml(issue.ruleName)}</td><td><code>${escapeHtml(location)}</code></td><td>${escapeHtml(issue.message)}</td></tr>`;
   }).join("\n");
   return `<h2>Top payoff targets</h2><table><thead><tr><th>Score</th><th>Severity</th><th>Rule</th><th>Location</th><th>Message</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 export function scanHasPayoffData(result: ScanResult): boolean {
   return hasPayoffScores(result.issues);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 }

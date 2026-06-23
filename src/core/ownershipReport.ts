@@ -37,7 +37,11 @@ export function buildOwnershipReport(input: {
   });
   if (!ownership) return undefined;
 
-  const owners = ownership.ownerSummaries.map((owner) => toScorecard(owner, input.result.issues, input.historyTotalsByOwner?.[owner.owner]));
+  const ownersByFile = new Map(ownership.files.map((file) => [file.file, file.owners]));
+  const owners = ownership.ownerSummaries.map((owner) => {
+    const ownerIssues = input.result.issues.filter((issue) => ownersByFile.get(issue.file)?.includes(owner.owner));
+    return toScorecard(owner, ownerIssues, input.historyTotalsByOwner?.[owner.owner]);
+  });
   const unownedIssues = input.result.issues.filter((issue) => {
     const file = ownership.files.find((entry) => entry.file === issue.file);
     return !file || file.owners.length === 0;
@@ -72,12 +76,11 @@ function toScorecard(
   issues: DebtIssue[],
   history?: number[],
 ): OwnershipScorecardEntry {
-  const ownerIssues = issues.filter((issue) => owner.topFiles.some((file) => file.file === issue.file) || owner.owner === "unowned");
-  const topRules = groupIssuesByRule(ownerIssues)
+  const topRules = groupIssuesByRule(issues)
     .map(([ruleId, ruleIssues]) => ({ ruleId, count: ruleIssues.length }))
     .sort((left, right) => right.count - left.count || left.ruleId.localeCompare(right.ruleId))
     .slice(0, 5);
-  const payoffWeightedDebt = sortIssuesByPayoff(ownerIssues).reduce((total, issue) => total + (issue.payoffScore ?? 0), 0);
+  const payoffWeightedDebt = sortIssuesByPayoff(issues).reduce((total, issue) => total + (issue.payoffScore ?? 0), 0);
   return {
     owner: owner.owner,
     totalIssues: owner.totalIssues,

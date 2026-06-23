@@ -11,6 +11,7 @@ import { dataLoaderSprawlDetector } from "./dataLoaderSprawl.js";
 import { commentedOutCodeDetector } from "./commentedOutCode.js";
 import { deadAbstractionDetector } from "./deadAbstraction.js";
 import { emptyCatchDetector, swallowedErrorDetector } from "./errorHandling.js";
+import { featureFlagDebtDetector } from "./featureFlagDebt.js";
 import { floatingPromiseDetector } from "./floatingPromise.js";
 import { duplicateLogicDetector } from "./duplicateLogic.js";
 import { duplicatedLiteralDetector } from "./duplicatedLiteral.js";
@@ -123,6 +124,7 @@ export const allDetectors: Detector[] = [
   composeStateHoistingDetector,
   instructionDuplicationDetector,
   instructionContradictionDetector,
+  featureFlagDebtDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);

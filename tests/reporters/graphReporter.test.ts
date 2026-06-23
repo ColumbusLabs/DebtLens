@@ -18,4 +18,21 @@ describe("graph reporter", () => {
     ]);
     assert.match(treemap, /<svg/);
   });
+
+  it("escapes graph and treemap labels", () => {
+    const graph: ImportGraph = {
+      nodes: ["src/<owner>&file.ts", "b.ts"],
+      edges: [{ from: "src/<owner>&file.ts", to: "b.ts", inCycle: false }],
+      cycles: [],
+    };
+    const svg = renderImportGraphSvg(graph);
+    assert.match(svg, /src\/&lt;owner&gt;&amp;file\.ts/);
+    assert.doesNotMatch(svg, /<owner>/);
+
+    const treemap = renderDebtTreemapSvg([
+      { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, message: "todo", file: "src/<bad&>/a.ts", tags: [] },
+    ]);
+    assert.match(treemap, /src\/&lt;bad&amp;&gt;/);
+    assert.doesNotMatch(treemap, /<bad&>/);
+  });
 });

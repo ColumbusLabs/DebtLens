@@ -155,6 +155,10 @@ export interface ScanOptions {
   batchSize?: number;
   /** Run detectors concurrently after source loading. Results remain sorted deterministically. */
   parallel?: boolean;
+  /** Worker-thread concurrency for large scans (`--concurrency`). */
+  concurrency?: number;
+  /** Shared cache directory override (`--cache-dir`). */
+  cacheDir?: string;
   /** Detectors contributed by config-loaded plugins, merged after built-in rules. */
   pluginDetectors?: Detector[];
   /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
@@ -190,6 +194,8 @@ export interface CliOptions {
   cachePath?: string;
   batchSize?: number;
   parallel?: boolean;
+  concurrency?: number;
+  cacheDir?: string;
   pluginDetectors?: Detector[];
   /** Threshold defaults contributed by plugins; user config and CLI thresholds override. */
   pluginThresholds?: ScanThresholds;
@@ -422,6 +428,7 @@ export interface ScanPerformance {
   };
   batchSize?: number;
   parallel?: boolean;
+  concurrency?: number;
 }
 
 export interface CacheKeyInput {

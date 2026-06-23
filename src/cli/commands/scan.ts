@@ -82,6 +82,8 @@ export function registerScanCommand(program: Command): void {
     .option("--audit-suppressions", "include used and unused inline suppression directives in scan output")
     .option("--cache [path]", "reuse unchanged scan results from a content-hash cache")
     .option("--parallel", "run detectors concurrently after source loading")
+    .option("--concurrency <count>", "maximum concurrent detector runs for large scans (1 disables)", parseInteger)
+    .option("--cache-dir <path>", "shared cache directory for CI artifact restore")
     .option("--batch-size <count>", "load source files in bounded batches", parseInteger)
     .option("--blame-age", "add introducedDaysAgo metadata to JSON issues using git blame")
     .option("--hotspots [limit]", "rank files by current findings plus recent git churn", parseOptionalInteger)
@@ -185,9 +187,11 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     thresholds: parseThresholds(rawOptions.threshold as string | undefined),
     minSeverity,
     maxFiles: rawOptions.maxFiles as number | undefined,
-    cache: rawOptions.cache !== undefined ? true : undefined,
+    cache: rawOptions.cache !== undefined || rawOptions.cacheDir !== undefined ? true : undefined,
     cachePath: typeof rawOptions.cache === "string" ? rawOptions.cache : undefined,
     parallel: rawOptions.parallel === true ? true : undefined,
+    concurrency: rawOptions.concurrency as number | undefined,
+    cacheDir: typeof rawOptions.cacheDir === "string" ? rawOptions.cacheDir : undefined,
     batchSize: rawOptions.batchSize as number | undefined,
     respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
     changedFiles,
@@ -297,7 +301,7 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
 
   const badgeThresholds = parseBadgeThresholds(fileConfig.badge);
 
-  const report = renderReport(reported, format, {
+  let report = renderReport(reported, format, {
     color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
     quiet: rawOptions.quiet === true,
     sourceUrlBase: format === "pr-comment" ? getGitHubSourceUrlBase(process.env) : undefined,
@@ -314,13 +318,16 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
 
   if (format === "badge" && rawOptions.output) {
     const outputPath = resolve(cwd, String(rawOptions.output));
-    const jsonPath = outputPath.endsWith(".json")
-      ? outputPath
-      : outputPath.endsWith(".svg")
+    const endpoint = renderBadgeEndpoint(reported, { thresholds: badgeThresholds });
+    if (outputPath.endsWith(".json")) {
+      report = endpoint;
+    } else {
+      const jsonPath = outputPath.endsWith(".svg")
         ? outputPath.replace(/\.svg$/, ".json")
         : `${outputPath.replace(/\.(svg|json)$/i, "")}.json`;
-    mkdirSync(dirname(jsonPath), { recursive: true });
-    writeFileSync(jsonPath, renderBadgeEndpoint(reported, { thresholds: badgeThresholds }), "utf8");
+      mkdirSync(dirname(jsonPath), { recursive: true });
+      writeFileSync(jsonPath, endpoint, "utf8");
+    }
   }
 
   let exitCode = 0;

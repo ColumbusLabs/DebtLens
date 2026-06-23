@@ -6,6 +6,7 @@ export interface ThresholdSuggestion {
   suggested: number;
   observedP90: number;
   samples: number;
+  observedValues?: number[];
 }
 
 interface EvidenceThreshold {
@@ -51,7 +52,7 @@ export function buildThresholdSuggestions(result: ScanResult, options: ScanOptio
       const current = options.thresholds[key];
       const observedP90 = percentile(values, 0.9);
       const suggested = Math.max(Math.ceil(observedP90 * 1.1), Math.ceil(current ?? 0));
-      return { key, current: current ?? 0, suggested, observedP90, samples: values.length };
+      return { key, current: current ?? 0, suggested, observedP90, samples: values.length, observedValues: [...values] };
     })
     .filter((suggestion) => suggestion.current > 0 && suggestion.suggested > suggestion.current)
     .sort((left, right) => left.key.localeCompare(right.key));

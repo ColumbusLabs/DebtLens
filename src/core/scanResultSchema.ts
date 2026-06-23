@@ -20,6 +20,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
       message: { type: "string" },
       file: { type: "string" },
       introducedDaysAgo: { type: "integer", minimum: 0 },
+      payoffScore: { type: "number", minimum: 0 },
       location: {
         type: "object",
         additionalProperties: false,
@@ -88,6 +89,34 @@ export function buildScanResultSchema(): Record<string, unknown> {
             startLine: { type: "integer", minimum: 1 },
             endLine: { type: "integer", minimum: 1 },
           },
+        },
+      },
+    },
+  };
+  const importGraph = {
+    type: "object",
+    additionalProperties: false,
+    required: ["nodes", "edges", "cycles"],
+    properties: {
+      nodes: { type: "array", items: { type: "string" } },
+      edges: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["from", "to", "inCycle"],
+          properties: {
+            from: { type: "string" },
+            to: { type: "string" },
+            inCycle: { type: "boolean" },
+          },
+        },
+      },
+      cycles: {
+        type: "array",
+        items: {
+          type: "array",
+          items: { type: "string" },
         },
       },
     },
@@ -308,6 +337,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
           },
           correlations: { type: "array", items: correlation },
           duplicateClusters: { type: "array", items: duplicateCluster },
+          importGraph,
           hotspots: {
             type: "object",
             additionalProperties: false,
@@ -364,6 +394,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
               },
               batchSize: { type: "integer", minimum: 1 },
               parallel: { type: "boolean" },
+              concurrency: { type: "integer", minimum: 1 },
             },
           },
         },

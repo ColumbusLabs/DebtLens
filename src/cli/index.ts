@@ -16,6 +16,7 @@ import { registerSuppressCommand } from "./commands/suppress.js";
 import { registerHistoryCommand } from "./commands/history.js";
 import { registerCalibrateCommand } from "./commands/calibrate.js";
 import { registerTriageCommand } from "./commands/triage.js";
+import { registerFixCommand } from "./commands/fix.js";
 import { registerWatchCommand } from "./commands/watch.js";
 
 const program = new Command();
@@ -41,6 +42,7 @@ registerAdoptCommand(program);
 registerHistoryCommand(program);
 registerCalibrateCommand(program);
 registerTriageCommand(program);
+registerFixCommand(program);
 
 if (process.argv.length <= 2) {
   program.help();

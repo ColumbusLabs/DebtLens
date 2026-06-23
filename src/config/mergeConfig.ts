@@ -76,6 +76,8 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     cachePath: cliOptions.cachePath,
     batchSize: cliOptions.batchSize,
     parallel: cliOptions.parallel,
+    concurrency: cliOptions.concurrency,
+    cacheDir: cliOptions.cacheDir,
     pluginDetectors: cliOptions.pluginDetectors,
     ruleSeverities: validateRuleSeverities(fileConfig.ruleSeverities),
     ruleConfidenceFloors: validateRuleConfidenceFloors(fileConfig.ruleConfidenceFloors),

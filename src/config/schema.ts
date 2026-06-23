@@ -212,6 +212,20 @@ export function buildConfigSchema(): Record<string, unknown> {
           yellowMax: { type: "integer", minimum: 0 },
         },
       },
+      priority: {
+        type: "object",
+        description: "Payoff ranking weights for --sort payoff.",
+        additionalProperties: false,
+        properties: {
+          churn: { type: "number", minimum: 0 },
+          age: { type: "number", minimum: 0 },
+          severity: {
+            type: "object",
+            additionalProperties: false,
+            properties: Object.fromEntries(severities.map((severity) => [severity, { type: "number", minimum: 0 }])),
+          },
+        },
+      },
     },
   };
 }

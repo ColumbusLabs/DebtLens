@@ -14,7 +14,7 @@ export function renderImportGraphSvg(graph: ImportGraph, width = 640, height = 3
   const nodes = graph.nodes.map((node) => {
     const point = positions.get(node);
     if (!point) return "";
-    const label = truncate(node);
+    const label = escapeXml(truncate(node));
     return `<g><circle cx="${point.x}" cy="${point.y}" r="16" fill="#eef2f5" stroke="#2f6feb" /><text x="${point.x}" y="${point.y + 28}" text-anchor="middle" font-size="10">${label}</text></g>`;
   }).join("\n");
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Import graph">${edges}${nodes}</svg>`;
@@ -24,12 +24,19 @@ export function renderDebtTreemapSvg(issues: DebtIssue[], width = 640, height = 
   const byDirectory = aggregateByDirectory(issues);
   const entries = [...byDirectory.entries()].sort((left, right) => right[1].total - left[1].total).slice(0, 12);
   if (entries.length === 0) return "";
-  const max = Math.max(...entries.map(([, value]) => value.total), 1);
+  let remainingTotal = Math.max(entries.reduce((total, [, value]) => total + value.total, 0), 1);
+  let remainingWidth = width;
   let x = 0;
-  const rects = entries.map(([directory, value]) => {
-    const w = Math.max(48, Math.round((value.total / max) * width));
-    const rect = `<rect x="${x}" y="0" width="${w}" height="${height}" fill="${heatColor(value.high, value.total)}" stroke="#fff"><title>${directory}: ${value.total} issues</title></rect><text x="${x + 8}" y="20" font-size="11">${truncate(directory, 18)} (${value.total})</text>`;
+  const rects = entries.map(([directory, value], index) => {
+    const isLast = index === entries.length - 1;
+    const proportional = Math.round((value.total / remainingTotal) * remainingWidth);
+    const w = isLast ? remainingWidth : Math.max(24, Math.min(remainingWidth, proportional));
+    const escapedDirectory = escapeXml(directory);
+    const escapedLabel = escapeXml(truncate(directory, 18));
+    const rect = `<rect x="${x}" y="0" width="${w}" height="${height}" fill="${heatColor(value.high, value.total)}" stroke="#fff"><title>${escapedDirectory}: ${value.total} issues</title></rect><text x="${x + 8}" y="20" font-size="11">${escapedLabel} (${value.total})</text>`;
     x += w;
+    remainingWidth = Math.max(0, remainingWidth - w);
+    remainingTotal = Math.max(1, remainingTotal - value.total);
     return rect;
   }).join("\n");
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Debt treemap">${rects}</svg>`;
@@ -70,4 +77,13 @@ function heatColor(high: number, total: number): string {
 
 function truncate(value: string, max = 24): string {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&apos;");
 }

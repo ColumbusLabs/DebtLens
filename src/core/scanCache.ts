@@ -32,6 +32,7 @@ export interface FileSnapshot {
 }
 
 export function getScanCachePath(options: ScanOptions): string {
+  if (options.cacheDir) return resolve(options.cwd, options.cacheDir, "cache.json");
   return resolve(options.cwd, options.cachePath ?? ".debtlens/cache.json");
 }
 

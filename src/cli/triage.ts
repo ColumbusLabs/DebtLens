@@ -2,6 +2,7 @@ import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
 import { loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
+import { existsSync } from "node:fs";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import type { DebtIssue, ScanOptions } from "../core/types.js";
@@ -50,7 +51,7 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
   const result = await scan(options);
   const issues = [...result.issues];
   const baselinePath = resolve(cwd, input.baselinePath ?? DEFAULT_BASELINE_FILENAME);
-  const baseline = loadBaseline(cwd, baselinePath);
+  const baseline = existsSync(baselinePath) ? loadBaseline(cwd, baselinePath) : createBaseline([]);
   const fingerprints = new Set(Object.keys(baseline.fingerprints));
   const suppressions: string[] = [];
   const counts: TriageActionResult = { kept: 0, baselined: 0, suppressed: 0, skipped: 0 };
@@ -66,14 +67,15 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
       if (!issue) continue;
       const rendered = formatIssue(issue, index + 1, issues.length);
       process.stdout.write(`\n${rendered}\n`);
-      const answer = (await rl.question("Action [k]eep [b]aseline [s]uppress [n]ext [q]uit [B]atch rule: ")).trim().toLowerCase();
+      const rawAnswer = (await rl.question("Action [k]eep [b]aseline [s]uppress [n]ext [q]uit [B]atch rule: ")).trim();
+      const answer = rawAnswer.toLowerCase();
 
       if (answer === "q" || answer === "quit") break;
       if (answer === "n" || answer === "next" || answer === "") {
         counts.skipped += 1;
         continue;
       }
-      if (answer === "batch" || answer === "b-rule") {
+      if (rawAnswer === "B" || answer === "batch" || answer === "b-rule") {
         const batchAction = (await rl.question("Apply to all remaining findings of this rule with [k]eep [b]aseline [s]uppress? ")).trim().toLowerCase();
         for (let cursor = index; cursor < issues.length; cursor += 1) {
           const candidate = issues[cursor];

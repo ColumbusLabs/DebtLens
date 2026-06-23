@@ -66,6 +66,8 @@ const NODE_RULES = [
   "route-sprawl",
 ] as const;
 
+const FEATURE_FLAG_RULES = ["stale-feature-flag"] as const;
+
 const AI_WORKFLOW_DRIFT_RULES = [
   "ai-instruction-duplication",
   "ai-instruction-contradiction",
@@ -330,6 +332,12 @@ export const RULE_PACKS: Record<string, RulePack> = {
     rules: [...AI_WORKFLOW_DRIFT_RULES],
     languages: [],
     includeGlobs: [...INSTRUCTION_FILE_GLOBS],
+  },
+  "feature-flags": {
+    id: "feature-flags",
+    description: "Opt-in pack for stale or hardcoded feature-flag debt.",
+    rules: [...FEATURE_FLAG_RULES],
+    languages: ["tsjs"],
   },
 };
 

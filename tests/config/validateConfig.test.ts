@@ -50,4 +50,41 @@ describe("validateConfigShape", () => {
     assert.match(result.errors.join("\n"), /duplicatedLiteral\.ignoreStrings must be an array of strings/);
     assert.match(result.errors.join("\n"), /duplicatedLiteral\.unknown is not allowed/);
   });
+
+  it("accepts budgets, badge, and payoff priority config", () => {
+    const result = validateConfigShape({
+      budgets: {
+        "src/**/*.ts": { maxIssues: 10, maxHigh: 0, maxMedium: 5 },
+      },
+      badge: { greenMax: 5, yellowMax: 25 },
+      priority: {
+        churn: 1.5,
+        age: 0.5,
+        severity: { high: 8, medium: 4, low: 1, info: 0 },
+      },
+    });
+
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.errors, []);
+  });
+
+  it("rejects invalid budgets, badge, and payoff priority config", () => {
+    const result = validateConfigShape({
+      budgets: {
+        src: { maxIssues: -1, extra: true },
+      },
+      badge: { greenMax: -1 },
+      priority: {
+        churn: -1,
+        severity: { severe: 10 },
+      },
+    });
+
+    assert.equal(result.valid, false);
+    assert.match(result.errors.join("\n"), /budgets\.src\.maxIssues must be a non-negative integer/);
+    assert.match(result.errors.join("\n"), /budgets\.src\.extra is not allowed/);
+    assert.match(result.errors.join("\n"), /badge\.greenMax must be a non-negative integer/);
+    assert.match(result.errors.join("\n"), /priority\.churn must be a non-negative number/);
+    assert.match(result.errors.join("\n"), /priority\.severity\.severe is not allowed/);
+  });
 });

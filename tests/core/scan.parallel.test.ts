@@ -31,6 +31,69 @@ describe("scan parallel dispatch", () => {
     assert.equal(parallel.summary.performance?.parallel, true);
   });
 
+  it("keeps concurrency-based dispatch equivalent to serial dispatch", async () => {
+    const cwd = process.cwd();
+    const baseOptions = {
+      cwd,
+      target: resolve("examples/react"),
+      include: defaultConfig.include,
+      exclude: [],
+      minSeverity: "medium" as const,
+      rules: ["duplicate-logic", "prop-drilling"],
+      thresholds: {},
+      maxFiles: defaultConfig.maxFiles,
+    };
+
+    const serial = await scan(baseOptions);
+    const parallel = await scan({ ...baseOptions, concurrency: 2 });
+
+    assert.deepEqual(
+      parallel.issues.map((issue) => [issue.ruleId, issue.file, issue.location?.startLine]),
+      serial.issues.map((issue) => [issue.ruleId, issue.file, issue.location?.startLine]),
+    );
+    assert.equal(parallel.summary.performance?.parallel, true);
+  });
+
+  it("caps concurrent detector dispatch when concurrency is set", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-concurrency-cap-"));
+    let active = 0;
+    let maxActive = 0;
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "export const value = 1;\n");
+      const detectors: Detector[] = [1, 2, 3, 4].map((index) => ({
+        id: `plugin-cap-${index}`,
+        name: `plugin-cap-${index}`,
+        description: "test",
+        defaultSeverity: "low",
+        tags: ["test"],
+        async detect() {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await new Promise((resolve) => setTimeout(resolve, 20));
+          active -= 1;
+          return [];
+        },
+      }));
+
+      await scan({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low",
+        rules: detectors.map((detector) => detector.id),
+        thresholds: defaultConfig.thresholds,
+        concurrency: 2,
+        pluginDetectors: detectors,
+      });
+
+      assert.equal(maxActive, 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("merges async parallel detector warnings in detector order", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-parallel-warnings-"));
     try {

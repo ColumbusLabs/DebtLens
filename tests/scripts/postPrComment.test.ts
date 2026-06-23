@@ -30,10 +30,10 @@ describe("post-pr-comment script", () => {
     const result = await withMockGitHub(requests, async (apiUrl) => runPostComment(apiUrl), (request, response, body) => {
       const url = new URL(request.url ?? "", "http://localhost");
       if (request.method === "GET" && url.searchParams.get("page") === "1") {
-        return json(response, Array.from({ length: 100 }, (_, index) => ({ id: index + 1, body: "ordinary comment" })));
+        return json(response, Array.from({ length: 100 }, (_, index) => ({ id: index + 1, body: "ordinary comment", user: { login: "octocat", type: "User" } })));
       }
       if (request.method === "GET" && url.searchParams.get("page") === "2") {
-        return json(response, [{ id: 424, body: markerBody }]);
+        return json(response, [{ id: 424, body: markerBody, user: { login: "github-actions[bot]", type: "Bot" } }]);
       }
       if (request.method === "PATCH" && url.pathname === "/repos/ColumbusLabs/DebtLens/issues/comments/424") {
         return json(response, { ok: true });
@@ -47,6 +47,66 @@ describe("post-pr-comment script", () => {
     const patch = requests.find((request) => request.method === "PATCH");
     assert.ok(patch);
     assert.match(patch.body, /DebtLens findings/);
+  });
+
+  it("creates a comment instead of updating a human marker comment", async () => {
+    const requests: RequestRecord[] = [];
+    const result = await withMockGitHub(requests, async (apiUrl) => runPostComment(apiUrl), (request, response) => {
+      if (request.method === "GET") {
+        return json(response, [{ id: 321, body: markerBody, user: { login: "zach", type: "User" } }]);
+      }
+      if (request.method === "POST" && request.url?.includes("/issues/7/comments")) {
+        return json(response, { id: 654 }, 201);
+      }
+      return json(response, { error: "unexpected" }, 500);
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /created pull request comment/);
+    assert.ok(!requests.some((request) => request.method === "PATCH"));
+    assert.ok(requests.some((request) => request.method === "POST"));
+  });
+
+  it("prefers the latest bot-owned marker comment", async () => {
+    const requests: RequestRecord[] = [];
+    const result = await withMockGitHub(requests, async (apiUrl) => runPostComment(apiUrl), (request, response) => {
+      if (request.method === "GET") {
+        return json(response, [
+          { id: 100, body: markerBody, user: { login: "github-actions[bot]", type: "Bot" } },
+          { id: 200, body: markerBody, user: { login: "github-actions[bot]", type: "Bot" } },
+        ]);
+      }
+      if (request.method === "PATCH" && request.url?.includes("/issues/comments/200")) {
+        return json(response, { ok: true });
+      }
+      return json(response, { error: "unexpected" }, 500);
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /updated existing pull request comment/);
+    assert.ok(requests.some((request) => request.method === "PATCH" && request.pathname.endsWith("/issues/comments/200")));
+    assert.ok(!requests.some((request) => request.method === "PATCH" && request.pathname.endsWith("/issues/comments/100")));
+  });
+
+  it("creates a fresh comment when an existing bot marker cannot be updated", async () => {
+    const requests: RequestRecord[] = [];
+    const result = await withMockGitHub(requests, async (apiUrl) => runPostComment(apiUrl), (request, response) => {
+      if (request.method === "GET") {
+        return json(response, [{ id: 424, body: markerBody, user: { login: "github-actions[bot]", type: "Bot" } }]);
+      }
+      if (request.method === "PATCH") {
+        return json(response, { message: "Resource not accessible by integration" }, 403);
+      }
+      if (request.method === "POST" && request.url?.includes("/issues/7/comments")) {
+        return json(response, { id: 425 }, 201);
+      }
+      return json(response, { error: "unexpected" }, 500);
+    });
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /created pull request comment after existing bot comment could not be updated/);
+    assert.ok(requests.some((request) => request.method === "PATCH"));
+    assert.ok(requests.some((request) => request.method === "POST"));
   });
 
   it("creates a comment when no existing marker is found", async () => {

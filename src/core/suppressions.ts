@@ -103,7 +103,10 @@ function parseFileSuppressions(
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
-    const fileMatch = line.match(disableFilePattern);
+    const commentText = extractSuppressionComment(line);
+    if (!commentText) continue;
+
+    const fileMatch = commentText.match(disableFilePattern);
     if (fileMatch) {
       registerSuppression(file.relativePath, fileMatch[1], fileMatch[2], validRuleIds, warnings, (ruleId, reason) => {
         const directive = {
@@ -120,7 +123,7 @@ function parseFileSuppressions(
       continue;
     }
 
-    const nextLineMatch = line.match(disableNextLinePattern);
+    const nextLineMatch = commentText.match(disableNextLinePattern);
     if (!nextLineMatch) continue;
 
     registerSuppression(file.relativePath, nextLineMatch[1], nextLineMatch[2], validRuleIds, warnings, (ruleId, reason) => {
@@ -142,6 +145,16 @@ function parseFileSuppressions(
   }
 
   return { fileRules, nextLineRules, directives };
+}
+
+function extractSuppressionComment(line: string): string | undefined {
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith("//")) return trimmed.slice(2);
+  if (trimmed.startsWith("#")) return trimmed.slice(1);
+  if (trimmed.startsWith("/*")) return trimmed.replace(/^\/\*+/, "").replace(/\*\/\s*$/, "");
+  if (trimmed.startsWith("*")) return trimmed.slice(1);
+  if (trimmed.startsWith("<!--")) return trimmed.slice(4).replace(/-->\s*$/, "");
+  return undefined;
 }
 
 function registerSuppression(

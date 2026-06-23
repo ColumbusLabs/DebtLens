@@ -13,8 +13,8 @@ import {
 import type { Baseline } from "../../src/core/baseline.js";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
 
-function issue(overrides: Partial<DebtIssue> = {}): DebtIssue {
-  return {
+function issue(overrides: Partial<DebtIssue> = {}): ScanResult["issues"][number] {
+  const finding: DebtIssue = {
     id: "dl_x",
     ruleId: "duplicate-logic",
     ruleName: "Duplicate logic",
@@ -28,9 +28,13 @@ function issue(overrides: Partial<DebtIssue> = {}): DebtIssue {
     tags: ["duplication"],
     ...overrides,
   };
+  return {
+    ...finding,
+    fingerprint: overrides.fingerprint ?? computeFingerprint(finding),
+  };
 }
 
-function resultOf(issues: DebtIssue[]): ScanResult {
+function resultOf(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const i of issues) bySeverity[i.severity] += 1;
   return {

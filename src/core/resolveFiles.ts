@@ -1,4 +1,5 @@
 import { realpathSync, statSync } from "node:fs";
+import { relative, resolve } from "node:path";
 import fg from "fast-glob";
 import type { ScanOptions } from "./types.js";
 import { getIgnoredFiles } from "../utils/git.js";
@@ -30,10 +31,12 @@ export async function resolveFileSelection(options: ScanOptions): Promise<FileSe
     cwd: options.target,
     absolute: true,
     onlyFiles: true,
+    followSymbolicLinks: false,
     ignore: options.exclude,
     dot: false,
     unique: true,
   });
+  paths = paths.filter((path) => isPathWithinRoot(path, options.target));
 
   if (changed) {
     paths = paths.filter((path) => changed.has(canonicalize(path)));
@@ -73,4 +76,16 @@ export function canonicalize(path: string): string {
   } catch {
     return path;
   }
+}
+
+function isPathWithinRoot(filePath: string, rootPath: string): boolean {
+  const file = normalizeForComparison(canonicalize(filePath));
+  const root = normalizeForComparison(canonicalize(rootPath));
+  if (file === root) return true;
+  const rel = relative(root, file).replaceAll("\\", "/");
+  return rel.length > 0 && rel !== ".." && !rel.startsWith("../");
+}
+
+function normalizeForComparison(path: string): string {
+  return resolve(path).replaceAll("\\", "/");
 }

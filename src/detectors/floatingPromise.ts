@@ -25,7 +25,7 @@ export const floatingPromiseDetector: Detector = {
         const call = extractFloatingCall(statement, allowVoid);
         if (!call) continue;
         if (isSkippedContext(call)) continue;
-        if (hasCatchOnChain(call)) continue;
+        if (hasCatchOnChain(call) || hasRejectionOnlyThenHandler(call)) continue;
 
         const promiseLike = assessPromiseLike(call, context);
         if (!promiseLike) continue;
@@ -114,6 +114,34 @@ function hasCatchOnChain(call: CallExpression): boolean {
   }
 
   return false;
+}
+
+function hasRejectionOnlyThenHandler(call: CallExpression): boolean {
+  let current: MorphNode = call;
+  while (Node.isCallExpression(current)) {
+    const callee = current.getExpression();
+    if (Node.isPropertyAccessExpression(callee) && callee.getName() === "then") {
+      const [onFulfilled, onRejected] = current.getArguments();
+      if (onRejected && isMissingFulfilledHandler(onFulfilled)) {
+        return true;
+      }
+    }
+
+    if (Node.isPropertyAccessExpression(callee) && Node.isCallExpression(callee.getExpression())) {
+      current = callee.getExpression();
+      continue;
+    }
+
+    break;
+  }
+
+  return false;
+}
+
+function isMissingFulfilledHandler(node: MorphNode | undefined): boolean {
+  if (!node) return true;
+  if (Node.isIdentifier(node)) return node.getText() === "undefined";
+  return node.getKind() === SyntaxKind.NullKeyword;
 }
 
 interface PromiseAssessment {
@@ -228,7 +256,7 @@ function getPromiseReturnTypeText(call: CallExpression): string | undefined {
   try {
     const returnType = call.getReturnType();
     const text = returnType.getText(call);
-    if (/Promise\s*<|Promise$/i.test(text)) {
+    if (isPromiseLikeTypeText(text)) {
       return truncate(text, 80);
     }
   } catch {
@@ -236,6 +264,10 @@ function getPromiseReturnTypeText(call: CallExpression): string | undefined {
   }
 
   return undefined;
+}
+
+function isPromiseLikeTypeText(text: string): boolean {
+  return /^(?:globalThis\.)?(?:Promise|PromiseLike)\s*(?:<|$)/i.test(text.trim());
 }
 
 function getEnclosingEffectHook(node: MorphNode): string | undefined {

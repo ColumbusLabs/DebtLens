@@ -253,7 +253,7 @@ export function updateBaseline(
 /** Apply a baseline to a scan result, returning a new result with a recomputed summary. */
 export function applyBaseline(result: ScanResult, baseline: Baseline): ScanResult {
   const comparison = compareBaseline(result.issues, baseline);
-  const issues = comparison.newIssues;
+  const issues = comparison.newIssues as ScanResult["issues"];
   const suppressedByBaseline = result.issues.length - issues.length;
   const summary = summarizeIssues(issues);
   const correlations = buildRuleCorrelations(issues);

@@ -32,8 +32,13 @@ const headers = {
 try {
   const existing = await findExistingComment();
   if (existing) {
-    await updateComment(existing.id);
-    console.log("DebtLens: updated existing pull request comment.");
+    const updated = await updateComment(existing.id);
+    if (updated) {
+      console.log("DebtLens: updated existing pull request comment.");
+    } else {
+      await createComment();
+      console.log("DebtLens: created pull request comment after existing bot comment could not be updated.");
+    }
   } else {
     await createComment();
     console.log("DebtLens: created pull request comment.");
@@ -47,12 +52,21 @@ try {
 }
 
 async function findExistingComment() {
+  let latest;
   for (let page = 1; ; page += 1) {
     const comments = await listComments(page);
-    const existing = comments.find((comment) => typeof comment.body === "string" && comment.body.includes(marker));
-    if (existing) return existing;
-    if (comments.length < 100) return undefined;
+    for (const comment of comments) {
+      if (isDebtLensOwnedMarkerComment(comment)) latest = comment;
+    }
+    if (comments.length < 100) return latest;
   }
+}
+
+function isDebtLensOwnedMarkerComment(comment) {
+  if (typeof comment.body !== "string" || !comment.body.includes(marker)) return false;
+  const login = typeof comment.user?.login === "string" ? comment.user.login : "";
+  const type = typeof comment.user?.type === "string" ? comment.user.type : "";
+  return type === "Bot" || login.endsWith("[bot]") || comment.performed_via_github_app !== undefined;
 }
 
 async function listComments(page) {
@@ -76,9 +90,13 @@ async function updateComment(commentId) {
     headers,
     body: JSON.stringify({ body }),
   });
+  if (response.status === 403 || response.status === 404) {
+    return false;
+  }
   if (!response.ok) {
     throw new Error(`Failed to update PR comment: ${response.status}`);
   }
+  return true;
 }
 
 async function createComment() {

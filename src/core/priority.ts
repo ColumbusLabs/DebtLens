@@ -56,7 +56,7 @@ export function enrichIssuesWithPayoffScores(
   }
 }
 
-export function sortIssuesByPayoff(issues: DebtIssue[]): DebtIssue[] {
+export function sortIssuesByPayoff<T extends DebtIssue>(issues: T[]): T[] {
   return [...issues].sort((left, right) => {
     const scoreDelta = (right.payoffScore ?? 0) - (left.payoffScore ?? 0);
     if (scoreDelta !== 0) return scoreDelta;
@@ -66,7 +66,7 @@ export function sortIssuesByPayoff(issues: DebtIssue[]): DebtIssue[] {
   });
 }
 
-export function topPayoffIssues(issues: DebtIssue[], limit = 10): DebtIssue[] {
+export function topPayoffIssues<T extends DebtIssue>(issues: T[], limit = 10): T[] {
   return sortIssuesByPayoff(issues).slice(0, Math.max(0, limit));
 }
 

@@ -33,6 +33,10 @@ export interface DebtIssue {
   tags: string[];
 }
 
+export interface ReportedDebtIssue extends DebtIssue {
+  fingerprint: string;
+}
+
 export interface SourceFileInfo {
   absolutePath: string;
   relativePath: string;
@@ -517,7 +521,7 @@ export interface ScanSummary {
 
 export interface ScanResult {
   schemaVersion: 1;
-  issues: DebtIssue[];
+  issues: ReportedDebtIssue[];
   suppressions?: InlineSuppressionAudit[];
   suppressionDirectives?: SuppressionDirectiveAudit[];
   summary: ScanSummary;

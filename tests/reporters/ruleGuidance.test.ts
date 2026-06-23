@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
+import type { ScanResult, Severity } from "../../src/core/types.js";
 import { renderMarkdown } from "../../src/reporters/markdownReporter.js";
 
-function makeResult(issues: DebtIssue[]): ScanResult {
+function makeResult(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const issue of issues) bySeverity[issue.severity] += 1;
   return {
@@ -25,6 +25,7 @@ describe("rule guidance in markdown reports", () => {
   it("includes a review prompt for a finding with guidance", () => {
     const md = renderMarkdown(makeResult([{
       id: "dl_test",
+      fingerprint: "dl_test",
       ruleId: "prop-drilling",
       ruleName: "Prop drilling",
       severity: "high",

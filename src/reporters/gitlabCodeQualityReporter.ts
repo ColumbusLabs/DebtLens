@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import type { DebtIssue, ScanResult, Severity } from "../core/types.js";
@@ -18,23 +19,60 @@ interface GitLabCodeQualityIssue {
 }
 
 export function renderGitLabCodeQuality(result: ScanResult): string {
-  const issues = result.issues.map((issue) => toGitLabCodeQualityIssue(issue, result));
+  const fingerprintCounts = countFingerprints(result.issues);
+  const fingerprintOccurrences = new Map<string, number>();
+  const issues = result.issues.map((issue) => toGitLabCodeQualityIssue(issue, result, fingerprintCounts, fingerprintOccurrences));
   return `${JSON.stringify(issues, null, 2)}\n`;
 }
 
-function toGitLabCodeQualityIssue(issue: DebtIssue, result: ScanResult): GitLabCodeQualityIssue {
+function toGitLabCodeQualityIssue(
+  issue: DebtIssue,
+  result: ScanResult,
+  fingerprintCounts: ReadonlyMap<string, number>,
+  fingerprintOccurrences: Map<string, number>,
+): GitLabCodeQualityIssue {
+  const path = normalizeReportPath(issue.file, result);
+  const line = issue.location?.startLine ?? 1;
   return {
     description: issue.message,
     check_name: issue.ruleId,
-    fingerprint: issue.fingerprint ?? issue.id,
+    fingerprint: providerFingerprint(issue, path, line, fingerprintCounts, fingerprintOccurrences),
     severity: toGitLabSeverity(issue.severity),
     location: {
-      path: normalizeReportPath(issue.file, result),
+      path,
       lines: {
-        begin: issue.location?.startLine ?? 1,
+        begin: line,
       },
     },
   };
+}
+
+function countFingerprints(issues: DebtIssue[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const issue of issues) {
+    const fingerprint = issue.fingerprint ?? issue.id;
+    counts.set(fingerprint, (counts.get(fingerprint) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function providerFingerprint(
+  issue: DebtIssue,
+  path: string,
+  line: number,
+  fingerprintCounts: ReadonlyMap<string, number>,
+  fingerprintOccurrences: Map<string, number>,
+): string {
+  const fingerprint = issue.fingerprint ?? issue.id;
+  if ((fingerprintCounts.get(fingerprint) ?? 0) <= 1) return fingerprint;
+
+  const occurrence = fingerprintOccurrences.get(fingerprint) ?? 0;
+  fingerprintOccurrences.set(fingerprint, occurrence + 1);
+  const locationHash = createHash("sha1")
+    .update(`${fingerprint}:${path}:${line}:${issue.location?.startColumn ?? 1}:${occurrence}`)
+    .digest("hex")
+    .slice(0, 12);
+  return `${fingerprint}-${locationHash}`;
 }
 
 function toGitLabSeverity(severity: Severity): GitLabCodeQualitySeverity {

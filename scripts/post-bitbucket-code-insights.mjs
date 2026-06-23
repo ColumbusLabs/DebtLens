@@ -70,7 +70,8 @@ async function putReport() {
 }
 
 async function postAnnotations(annotations) {
-  for (const chunk of chunks(annotations.map(toAnnotation), 100)) {
+  const annotationIds = buildAnnotationIds(annotations);
+  for (const chunk of chunks(annotations.map((issue, index) => toAnnotation(issue, annotationIds[index])), 100)) {
     const response = await fetch(`${reportUrl()}/annotations`, {
       method: "POST",
       headers,
@@ -95,9 +96,9 @@ function reportDetails() {
   return `DebtLens found ${total} maintainability finding(s): ${high} high, ${medium} medium, ${low} low, ${info} info.`;
 }
 
-function toAnnotation(issue) {
+function toAnnotation(issue, externalId) {
   return {
-    external_id: stableAnnotationId(issue),
+    external_id: externalId,
     title: `${issue.ruleId ?? "debtlens"}: ${issue.severity ?? "finding"}`,
     annotation_type: "CODE_SMELL",
     result: "FAILED",
@@ -122,8 +123,29 @@ function annotationDetails(issue) {
   return lines.join("\n");
 }
 
-function stableAnnotationId(issue) {
-  const seed = String(issue.fingerprint ?? issue.id ?? `${issue.ruleId}:${issue.file}:${issue.location?.startLine ?? 1}`);
+function buildAnnotationIds(issues) {
+  const counts = new Map();
+  for (const issue of issues) {
+    const seed = stableAnnotationSeed(issue);
+    counts.set(seed, (counts.get(seed) ?? 0) + 1);
+  }
+
+  const occurrences = new Map();
+  return issues.map((issue) => {
+    const seed = stableAnnotationSeed(issue);
+    if ((counts.get(seed) ?? 0) <= 1) return stableAnnotationId(seed);
+
+    const occurrence = occurrences.get(seed) ?? 0;
+    occurrences.set(seed, occurrence + 1);
+    return stableAnnotationId(`${seed}:${normalizePath(issue.file ?? "", result)}:${issue.location?.startLine ?? 1}:${issue.location?.startColumn ?? 1}:${occurrence}`);
+  });
+}
+
+function stableAnnotationSeed(issue) {
+  return String(issue.fingerprint ?? issue.id ?? `${issue.ruleId}:${issue.file}:${issue.location?.startLine ?? 1}`);
+}
+
+function stableAnnotationId(seed) {
   return `debtlens-${createHash("sha1").update(seed).digest("hex").slice(0, 24)}`;
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -125,6 +125,34 @@ describe("debtlens scan warnings", () => {
       assert.equal(parsed.summary.filesScanned, 2);
       assert.match(result.stderr, /DebtLens warning: DebtLens scanned the first 2 of 3 matched files/);
       assert.match(parsed.summary.warnings[0], /DebtLens scanned the first 2 of 3 matched files/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not follow symlinked source files outside the scan target", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-symlink-"));
+    try {
+      mkdirSync(join(dir, "scan"));
+      mkdirSync(join(dir, "outside"));
+      writeFileSync(join(dir, "outside", "secret.ts"), "// TODO outside target\nexport const secret = true;\n", "utf8");
+      symlinkSync(join(dir, "outside", "secret.ts"), join(dir, "scan", "leak.ts"));
+
+      const result = runScan([
+        "scan",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.filesScanned, 0);
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.match(result.stderr, /DebtLens warning: scanned 0 files/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -694,6 +722,21 @@ describe("debtlens scan failOn from config", () => {
     }
   }
 
+  it("rejects schema-invalid config during scan", () => {
+    withTempProject((dir) => {
+      writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
+        maxFiles: "abc",
+        rules: ["todo-comment"],
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--format", "json"]);
+
+      assert.equal(result.status, 1);
+      assert.match(result.stderr, /config schema validation failed/);
+      assert.match(result.stderr, /maxFiles must be a positive integer/);
+    });
+  });
+
   it("gates the exit code from config-only failOn", () => {
     withTempProject((dir) => {
       writeFileSync(join(dir, "debtlens.config.json"), JSON.stringify({
@@ -743,7 +786,8 @@ describe("debtlens scan failOn from config", () => {
       const result = runScan([".", "--cwd", dir, "--format", "json"]);
 
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /Invalid severity "critical"/);
+      assert.match(result.stderr, /config schema validation failed/);
+      assert.match(result.stderr, /failOn must be one of info, low, medium, high/);
     });
   });
 
@@ -757,7 +801,8 @@ describe("debtlens scan failOn from config", () => {
       const result = runScan([".", "--cwd", dir, "--format", "json"]);
 
       assert.equal(result.status, 1);
-      assert.match(result.stderr, /Invalid gate preset "block-everything"/);
+      assert.match(result.stderr, /config schema validation failed/);
+      assert.match(result.stderr, /gatePreset must be one of advisory, new-code, strict-new-code, legacy-baseline/);
       assert.doesNotMatch(result.stderr, /Cannot read properties/);
     });
   });
@@ -895,6 +940,72 @@ describe("debtlens scan diff-base", () => {
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Use either --diff-base or --baseline, not both/);
   });
+
+  it("baselines unchanged Python findings with --diff-base", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-diff-python-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.py"), "# TODO committed python debt\ndef handler():\n    return True\n", "utf8");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--pack",
+        "python",
+        "--diff-base",
+        "HEAD",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.current.totalIssues, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.new, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("baselines unchanged Ruby findings with --diff-base", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-diff-ruby-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "lib"));
+      writeFileSync(join(dir, "lib", "app.rb"), "# TODO committed ruby debt\nclass App\nend\n", "utf8");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--pack",
+        "ruby",
+        "--diff-base",
+        "HEAD",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.totalIssues, 0);
+      assert.equal(parsed.summary.deltaFromBaseline.current.totalIssues, 1);
+      assert.equal(parsed.summary.deltaFromBaseline.new, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("debtlens scan profile", () => {
@@ -967,6 +1078,99 @@ describe("debtlens scan git modes", () => {
 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Use either --staged or --changed, not both/);
+  });
+
+  it("does not leak old test-duplication findings into docs-only changed scans", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-changed-tests-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "docs"));
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "docs", "README.md"), "# docs\n", "utf8");
+      writeFileSync(join(dir, "src", "a.test.ts"), `
+        test("creates invoice", () => {
+          const invoice = createInvoice({ total: 10 });
+          expect(invoice.total).toBe(10);
+          expect(invoice.status).toBe("open");
+        });
+      `, "utf8");
+      writeFileSync(join(dir, "src", "b.test.ts"), `
+        test("creates receipt", () => {
+          const receipt = createInvoice({ total: 10 });
+          expect(receipt.total).toBe(10);
+          expect(receipt.status).toBe("open");
+        });
+      `, "utf8");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      writeFileSync(join(dir, "docs", "README.md"), "# docs\n\nChanged only docs.\n", "utf8");
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--changed",
+        "HEAD",
+        "--rules",
+        "test-duplication",
+        "--threshold",
+        "test-duplication.minLines=2",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.filesScanned, 0);
+      assert.equal(parsed.summary.totalIssues, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not leak old config-drift findings into docs-only changed scans", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-changed-config-"));
+    try {
+      execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.email", "t@t.t"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["config", "user.name", "t"], { cwd: dir, stdio: "ignore" });
+      mkdirSync(join(dir, "docs"));
+      mkdirSync(join(dir, "packages", "app"), { recursive: true });
+      mkdirSync(join(dir, "packages", "web"), { recursive: true });
+      writeFileSync(join(dir, "docs", "README.md"), "# docs\n", "utf8");
+      writeFileSync(join(dir, "packages", "app", "package.json"), JSON.stringify({
+        scripts: { build: "vite build" },
+      }), "utf8");
+      writeFileSync(join(dir, "packages", "web", "package.json"), JSON.stringify({
+        scripts: { build: "next build" },
+      }), "utf8");
+      execFileSync("git", ["add", "-A"], { cwd: dir, stdio: "ignore" });
+      execFileSync("git", ["commit", "-m", "init"], { cwd: dir, stdio: "ignore" });
+
+      writeFileSync(join(dir, "docs", "README.md"), "# docs\n\nChanged only docs.\n", "utf8");
+
+      const result = runScan([
+        ".",
+        "--cwd",
+        dir,
+        "--changed",
+        "HEAD",
+        "--rules",
+        "config-drift",
+        "--format",
+        "json",
+      ]);
+      const parsed = JSON.parse(result.stdout);
+
+      assert.equal(result.status, 0);
+      assert.equal(parsed.summary.filesScanned, 0);
+      assert.equal(parsed.summary.totalIssues, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("scans staged blob contents instead of unstaged working-tree edits", () => {

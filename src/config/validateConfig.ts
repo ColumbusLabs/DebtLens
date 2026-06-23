@@ -2,6 +2,7 @@ import { isSeverity, severities } from "../core/severity.js";
 import { gatePresets } from "../core/gatePresets.js";
 import { RULE_PACK_IDS } from "./packs.js";
 import type { DebtLensConfig } from "../core/types.js";
+import { DEBTLENS_PLUGIN_API_VERSION } from "../plugins/version.js";
 
 const knownRootKeys = new Set([
   "$schema",
@@ -65,7 +66,7 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
     errors.push(`failOn must be one of ${severities.join(", ")}`);
   }
   if (typed.gatePreset !== undefined && !gatePresets.includes(String(typed.gatePreset) as typeof gatePresets[number])) {
-    errors.push(`gatePreset must be one of ${gatePresets.join(", ")}`);
+    errors.push(`Invalid gate preset "${String(typed.gatePreset)}"; gatePreset must be one of ${gatePresets.join(", ")}`);
   }
   if (typed.pack !== undefined) {
     if (typeof raw.pack !== "string") {
@@ -87,7 +88,7 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
     errors.push("pluginApiVersion must be a positive integer");
   }
   if (typed.plugins?.length && typed.pluginApiVersion === undefined) {
-    errors.push("plugins requires pluginApiVersion");
+    errors.push(`plugins requires pluginApiVersion; "plugins" requires "pluginApiVersion": ${DEBTLENS_PLUGIN_API_VERSION}`);
   }
   if (typed.failOnConfidence !== undefined && !isNumberInRange(typed.failOnConfidence, 0, 1)) {
     errors.push("failOnConfidence must be a number between 0 and 1");

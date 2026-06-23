@@ -60,6 +60,31 @@ describe("post-bitbucket-code-insights script", () => {
     assert.equal(annotations[1].severity, "LOW");
   });
 
+  it("uses unique external ids for repeated canonical fingerprints", async () => {
+    const requests: RequestRecord[] = [];
+    const duplicateReport = makeReport();
+    duplicateReport.issues = duplicateReport.issues.slice(1).map((issue, index) => ({
+      ...issue,
+      fingerprint: "shared-fingerprint",
+      id: `duplicate-${index}`,
+      file: "src/Todo.ts",
+      location: { startLine: index === 0 ? 8 : 12 },
+    }));
+    duplicateReport.summary.totalIssues = duplicateReport.issues.length;
+    const result = await withMockBitbucket(requests, async (apiUrl) =>
+      runPostCodeInsights(apiUrl, { DEBTLENS_BITBUCKET_ANNOTATIONS_MAX_COUNT: "10" }, duplicateReport), (_request, response) =>
+      json(response, { ok: true }));
+
+    assert.equal(result.status, 0, result.stderr);
+    const postAnnotations = requests.find((request) => request.method === "POST");
+    assert.ok(postAnnotations);
+    const annotations = JSON.parse(postAnnotations.body);
+    assert.equal(annotations.length, 2);
+    assert.notEqual(annotations[0].external_id, annotations[1].external_id);
+    assert.match(annotations[0].external_id, /^debtlens-[a-f0-9]{24}$/);
+    assert.match(annotations[1].external_id, /^debtlens-[a-f0-9]{24}$/);
+  });
+
   it("supports Basic auth repository variables", async () => {
     const requests: RequestRecord[] = [];
     const result = await withMockBitbucket(requests, async (apiUrl) =>

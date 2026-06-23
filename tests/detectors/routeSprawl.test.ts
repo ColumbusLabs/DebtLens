@@ -68,4 +68,21 @@ fastify.route({ method: "GET", url: "/accounts/:id/events", handler: listEvents 
     assert.equal(issues.length, 1);
     assert.ok(issues[0]?.evidence?.some((entry) => entry.includes("GET") && entry.includes("/accounts")));
   });
+
+  it("does NOT count Hono context get calls as route registrations", async () => {
+    const issues = await runDetector(routeSprawlDetector, {
+      "src/routes/social-dms.ts": `
+app.get("/messages", (c) => {
+  const userId = c.get("userId");
+  const accountId = c.get("accountId");
+  const locale = c.get("locale");
+  return c.json({ userId, accountId, locale });
+});
+`,
+    }, {
+      thresholds: { "route-sprawl.maxRoutes": 3 },
+    });
+
+    assert.equal(issues.length, 0);
+  });
 });

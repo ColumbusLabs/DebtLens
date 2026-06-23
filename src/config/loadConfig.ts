@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DEBTLENS_PLUGIN_API_VERSION } from "../plugins/version.js";
 import type { DebtLensConfig } from "../core/types.js";
+import { validateConfigShape } from "./validateConfig.js";
 
 const configNames = [
   "debtlens.config.json",
@@ -113,6 +114,11 @@ export function loadConfigAtPath(configPath: string): DebtLensConfig {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Could not read DebtLens config at ${configPath}: ${message}`);
+  }
+
+  const validation = validateConfigShape(config);
+  if (!validation.valid) {
+    throw new Error(`${configPath}: config schema validation failed: ${validation.errors.join("; ")}`);
   }
 
   validatePluginApiVersion(config, configPath);

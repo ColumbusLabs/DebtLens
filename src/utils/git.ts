@@ -140,7 +140,7 @@ export function getStagedFiles(cwd: string): ChangedFiles | null {
   return { root, files, contents };
 }
 
-const scannableRefPattern = /\.(tsx?|jsx?)$/i;
+const scannableRefPattern = /\.(tsx?|jsx?|py|vue|svelte|kt|kts|swift|rb)$/i;
 
 /**
  * Snapshot scannable source files at a git ref for diff-base scanning.

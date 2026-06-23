@@ -2,11 +2,19 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, isAbsolute, relative, resolve } from "node:path";
 import { ts } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
+import { buildChangedPathScope, isChangedPath, isSourceFileChanged } from "../utils/changedScope.js";
 import { createIssue } from "../utils/createIssue.js";
 
 interface DriftValue {
   file: string;
   value: string;
+  changed: boolean;
+}
+
+interface ConfigFile {
+  relativePath: string;
+  content: string;
+  changed: boolean;
 }
 
 export const configDriftDetector: Detector = {
@@ -18,21 +26,24 @@ export const configDriftDetector: Detector = {
   detect(context: DetectorContext): DebtIssue[] {
     const values = new Map<string, DriftValue[]>();
     const maxConfigFiles = context.getThreshold("config-drift.maxConfigFiles", 200);
+    const changedScoped = context.options.changedFiles !== undefined;
 
     for (const file of collectConfigFiles(context, maxConfigFiles)) {
       const parsed = parseJsonConfig(file.relativePath, file.content);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) continue;
-      collectPackageScripts(values, file.relativePath, parsed);
-      collectTsConfigOptions(values, file.relativePath, parsed);
-      collectArrayField(values, file.relativePath, parsed, "include");
-      collectArrayField(values, file.relativePath, parsed, "exclude");
+      collectPackageScripts(values, file, parsed);
+      collectTsConfigOptions(values, file, parsed);
+      collectArrayField(values, file, parsed, "include");
+      collectArrayField(values, file, parsed, "exclude");
     }
 
     const issues: DebtIssue[] = [];
     for (const [key, entries] of values) {
       const distinct = new Map(entries.map((entry) => [entry.value, entry]));
       if (entries.length < 2 || distinct.size < 2) continue;
-      const first = entries[0];
+      const first = changedScoped
+        ? entries.find((entry) => entry.changed)
+        : entries[0];
       if (!first) continue;
       issues.push(createIssue({
         detector: configDriftDetector,
@@ -61,10 +72,15 @@ function isJsonConfig(path: string): boolean {
 function collectConfigFiles(
   context: DetectorContext,
   maxConfigFiles: number,
-): Array<Pick<SourceFileInfo, "relativePath" | "content">> {
+): ConfigFile[] {
+  const changedScope = buildChangedPathScope(context.options);
   const existing = context.files
     .filter((file) => isJsonConfig(file.relativePath))
-    .map((file) => ({ relativePath: file.relativePath, content: file.content }))
+    .map((file) => ({
+      relativePath: file.relativePath,
+      content: file.content,
+      changed: isSourceFileChanged(changedScope, file),
+    }))
     .slice(0, maxConfigFiles);
   if (existing.length >= maxConfigFiles) return existing;
 
@@ -83,7 +99,11 @@ function collectConfigFiles(
       : relative(context.options.target, absolutePath).replaceAll("\\", "/");
     if (seen.has(relativePath) || !isJsonConfig(relativePath)) continue;
     seen.add(relativePath);
-    existing.push({ relativePath, content: readFileSync(resolve(absolutePath), "utf8") });
+    existing.push({
+      relativePath,
+      content: readFileSync(resolve(absolutePath), "utf8"),
+      changed: isChangedPath(changedScope, relativePath, absolutePath),
+    });
   }
 
   return existing;
@@ -148,8 +168,8 @@ function parseJsonConfig(file: string, content: string): unknown {
   return parsed.error ? undefined : parsed.config;
 }
 
-function collectPackageScripts(values: Map<string, DriftValue[]>, file: string, parsed: object): void {
-  if (basename(file) !== "package.json") return;
+function collectPackageScripts(values: Map<string, DriftValue[]>, file: ConfigFile, parsed: object): void {
+  if (basename(file.relativePath) !== "package.json") return;
   const scripts = (parsed as { scripts?: unknown }).scripts;
   if (!scripts || typeof scripts !== "object" || Array.isArray(scripts)) return;
   for (const [scriptName, command] of Object.entries(scripts)) {
@@ -159,8 +179,8 @@ function collectPackageScripts(values: Map<string, DriftValue[]>, file: string, 
   }
 }
 
-function collectTsConfigOptions(values: Map<string, DriftValue[]>, file: string, parsed: object): void {
-  if (!/^tsconfig(?:\..+)?\.json$/.test(basename(file))) return;
+function collectTsConfigOptions(values: Map<string, DriftValue[]>, file: ConfigFile, parsed: object): void {
+  if (!/^tsconfig(?:\..+)?\.json$/.test(basename(file.relativePath))) return;
   const compilerOptions = (parsed as { compilerOptions?: unknown }).compilerOptions;
   if (!compilerOptions || typeof compilerOptions !== "object" || Array.isArray(compilerOptions)) return;
   for (const optionName of ["target", "module", "jsx", "strict", "moduleResolution"]) {
@@ -171,15 +191,15 @@ function collectTsConfigOptions(values: Map<string, DriftValue[]>, file: string,
   }
 }
 
-function collectArrayField(values: Map<string, DriftValue[]>, file: string, parsed: object, key: "include" | "exclude"): void {
+function collectArrayField(values: Map<string, DriftValue[]>, file: ConfigFile, parsed: object, key: "include" | "exclude"): void {
   const value = (parsed as Record<string, unknown>)[key];
   if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
-    pushValue(values, `${basename(file)} ${key}`, file, JSON.stringify([...value].sort()));
+    pushValue(values, `${basename(file.relativePath)} ${key}`, file, JSON.stringify([...value].sort()));
   }
 }
 
-function pushValue(values: Map<string, DriftValue[]>, key: string, file: string, value: string): void {
+function pushValue(values: Map<string, DriftValue[]>, key: string, file: ConfigFile, value: string): void {
   const entries = values.get(key) ?? [];
-  entries.push({ file, value });
+  entries.push({ file: file.relativePath, value, changed: file.changed });
   values.set(key, entries);
 }

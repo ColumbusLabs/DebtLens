@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
 import { renderPrComment } from "../../src/reporters/prCommentReporter.js";
 
-function makeResult(issues: DebtIssue[]): ScanResult {
+function makeResult(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const issue of issues) bySeverity[issue.severity] += 1;
   return {
@@ -21,8 +21,9 @@ function makeResult(issues: DebtIssue[]): ScanResult {
   };
 }
 
-const propIssue: DebtIssue = {
+const propIssue: ScanResult["issues"][number] = {
   id: "dl_pr_1",
+  fingerprint: "dl_pr_1",
   ruleId: "prop-drilling",
   ruleName: "Prop drilling",
   severity: "high",
@@ -35,8 +36,9 @@ const propIssue: DebtIssue = {
   tags: ["react"],
 };
 
-const stateIssue: DebtIssue = {
+const stateIssue: ScanResult["issues"][number] = {
   id: "dl_pr_2",
+  fingerprint: "dl_pr_2",
   ruleId: "state-sprawl",
   ruleName: "State sprawl",
   severity: "medium",
@@ -47,8 +49,9 @@ const stateIssue: DebtIssue = {
   tags: ["react"],
 };
 
-const namingIssue: DebtIssue = {
+const namingIssue: ScanResult["issues"][number] = {
   id: "dl_pr_3",
+  fingerprint: "dl_pr_3",
   ruleId: "naming-drift",
   ruleName: "Naming drift",
   severity: "info",

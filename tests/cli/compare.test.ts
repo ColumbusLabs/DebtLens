@@ -136,7 +136,7 @@ function writeReport(path: string, result: ScanResult): void {
   writeFileSync(path, `${JSON.stringify(result, null, 2)}\n`, "utf8");
 }
 
-function resultOf(issues: DebtIssue[]): ScanResult {
+function resultOf(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   const byRule: Record<string, number> = {};
   for (const finding of issues) {
@@ -158,7 +158,7 @@ function resultOf(issues: DebtIssue[]): ScanResult {
   };
 }
 
-function issue(overrides: Partial<DebtIssue> = {}): DebtIssue {
+function issue(overrides: Partial<DebtIssue> = {}): ScanResult["issues"][number] {
   return {
     id: "issue",
     fingerprint: "issue",

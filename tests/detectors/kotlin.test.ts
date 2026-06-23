@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { defaultConfig } from "../../src/config/defaults.js";
 import { getRulePack } from "../../src/config/packs.js";
 import { scan } from "../../src/core/scan.js";
+import type { ScanResult } from "../../src/core/types.js";
 import {
   kotlinDeadAbstractionDetector,
   kotlinDuplicateLogicDetector,
@@ -55,7 +56,7 @@ fun buildInvoiceView(invoice: Invoice): String {
     });
     const sarif = JSON.parse(renderReport({
       schemaVersion: 1,
-      issues,
+      issues: issues as ScanResult["issues"],
       summary: {
         totalIssues: issues.length,
         bySeverity: { info: 0, low: issues.length, medium: 0, high: 0 },

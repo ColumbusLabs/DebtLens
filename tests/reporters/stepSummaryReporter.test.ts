@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { DebtIssue, ScanResult, Severity } from "../../src/core/types.js";
+import type { ScanResult, Severity } from "../../src/core/types.js";
 import { renderStepSummary } from "../../src/reporters/stepSummaryReporter.js";
 
-function makeResult(issues: DebtIssue[]): ScanResult {
+function makeResult(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   const byRule: Record<string, number> = {};
   for (const issue of issues) {
@@ -37,6 +37,7 @@ describe("step summary reporter", () => {
   it("renders gate decisions, filters, warnings, and report artifacts", () => {
     const result = makeResult([{
       id: "1",
+      fingerprint: "1",
       ruleId: "prop-drilling",
       ruleName: "Prop drilling",
       severity: "high",
@@ -94,6 +95,7 @@ describe("step summary reporter", () => {
   it("renders fail-on confidence floors in gate decisions", () => {
     const result = makeResult([{
       id: "low-confidence",
+      fingerprint: "low-confidence",
       ruleId: "prop-drilling",
       ruleName: "Prop drilling",
       severity: "high",
@@ -103,6 +105,7 @@ describe("step summary reporter", () => {
       tags: [],
     }, {
       id: "high-confidence",
+      fingerprint: "high-confidence",
       ruleId: "prop-drilling",
       ruleName: "Prop drilling",
       severity: "high",
@@ -152,9 +155,10 @@ describe("step summary reporter", () => {
   });
 
   it("lists up to five findings sorted by severity then confidence", () => {
-    const issues: DebtIssue[] = [
+    const issues: ScanResult["issues"] = [
       {
         id: "1",
+        fingerprint: "1",
         ruleId: "naming-drift",
         ruleName: "Naming drift",
         severity: "info",
@@ -166,6 +170,7 @@ describe("step summary reporter", () => {
       },
       {
         id: "2",
+        fingerprint: "2",
         ruleId: "prop-drilling",
         ruleName: "Prop drilling",
         severity: "high",
@@ -177,6 +182,7 @@ describe("step summary reporter", () => {
       },
       {
         id: "3",
+        fingerprint: "3",
         ruleId: "state-sprawl",
         ruleName: "State sprawl",
         severity: "medium",
@@ -201,6 +207,7 @@ describe("step summary reporter", () => {
   it("notes when more than five findings exist", () => {
     const issues = Array.from({ length: 7 }, (_, index) => ({
       id: String(index),
+      fingerprint: String(index),
       ruleId: "todo-comment",
       ruleName: "Todo comment",
       severity: "low" as const,
@@ -267,6 +274,7 @@ describe("step summary reporter", () => {
     };
     const current = makeResult([{
       id: "1",
+      fingerprint: "1",
       ruleId: "todo-comment",
       ruleName: "Todo comment",
       severity: "high",

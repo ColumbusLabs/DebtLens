@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import type { DebtIssue, ScanResult } from "../../src/core/types.js";
+import type { ScanResult } from "../../src/core/types.js";
 import { renderJson } from "../../src/reporters/jsonReporter.js";
 
-const issue: DebtIssue = {
+const issue: ScanResult["issues"][number] = {
   id: "dl_json_contract",
   fingerprint: "dl_json_contract",
   ruleId: "prop-drilling",

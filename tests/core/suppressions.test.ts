@@ -81,6 +81,24 @@ describe("inline suppressions", () => {
     assert.equal(result.suppressionDirectives.length, 0);
   });
 
+  it("does not honor suppression text inside string literals", () => {
+    const files = [file("src/a.ts", "const text = \"debtlens-disable-file todo-comment -- not a comment\";\n// TODO still reported\n")];
+    const result = applyInlineSuppressions([issue()], files, validRuleIds);
+
+    assert.equal(result.issues.length, 1);
+    assert.equal(result.suppressedByInline, 0);
+    assert.equal(result.suppressionDirectives.length, 0);
+  });
+
+  it("does not honor suppression text inside template literals", () => {
+    const files = [file("src/a.ts", "const text = `debtlens-disable-next-line todo-comment -- not a comment`;\n// TODO still reported\n")];
+    const result = applyInlineSuppressions([issue()], files, validRuleIds);
+
+    assert.equal(result.issues.length, 1);
+    assert.equal(result.suppressedByInline, 0);
+    assert.equal(result.suppressionDirectives.length, 0);
+  });
+
   it("warns on unknown rule ids", () => {
     const files = [file("src/a.ts", "// debtlens-disable-next-line made-up-rule -- reason\n")];
     const result = applyInlineSuppressions([issue()], files, validRuleIds);

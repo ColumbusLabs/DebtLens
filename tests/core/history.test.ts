@@ -10,7 +10,7 @@ import { renderHistoryReport } from "../../src/reporters/historyReporter.js";
 const sampleResult: ScanResult = {
   schemaVersion: 1,
   issues: [
-    { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, message: "todo", file: "src/a.ts", tags: [] },
+    { id: "1", fingerprint: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, message: "todo", file: "src/a.ts", tags: [] },
   ],
   summary: {
     totalIssues: 1,

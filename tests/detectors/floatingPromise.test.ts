@@ -57,6 +57,27 @@ export function load() {
     assert.equal(issues.length, 0);
   });
 
+  it("does NOT flag a promise chain with a rejection-only .then handler", async () => {
+    const src = `
+export function load() {
+  fetch("/api").then(undefined, handleError);
+}
+`;
+    const issues = await runDetector(floatingPromiseDetector, { "load.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("still flags a promise chain with a fulfilled .then handler and no catch", async () => {
+    const src = `
+export function load() {
+  fetch("/api").then((response) => response.json(), handleError);
+}
+`;
+    const issues = await runDetector(floatingPromiseDetector, { "load.ts": src });
+    assert.equal(issues.length, 1);
+    assert.equal(issues[0]?.ruleId, "floating-promise");
+  });
+
   it("flags a bare fetch call", async () => {
     const src = `
 export function load() {
@@ -110,6 +131,18 @@ export function run(task: Promise<void>) {
 
 export function load() {
   run(fetch("/api"));
+}
+`;
+    const issues = await runDetector(floatingPromiseDetector, { "load.ts": src });
+    assert.equal(issues.length, 0);
+  });
+
+  it("does NOT flag storing a promise-valued argument in a Map", async () => {
+    const src = `
+const inFlightByUser = new Map<string, Promise<Response>>();
+
+export function load(userId: string) {
+  inFlightByUser.set(userId, fetch(\`/api/users/\${userId}\`));
 }
 `;
     const issues = await runDetector(floatingPromiseDetector, { "load.ts": src });

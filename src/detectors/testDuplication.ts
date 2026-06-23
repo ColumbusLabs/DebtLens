@@ -5,9 +5,15 @@ import { Node, SyntaxKind } from "ts-morph";
 import type { CallExpression } from "ts-morph";
 import type { DebtIssue, Detector, DetectorContext, SourceFileInfo } from "../core/types.js";
 import { structuralFingerprint } from "../utils/ast.js";
+import { buildChangedPathScope, isChangedPath, isSourceFileChanged } from "../utils/changedScope.js";
 import { createIssue } from "../utils/createIssue.js";
 import { nodeLineSpan } from "../utils/lines.js";
 import { cosineSimilarity, jaccard, normalizeSnippet, shingle } from "../utils/similarity.js";
+
+interface TestFile {
+  file: SourceFileInfo;
+  changed: boolean;
+}
 
 interface TestSnippet {
   name: string;
@@ -17,6 +23,7 @@ interface TestSnippet {
   normalized: string;
   shingles: Set<string>;
   fingerprint: Map<string, number>;
+  changed: boolean;
 }
 
 export const testDuplicationDetector: Detector = {
@@ -29,11 +36,12 @@ export const testDuplicationDetector: Detector = {
     const minSimilarity = context.getThreshold("test-duplication.minSimilarity", 0.88);
     const minStructural = context.getThreshold("test-duplication.minStructuralSimilarity", 0.72);
     const minLines = context.getThreshold("test-duplication.minLines", 3);
+    const changedScoped = context.options.changedFiles !== undefined;
     const snippets: TestSnippet[] = [];
 
     for (const file of collectTestFiles(context)) {
-      for (const call of file.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-        const snippet = buildTestSnippet(file.relativePath, call, minLines);
+      for (const call of file.file.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+        const snippet = buildTestSnippet(file.file.relativePath, call, minLines, file.changed);
         if (snippet) snippets.push(snippet);
       }
     }
@@ -45,10 +53,13 @@ export const testDuplicationDetector: Detector = {
         const a = snippets[i];
         const b = snippets[j];
         if (!a || !b || a.file === b.file) continue;
+        if (changedScoped && !a.changed && !b.changed) continue;
         const structural = cosineSimilarity(a.fingerprint, b.fingerprint);
         if (structural < minStructural) continue;
         const similarity = jaccard(a.shingles, b.shingles);
         if (similarity < minSimilarity) continue;
+        const primary = changedScoped && b.changed && !a.changed ? b : a;
+        const match = primary === a ? b : a;
         const key = [a.file, a.startLine, b.file, b.startLine].sort().join("|");
         if (seen.has(key)) continue;
         seen.add(key);
@@ -56,12 +67,12 @@ export const testDuplicationDetector: Detector = {
           detector: testDuplicationDetector,
           severity: similarity > 0.94 ? "high" : "medium",
           confidence: Math.min(0.97, similarity),
-          file: a.file,
-          location: { startLine: a.startLine, endLine: a.endLine },
-          message: `${a.name} is ${Math.round(similarity * 100)}% similar to ${b.name}.`,
+          file: primary.file,
+          location: { startLine: primary.startLine, endLine: primary.endLine },
+          message: `${primary.name} is ${Math.round(similarity * 100)}% similar to ${match.name}.`,
           evidence: [
-            `${a.file}:${a.startLine}-${a.endLine}`,
-            `${b.file}:${b.startLine}-${b.endLine}`,
+            `${primary.file}:${primary.startLine}-${primary.endLine}`,
+            `${match.file}:${match.startLine}-${match.endLine}`,
           ],
           suggestion: "Extract a shared test helper or convert the duplicated assertions into a table-driven test when the scenarios are intentionally parallel.",
         }));
@@ -76,9 +87,12 @@ function isTestFile(path: string): boolean {
   return /(?:^|\/)(__tests__\/|.*\.(?:test|spec)\.[tj]sx?$)/.test(path);
 }
 
-function collectTestFiles(context: DetectorContext): SourceFileInfo[] {
-  const files = context.files.filter((file) => isTestFile(file.relativePath));
-  const seen = new Set(files.map((file) => file.relativePath));
+function collectTestFiles(context: DetectorContext): TestFile[] {
+  const changedScope = buildChangedPathScope(context.options);
+  const files = context.files
+    .filter((file) => isTestFile(file.relativePath))
+    .map((file) => ({ file, changed: isSourceFileChanged(changedScope, file) }));
+  const seen = new Set(files.map((file) => file.file.relativePath));
   if (!isAbsolute(context.options.target) || !existsSync(context.options.target) || statSync(context.options.target).isFile()) return files;
 
   const ignore = context.options.exclude.filter((pattern) =>
@@ -100,14 +114,17 @@ function collectTestFiles(context: DetectorContext): SourceFileInfo[] {
     if (seen.has(relativePath)) continue;
     const content = readFileSync(absolutePath, "utf8");
     const sourceFile = context.project.createSourceFile(absolutePath, content, { overwrite: true });
-    files.push({ absolutePath, relativePath, content, language: "tsjs", sourceFile });
+    files.push({
+      file: { absolutePath, relativePath, content, language: "tsjs", sourceFile },
+      changed: isChangedPath(changedScope, relativePath, absolutePath),
+    });
     seen.add(relativePath);
   }
 
   return files;
 }
 
-function buildTestSnippet(file: string, call: CallExpression, minLines: number): TestSnippet | undefined {
+function buildTestSnippet(file: string, call: CallExpression, minLines: number, changed: boolean): TestSnippet | undefined {
   const expression = call.getExpression();
   const expressionText = expression.getText();
   if (!/^(?:it|test)(?:\.only|\.skip)?$/.test(expressionText)) return undefined;
@@ -128,5 +145,6 @@ function buildTestSnippet(file: string, call: CallExpression, minLines: number):
     normalized,
     shingles: shingle(normalized),
     fingerprint: structuralFingerprint(body),
+    changed,
   };
 }

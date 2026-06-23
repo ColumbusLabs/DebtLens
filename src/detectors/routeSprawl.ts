@@ -77,7 +77,9 @@ function describeRouteCall(call: CallExpression, expression: Node): RouteRegistr
 
     if (!ROUTE_METHODS.has(method)) return undefined;
 
-    const [firstArg] = call.getArguments();
+    const args = call.getArguments();
+    if (args.length < 2) return undefined;
+    const [firstArg] = args;
     if (!firstArg || !isRoutePathArgument(firstArg)) return undefined;
 
     return {

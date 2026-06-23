@@ -145,8 +145,8 @@ export async function resolveReportedIssues(
 }
 
 function isPathWithinRoot(filePath: string, rootPath: string): boolean {
-  const file = normalizePath(resolve(filePath));
-  const root = normalizePath(resolve(rootPath));
+  const file = normalizePath(canonicalizePath(resolve(filePath)));
+  const root = normalizePath(canonicalizePath(resolve(rootPath)));
   if (file === root) return true;
   const rel = relative(root, file).replaceAll("\\", "/");
   return rel.length > 0 && !rel.startsWith("..");

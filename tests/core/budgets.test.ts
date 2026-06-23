@@ -27,8 +27,8 @@ function makeResult(issues: ScanResult["issues"]): ScanResult {
 describe("budget evaluation", () => {
   it("detects per-area breaches", () => {
     const result = makeResult([
-      { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "high", confidence: 1, file: "src/payments/a.ts", message: "todo", tags: [] },
-      { id: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/other/b.ts", message: "todo", tags: [] },
+      { id: "1", fingerprint: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "high", confidence: 1, file: "src/payments/a.ts", message: "todo", tags: [] },
+      { id: "2", fingerprint: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/other/b.ts", message: "todo", tags: [] },
     ]);
     const evaluation = evaluateBudgets(result, {
       "src/payments": { maxIssues: 0, maxHigh: 0 },
@@ -39,7 +39,7 @@ describe("budget evaluation", () => {
 
   it("matches nested paths under a glob prefix", () => {
     const result = makeResult([
-      { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/payments/nested/a.ts", message: "todo", tags: [] },
+      { id: "1", fingerprint: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/payments/nested/a.ts", message: "todo", tags: [] },
     ]);
     const evaluation = evaluateBudgets(result, {
       "src/payments/**": { maxIssues: 0 },
@@ -49,8 +49,8 @@ describe("budget evaluation", () => {
 
   it("matches globstars with or without an intermediate directory", () => {
     const result = makeResult([
-      { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/a.ts", message: "todo", tags: [] },
-      { id: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/nested/b.ts", message: "todo", tags: [] },
+      { id: "1", fingerprint: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/a.ts", message: "todo", tags: [] },
+      { id: "2", fingerprint: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/nested/b.ts", message: "todo", tags: [] },
     ]);
     const evaluation = evaluateBudgets(result, {
       "src/**/*.ts": { maxIssues: 1 },

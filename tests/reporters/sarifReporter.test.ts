@@ -5,7 +5,7 @@ import { allDetectors } from "../../src/detectors/index.js";
 import { renderSarif } from "../../src/reporters/sarifReporter.js";
 import { packageVersion } from "../../src/utils/packageInfo.js";
 
-function makeResult(issues: DebtIssue[]): ScanResult {
+function makeResult(issues: ScanResult["issues"]): ScanResult {
   const bySeverity: Record<Severity, number> = { info: 0, low: 0, medium: 0, high: 0 };
   for (const issue of issues) bySeverity[issue.severity] += 1;
   return {
@@ -23,7 +23,7 @@ function makeResult(issues: DebtIssue[]): ScanResult {
   };
 }
 
-const highIssue: DebtIssue = {
+const highIssue: ScanResult["issues"][number] = {
   id: "dl_1",
   fingerprint: "dl_1",
   ruleId: "prop-drilling",
@@ -38,7 +38,7 @@ const highIssue: DebtIssue = {
   tags: ["react"],
 };
 
-const infoIssue: DebtIssue = {
+const infoIssue: ScanResult["issues"][number] = {
   id: "dl_2",
   fingerprint: "dl_2",
   ruleId: "naming-drift",
@@ -93,7 +93,7 @@ describe("sarif reporter", () => {
   });
 
   it("uses the issue id as the SARIF partial fingerprint fallback", () => {
-    const legacyIssue = { ...infoIssue, id: "legacy-id", fingerprint: undefined };
+    const legacyIssue = { ...infoIssue, id: "legacy-id", fingerprint: undefined } as unknown as ScanResult["issues"][number];
     const sarif = JSON.parse(renderSarif(makeResult([legacyIssue])));
     const [result] = sarif.runs[0].results;
 

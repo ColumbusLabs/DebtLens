@@ -72,4 +72,58 @@ describe("config-drift detector", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("anchors changed-mode drift to changed config files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-config-drift-changed-"));
+    try {
+      mkdirSync(join(dir, "packages", "app"), { recursive: true });
+      mkdirSync(join(dir, "packages", "web"), { recursive: true });
+      mkdirSync(join(dir, "packages", "legacy"), { recursive: true });
+      writeFileSync(join(dir, "packages", "app", "package.json"), JSON.stringify({
+        scripts: { build: "vite build", test: "vitest" },
+      }), "utf8");
+      writeFileSync(join(dir, "packages", "web", "package.json"), JSON.stringify({
+        scripts: { build: "next build", test: "vitest" },
+      }), "utf8");
+      writeFileSync(join(dir, "packages", "legacy", "package.json"), JSON.stringify({
+        scripts: { build: "next build", test: "vitest" },
+      }), "utf8");
+
+      const issues = await runDetector(configDriftDetector, {}, {
+        target: dir,
+        changedFiles: [join(dir, "packages", "app", "package.json")],
+      });
+
+      assert.equal(issues.length, 1);
+      assert.equal(issues[0]?.file, "packages/app/package.json");
+      assert.match(issues[0]?.message ?? "", /scripts\.build/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not report global config drift when changed mode does not touch config files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-config-drift-unchanged-"));
+    try {
+      mkdirSync(join(dir, "packages", "app"), { recursive: true });
+      mkdirSync(join(dir, "packages", "web"), { recursive: true });
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(join(dir, "packages", "app", "package.json"), JSON.stringify({
+        scripts: { build: "vite build" },
+      }), "utf8");
+      writeFileSync(join(dir, "packages", "web", "package.json"), JSON.stringify({
+        scripts: { build: "next build" },
+      }), "utf8");
+      writeFileSync(join(dir, "src", "app.ts"), "export const app = true;\n", "utf8");
+
+      const issues = await runDetector(configDriftDetector, {}, {
+        target: dir,
+        changedFiles: [join(dir, "src", "app.ts")],
+      });
+
+      assert.equal(issues.length, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

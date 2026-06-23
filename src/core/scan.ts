@@ -12,7 +12,7 @@ import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
 import { suggestClosest } from "../utils/didYouMean.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
-import type { DebtIssue, Detector, DetectorContext, ScanOptions, ScanResult, SourceFileInfo, SourceLanguage } from "./types.js";
+import type { DebtIssue, Detector, DetectorContext, ReportedDebtIssue, ScanOptions, ScanResult, SourceFileInfo, SourceLanguage } from "./types.js";
 
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startedAt = Date.now();
@@ -128,13 +128,14 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     ...(suppression.suppressedByInline > 0 ? { suppressedByInline: suppression.suppressedByInline } : {}),
   };
 
-  const issueSummary = summarizeIssues(issues);
-  const correlations = buildRuleCorrelations(issues);
-  const duplicateClusters = buildDuplicateLogicClusters(issues);
+  const reportedIssues = toReportedIssues(issues);
+  const issueSummary = summarizeIssues(reportedIssues);
+  const correlations = buildRuleCorrelations(reportedIssues);
+  const duplicateClusters = buildDuplicateLogicClusters(reportedIssues);
   const importGraph = buildImportGraphFromFiles(files.filter((file) => file.language === "tsjs"), true);
   const result: ScanResult = {
     schemaVersion: 1,
-    issues,
+    issues: reportedIssues,
     ...(suppression.suppressions.length > 0 ? { suppressions: suppression.suppressions } : {}),
     ...(options.auditSuppressions && suppression.suppressionDirectives.length > 0
       ? { suppressionDirectives: suppression.suppressionDirectives }
@@ -291,6 +292,13 @@ function normalizeIssueIdentity(issue: DebtIssue): void {
   const fingerprint = issue.fingerprint ?? computeIssueFingerprint(issue);
   issue.fingerprint = fingerprint;
   issue.id = fingerprint;
+}
+
+function toReportedIssues(issues: DebtIssue[]): ReportedDebtIssue[] {
+  return issues.map((issue) => {
+    normalizeIssueIdentity(issue);
+    return issue as ReportedDebtIssue;
+  });
 }
 
 function getContentOverride(options: ScanOptions, absolutePath: string): string | undefined {

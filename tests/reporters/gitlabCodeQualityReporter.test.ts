@@ -45,10 +45,33 @@ describe("gitlab-codequality reporter", () => {
     assert.equal(finding.location.path, "examples/react/src/Dashboard.tsx");
     assert.equal(finding.location.lines.begin, 22);
   });
+
+  it("disambiguates repeated canonical fingerprints for GitLab display", () => {
+    const result = makeResult();
+    result.issues = [{
+      ...result.issues[0]!,
+      fingerprint: "shared-fingerprint",
+      file: "src/Todo.ts",
+      location: { startLine: 1 },
+    }, {
+      ...result.issues[0]!,
+      id: "second",
+      fingerprint: "shared-fingerprint",
+      file: "src/Todo.ts",
+      location: { startLine: 3 },
+    }];
+
+    const parsed = JSON.parse(renderGitLabCodeQuality(result)) as Array<{ fingerprint: string }>;
+
+    assert.equal(parsed.length, 2);
+    assert.notEqual(parsed[0]?.fingerprint, parsed[1]?.fingerprint);
+    assert.match(parsed[0]?.fingerprint ?? "", /^shared-fingerprint-[a-f0-9]{12}$/);
+    assert.match(parsed[1]?.fingerprint ?? "", /^shared-fingerprint-[a-f0-9]{12}$/);
+  });
 });
 
 function makeResult(): ScanResult {
-  const issues: DebtIssue[] = [{
+  const issues: ScanResult["issues"] = [{
     id: "high-id",
     fingerprint: "stable-high",
     ruleId: "prop-drilling",
@@ -61,6 +84,7 @@ function makeResult(): ScanResult {
     tags: [],
   }, {
     id: "medium-id",
+    fingerprint: "medium-id",
     ruleId: "large-function",
     ruleName: "Large function",
     severity: "medium",
@@ -71,6 +95,7 @@ function makeResult(): ScanResult {
     tags: [],
   }, {
     id: "low-id",
+    fingerprint: "low-id",
     ruleId: "todo-comment",
     ruleName: "Todo comment",
     severity: "low",
@@ -81,6 +106,7 @@ function makeResult(): ScanResult {
     tags: [],
   }, {
     id: "info-id",
+    fingerprint: "info-id",
     ruleId: "naming-drift",
     ruleName: "Naming drift",
     severity: "info",

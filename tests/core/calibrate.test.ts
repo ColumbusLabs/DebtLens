@@ -9,6 +9,7 @@ describe("calibrate", () => {
       schemaVersion: 1,
       issues: [{
         id: "1",
+        fingerprint: "1",
         ruleId: "large-component",
         ruleName: "Large component",
         severity: "medium",
@@ -49,6 +50,7 @@ describe("calibrate", () => {
       schemaVersion: 1,
       issues: [100, 200, 300].map((lines, index) => ({
         id: String(index),
+        fingerprint: String(index),
         ruleId: "large-component",
         ruleName: "Large component",
         severity: "medium" as const,

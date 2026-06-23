@@ -25,4 +25,25 @@ export const version = 1;
     assert.equal(issues.length, 1);
     assert.match(issues[0]?.message ?? "", /never referenced/);
   });
+
+  it("tracks same-named flags per file", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "one.ts": "const enableCheckout = true;\nexport const one = enableCheckout;\n",
+      "two.ts": "const enableCheckout = true;\nexport const two = enableCheckout;\n",
+    });
+
+    assert.equal(issues.length, 2);
+    assert.deepEqual(issues.map((issue) => issue.file).sort(), ["one.ts", "two.ts"]);
+  });
+
+  it("ignores local boolean helpers that only look like flags", async () => {
+    const src = `
+export function render(enabled) {
+  const enableButton = true;
+  return enabled && enableButton;
+}
+`;
+    const issues = await runDetector(featureFlagDebtDetector, { "local.ts": src });
+    assert.equal(issues.length, 0);
+  });
 });

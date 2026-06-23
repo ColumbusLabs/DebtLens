@@ -53,10 +53,10 @@ describe("debtlens fix", () => {
     try {
       mkdirSync(join(dir, "src"));
       writeFileSync(join(dir, "src", "copy.ts"), `
-export function buildCopy(locale) {
+function buildCopy(locale) {
   return locale.toUpperCase();
 }
-export function getCopy(locale) {
+function getCopy(locale) {
   return buildCopy(locale);
 }
 export const label = getCopy("en");
@@ -75,6 +75,61 @@ export const label = getCopy("en");
       const updated = readFileSync(join(dir, "src", "copy.ts"), "utf8");
       assert.doesNotMatch(updated, /function getCopy/);
       assert.match(updated, /buildCopy\("en"\)/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects non-writable rules in write mode before touching files", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-fix-reject-rule-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      const file = join(dir, "src", "billing.ts");
+      writeFileSync(file, `export const one = "payment-overdue";\n`);
+      await assert.rejects(
+        () => runFix({
+          cwd: dir,
+          target: dir,
+          include: defaultConfig.include,
+          exclude: defaultConfig.exclude,
+          minSeverity: "low",
+          rules: ["duplicated-literal"],
+          thresholds: defaultConfig.thresholds,
+        }, { rules: ["duplicated-literal"], dryRun: false }),
+        /not writable/,
+      );
+      assert.match(readFileSync(file, "utf8"), /"payment-overdue"/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not remove exported pass-through wrappers in write mode", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-fix-exported-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      const file = join(dir, "src", "copy.ts");
+      writeFileSync(file, `
+export function buildCopy(locale) {
+  return locale.toUpperCase();
+}
+export function getCopy(locale) {
+  return buildCopy(locale);
+}
+export const label = getCopy("en");
+`);
+      const result = await runFix({
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low",
+        rules: ["dead-abstraction"],
+        thresholds: defaultConfig.thresholds,
+      }, { rules: ["dead-abstraction"], dryRun: false });
+
+      assert.equal(result.filesTouched, 0);
+      assert.match(readFileSync(file, "utf8"), /export function getCopy/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -5,6 +5,7 @@ import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { buildImportGraphFromFiles } from "./importGraph.js";
 import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
+import { resolveConcurrency } from "./parallelScan.js";
 import { canonicalize, resolveFileSelection } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
@@ -249,13 +250,34 @@ async function runDetectors(
   };
 
   if (contextBase.options.parallel || (contextBase.options.concurrency ?? 0) > 1) {
-    return Promise.all(detectors.map((detector) => runOne(detector)));
+    const concurrency = contextBase.options.concurrency !== undefined
+      ? resolveConcurrency(contextBase.options)
+      : Math.max(1, detectors.length);
+    return runWithConcurrency(detectors, concurrency, runOne);
   }
 
   const results: DetectorRunResult[] = [];
   for (const detector of detectors) {
     results.push(await runOne(detector));
   }
+  return results;
+}
+
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  runOne: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await runOne(items[index] as T);
+    }
+  }));
   return results;
 }
 

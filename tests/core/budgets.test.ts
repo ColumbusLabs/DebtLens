@@ -47,6 +47,18 @@ describe("budget evaluation", () => {
     assert.ok(evaluation?.breached);
   });
 
+  it("matches globstars with or without an intermediate directory", () => {
+    const result = makeResult([
+      { id: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/a.ts", message: "todo", tags: [] },
+      { id: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "src/nested/b.ts", message: "todo", tags: [] },
+    ]);
+    const evaluation = evaluateBudgets(result, {
+      "src/**/*.ts": { maxIssues: 1 },
+    });
+    assert.ok(evaluation?.breached);
+    assert.equal(evaluation?.areas[0]?.issueCount, 2);
+  });
+
   it("renders a budget report table", () => {
     const result = makeResult([]);
     const evaluation = evaluateBudgets(result, {

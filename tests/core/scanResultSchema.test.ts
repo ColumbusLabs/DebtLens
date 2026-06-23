@@ -15,7 +15,7 @@ describe("ScanResult JSON schema", () => {
       required: string[];
       properties: {
         schemaVersion: { const: number };
-        issues: { items: { required: string[] } };
+        issues: { items: { required: string[]; properties: Record<string, unknown> } };
         suppressions: { items: { required: string[] } };
         suppressionDirectives: { items: { required: string[] } };
         summary: {
@@ -23,6 +23,7 @@ describe("ScanResult JSON schema", () => {
             deltaFromBaseline?: { required: string[] };
             correlations?: { items: { required: string[] } };
             duplicateClusters?: { items: { required: string[] } };
+            importGraph?: { required: string[]; properties: { edges: { items: { required: string[] } } } };
             hotspots?: {
               required: string[];
               properties: {
@@ -45,12 +46,15 @@ describe("ScanResult JSON schema", () => {
     assert.deepEqual(schema.required, ["schemaVersion", "issues", "summary", "options"]);
     assert.equal(schema.properties.schemaVersion.const, 1);
     assert.ok(schema.properties.issues.items.required.includes("fingerprint"));
+    assert.ok("payoffScore" in schema.properties.issues.items.properties);
     assert.ok(schema.properties.suppressions.items.required.includes("reason"));
     assert.ok(schema.properties.suppressionDirectives.items.required.includes("recommendedAction"));
     assert.ok(schema.properties.suppressionDirectives.items.required.includes("suppressedIssueCount"));
     assert.ok(schema.properties.summary.properties.deltaFromBaseline?.required.includes("totalDelta"));
     assert.ok(schema.properties.summary.properties.correlations?.items.required.includes("rules"));
     assert.ok(schema.properties.summary.properties.duplicateClusters?.items.required.includes("locations"));
+    assert.ok(schema.properties.summary.properties.importGraph?.required.includes("edges"));
+    assert.ok(schema.properties.summary.properties.importGraph?.properties.edges.items.required.includes("inCycle"));
     assert.ok(schema.properties.summary.properties.hotspots?.required.includes("ranking"));
     assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.required.includes("churn"));
     assert.ok(schema.properties.summary.properties.hotspots?.properties.ranking.items.properties.churn.required.includes("changedLines"));

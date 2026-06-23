@@ -131,8 +131,13 @@ function pathMatchesPattern(path: string, pattern: string): boolean {
       const char = normalizedPattern[index];
       const next = normalizedPattern[index + 1];
       if (char === "*" && next === "*") {
-        expression += ".*";
-        index += 1;
+        if (normalizedPattern[index + 2] === "/") {
+          expression += "(?:.*/)?";
+          index += 2;
+        } else {
+          expression += ".*";
+          index += 1;
+        }
       } else if (char === "*") {
         expression += "[^/]*";
       } else {

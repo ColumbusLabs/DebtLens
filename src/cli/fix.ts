@@ -6,7 +6,8 @@ import type { DebtIssue, ScanOptions } from "../core/types.js";
 import { collectFunctionLikes, getFunctionBody } from "../utils/ast.js";
 import { nodeLineSpan } from "../utils/lines.js";
 
-const FIXABLE_RULES = new Set(["duplicated-literal", "dead-abstraction"]);
+const PREVIEWABLE_RULES = new Set(["duplicated-literal", "dead-abstraction"]);
+const WRITABLE_RULES = new Set(["dead-abstraction"]);
 
 export interface FixResult {
   diffs: string[];
@@ -18,8 +19,9 @@ export async function runFix(options: ScanOptions, input: {
   rules?: string[];
   dryRun?: boolean;
 }): Promise<FixResult> {
-  const allowedRules = (input.rules ?? [...FIXABLE_RULES]).filter((rule) => FIXABLE_RULES.has(rule));
-  const result = await scan({ ...options, rules: allowedRules.length ? allowedRules : [...FIXABLE_RULES] });
+  const dryRun = input.dryRun !== false;
+  const allowedRules = resolveFixRules(input.rules, dryRun);
+  const result = await scan({ ...options, rules: allowedRules });
   const project = new Project({
     compilerOptions: {
       allowJs: true,
@@ -31,6 +33,7 @@ export async function runFix(options: ScanOptions, input: {
 
   const diffs: string[] = [];
   const touched = new Set<string>();
+  const fixedIssues: DebtIssue[] = [];
   for (const issue of result.issues) {
     if (issue.ruleId === "duplicated-literal") {
       const literal = extractDuplicatedLiteral(issue);
@@ -41,6 +44,7 @@ export async function runFix(options: ScanOptions, input: {
         if (diff) {
           diffs.push(diff);
           touched.add(file);
+          fixedIssues.push(issue);
         }
       }
     }
@@ -49,14 +53,15 @@ export async function runFix(options: ScanOptions, input: {
       if (diff) {
         diffs.push(diff);
         touched.add(issue.file);
+        fixedIssues.push(issue);
       }
     }
   }
 
-  if (!input.dryRun) {
-    await project.save();
-    const verify = await scan({ ...options, rules: allowedRules.length ? allowedRules : [...FIXABLE_RULES] });
-    for (const issue of result.issues) {
+  if (!dryRun && fixedIssues.length > 0) {
+    const fileContents = buildFileContentOverrides(project, options);
+    const verify = await scan({ ...options, rules: allowedRules, fileContents });
+    for (const issue of fixedIssues) {
       const stillPresent = verify.issues.some((candidate) =>
         candidate.ruleId === issue.ruleId
         && candidate.file === issue.file
@@ -66,9 +71,29 @@ export async function runFix(options: ScanOptions, input: {
         throw new Error(`Fix did not resolve ${issue.ruleId} at ${issue.file}:${issue.location?.startLine ?? "?"}`);
       }
     }
+    await project.save();
   }
 
-  return { diffs, filesTouched: touched.size, dryRun: input.dryRun !== false };
+  return { diffs, filesTouched: touched.size, dryRun };
+}
+
+function resolveFixRules(requestedRules: string[] | undefined, dryRun: boolean): string[] {
+  const allowed = dryRun ? PREVIEWABLE_RULES : WRITABLE_RULES;
+  const requested = requestedRules?.length ? requestedRules : [...allowed];
+  const unsupported = requested.filter((rule) => !allowed.has(rule));
+  if (unsupported.length > 0) {
+    const mode = dryRun ? "previewable" : "writable";
+    throw new Error(`Rule(s) are not ${mode} by debtlens fix: ${unsupported.join(", ")}`);
+  }
+  return [...new Set(requested)];
+}
+
+function buildFileContentOverrides(project: Project, options: ScanOptions): Record<string, string> {
+  const overrides: Record<string, string> = { ...(options.fileContents ?? {}) };
+  for (const source of project.getSourceFiles()) {
+    overrides[source.getFilePath()] = source.getFullText();
+  }
+  return overrides;
 }
 
 function collectIssueFiles(issue: DebtIssue): string[] {
@@ -132,6 +157,7 @@ function fixDeadAbstraction(project: Project, options: ScanOptions, issue: DebtI
 
     const delegation = getPassThroughDelegation(body, fn.node, fn.name);
     if (!delegation) return undefined;
+    if (isExportedWrapper(source, fn)) return undefined;
 
     const before = source.getFullText();
     inlinePassThroughWrapper(source, fn, delegation.calleeText);
@@ -141,6 +167,21 @@ function fixDeadAbstraction(project: Project, options: ScanOptions, issue: DebtI
   }
 
   return undefined;
+}
+
+function isExportedWrapper(
+  source: NonNullable<ReturnType<Project["addSourceFileAtPathIfExists"]>>,
+  fn: ReturnType<typeof collectFunctionLikes>[number],
+): boolean {
+  if (Node.isFunctionDeclaration(fn.declaration) && fn.declaration.isExported()) return true;
+  const variableStatement = Node.isVariableDeclaration(fn.declaration)
+    ? fn.declaration.getVariableStatement()
+    : undefined;
+  if (variableStatement?.isExported()) return true;
+  return source.getExportDeclarations().some((declaration) =>
+    !declaration.getModuleSpecifierValue()
+    && declaration.getNamedExports().some((namedExport) => namedExport.getName() === fn.name),
+  );
 }
 
 function getPassThroughDelegation(body: MorphNode, fnNode: MorphNode, fnName: string): { calleeText: string } | undefined {

@@ -15,6 +15,7 @@ describe("html reporter", () => {
       message: "Avoid <script>alert(1)</script>",
       file: "src/app.ts",
       location: { startLine: 2 },
+      payoffScore: 12.5,
       tags: [],
     }]));
 
@@ -22,7 +23,9 @@ describe("html reporter", () => {
     assert.match(html, /DebtLens Report/);
     assert.match(html, /Todo &lt;comment&gt;/);
     assert.doesNotMatch(html, /<script>alert/);
+    assert.match(html, /Avoid &lt;script&gt;alert\(1\)&lt;\/script&gt;/);
     assert.match(html, /Fix These First/);
+    assert.match(html, /Top payoff targets/);
     assert.match(html, /1 low-severity finding/);
     assert.match(html, /Debt Heatmap/);
   });

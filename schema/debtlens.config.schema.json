@@ -1456,6 +1456,43 @@
           "minimum": 0
         }
       }
+    },
+    "priority": {
+      "type": "object",
+      "description": "Payoff ranking weights for --sort payoff.",
+      "additionalProperties": false,
+      "properties": {
+        "churn": {
+          "type": "number",
+          "minimum": 0
+        },
+        "age": {
+          "type": "number",
+          "minimum": 0
+        },
+        "severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "info": {
+              "type": "number",
+              "minimum": 0
+            },
+            "low": {
+              "type": "number",
+              "minimum": 0
+            },
+            "medium": {
+              "type": "number",
+              "minimum": 0
+            },
+            "high": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
     }
   }
 }

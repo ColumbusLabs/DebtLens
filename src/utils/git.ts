@@ -32,6 +32,12 @@ function gitSafe(cwd: string, args: string[]): string {
   }
 }
 
+export function getCurrentGitSha(cwd: string): string | undefined {
+  if (!isGitRepo(cwd)) return undefined;
+  const sha = gitSafe(cwd, ["rev-parse", "HEAD"]).trim();
+  return sha || undefined;
+}
+
 export function isGitRepo(cwd: string): boolean {
   try {
     return git(cwd, ["rev-parse", "--is-inside-work-tree"]) === "true";

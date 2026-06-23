@@ -7,6 +7,7 @@ import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
 import { evaluateBudgets, renderBudgetReport } from "../../core/budgets.js";
+import { enrichIssuesWithPayoffScores, sortIssuesByPayoff } from "../../core/priority.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
@@ -96,6 +97,7 @@ export function registerScanCommand(program: Command): void {
     .option("--pr-comment-max-bytes <count>", "with --format pr-comment, cap the rendered comment body in bytes", parseInteger)
     .option("--pr-comment-full-report-url <url>", "with --format pr-comment, link omitted findings to a full report artifact")
     .option("--budget-report", "print per-area budget usage without failing the gate")
+    .option("--sort <field>", "sort findings by severity or payoff")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
         const result = await runScanCommand(target, rawOptions);
@@ -243,6 +245,19 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
   }
   enrichWithHotspots(cwd, options, reported, rawOptions, writeStderr);
   enrichWithOwnership(cwd, options, reported, rawOptions, writeStderr);
+
+  if (rawOptions.sort === "payoff") {
+    enrichIssuesWithPayoffScores(reported.issues, {
+      hotspots: reported.summary.hotspots,
+      weights: fileConfig.priority,
+    });
+    reported.issues = sortIssuesByPayoff(reported.issues);
+  } else if (rawOptions.blameAge === true || reported.summary.hotspots) {
+    enrichIssuesWithPayoffScores(reported.issues, {
+      hotspots: reported.summary.hotspots,
+      weights: fileConfig.priority,
+    });
+  }
 
   const budgetEvaluation = evaluateBudgets(reported, options.budgets);
   const budgetReportOnly = rawOptions.budgetReport === true;

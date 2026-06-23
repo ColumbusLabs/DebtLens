@@ -25,6 +25,8 @@ export interface DebtIssue {
   location?: IssueLocation;
   /** Optional git blame age in whole days for the finding start line. */
   introducedDaysAgo?: number;
+  /** Composite payoff ranking score when churn/priority data is available. */
+  payoffScore?: number;
   evidence?: string[];
   suggestion?: string;
   tags: string[];
@@ -100,6 +102,12 @@ export interface DebtLensConfig {
   badge?: {
     greenMax?: number;
     yellowMax?: number;
+  };
+  /** Payoff ranking weights for `--sort payoff`. */
+  priority?: {
+    severity?: Partial<Record<Severity, number>>;
+    churn?: number;
+    age?: number;
   };
   /** Rule id -> severity reported for that rule's issues, replacing the detector's choice. */
   ruleSeverities?: Record<string, Severity>;

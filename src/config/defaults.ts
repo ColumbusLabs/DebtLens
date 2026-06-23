@@ -1,7 +1,7 @@
 import type { DebtLensConfig } from "../core/types.js";
 import { getLanguageDefinition } from "../core/languages.js";
 
-export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "failOnConfidence" | "gatePreset" | "pluginApiVersion" | "plugins" | "ruleSeverities" | "ruleConfidenceFloors" | "budgets" | "badge">> = {
+export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "failOnConfidence" | "gatePreset" | "pluginApiVersion" | "plugins" | "ruleSeverities" | "ruleConfidenceFloors" | "budgets" | "badge" | "priority">> = {
   include: getLanguageDefinition("tsjs").includeGlobs,
   exclude: [
     "node_modules/**",

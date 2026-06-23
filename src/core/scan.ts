@@ -3,6 +3,7 @@ import { basename, relative } from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
+import { buildImportGraphFromFiles } from "./importGraph.js";
 import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
 import { canonicalize, resolveFileSelection } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
@@ -128,6 +129,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const issueSummary = summarizeIssues(issues);
   const correlations = buildRuleCorrelations(issues);
   const duplicateClusters = buildDuplicateLogicClusters(issues);
+  const importGraph = buildImportGraphFromFiles(files.filter((file) => file.language === "tsjs"), true);
   const result: ScanResult = {
     schemaVersion: 1,
     issues,
@@ -146,6 +148,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
       ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
       ...(correlations.length > 0 ? { correlations } : {}),
       ...(duplicateClusters.length > 0 ? { duplicateClusters } : {}),
+      importGraph,
       ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
       ...(cachePath || options.batchSize || options.parallel ? {
         performance: {

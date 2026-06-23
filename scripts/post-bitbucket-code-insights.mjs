@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+  compareIssues,
+  normalizeSlashPath,
+  parseAnnotationLimit,
+  repoRelativeIssuePath,
+  severityRank,
+} from "./lib/report-utils.mjs";
 
 const reportPath = process.argv[2];
 const authHeader = authorizationHeader();
@@ -19,7 +26,11 @@ if (!reportPath || !authHeader || !workspace || !repoSlug || !commit) {
 
 const result = JSON.parse(readFileSync(reportPath, "utf8"));
 const issues = Array.isArray(result.issues) ? result.issues : [];
-const maxAnnotations = parseMaxAnnotations(process.env.DEBTLENS_BITBUCKET_ANNOTATIONS_MAX_COUNT);
+const maxAnnotations = parseAnnotationLimit(process.env.DEBTLENS_BITBUCKET_ANNOTATIONS_MAX_COUNT, {
+  defaultValue: 100,
+  max: 1000,
+  name: "Bitbucket annotation max count",
+});
 const selected = [...issues].sort(compareIssues).slice(0, maxAnnotations);
 const headers = {
   Authorization: authHeader,
@@ -105,7 +116,7 @@ function toAnnotation(issue, externalId) {
     summary: String(issue.message ?? "Maintainability finding").slice(0, 450),
     details: annotationDetails(issue),
     severity: bitbucketSeverity(issue.severity),
-    ...(issue.file ? { path: normalizePath(issue.file, result) } : {}),
+    ...(issue.file ? { path: bitbucketIssuePath(issue.file) } : {}),
     ...(issue.location?.startLine ? { line: issue.location.startLine } : {}),
   };
 }
@@ -137,7 +148,7 @@ function buildAnnotationIds(issues) {
 
     const occurrence = occurrences.get(seed) ?? 0;
     occurrences.set(seed, occurrence + 1);
-    return stableAnnotationId(`${seed}:${normalizePath(issue.file ?? "", result)}:${issue.location?.startLine ?? 1}:${issue.location?.startColumn ?? 1}:${occurrence}`);
+    return stableAnnotationId(`${seed}:${bitbucketIssuePath(issue.file ?? "")}:${issue.location?.startLine ?? 1}:${issue.location?.startColumn ?? 1}:${occurrence}`);
   });
 }
 
@@ -175,59 +186,9 @@ function authorizationHeader() {
   return "";
 }
 
-function normalizePath(file, scanResult) {
-  const repoRoot = repoRootForTarget(scanResult.options?.target);
-  const normalizedFile = String(file).replaceAll("\\", "/").replace(/^\.\//, "");
-  if (isAbsolute(normalizedFile)) {
-    const relativePath = relative(repoRoot, normalizedFile).replaceAll("\\", "/");
-    return relativePath && !relativePath.startsWith("..") ? relativePath : normalizedFile;
-  }
-
-  const targetPrefix = repoRelativeTargetPrefix(scanResult.options?.target, repoRoot);
-  if (!targetPrefix || pathStartsWith(normalizedFile, targetPrefix)) {
-    return normalizedFile;
-  }
-  return `${targetPrefix}/${normalizedFile.replace(/^\/+/, "")}`;
-}
-
-function repoRelativeTargetPrefix(target, repoRoot) {
-  if (!target || target === ".") return "";
-  const targetPath = isAbsolute(target) ? target : resolve(repoRoot, target);
-  const issueRoot = safeIsFile(targetPath) ? dirname(targetPath) : targetPath;
-  const relativePath = relative(repoRoot, issueRoot).replaceAll("\\", "/");
-  if (!relativePath || relativePath === "." || relativePath.startsWith("..") || isAbsolute(relativePath)) return "";
-  return relativePath.replace(/\/+$/, "");
-}
-
-function repoRootForTarget(target) {
-  const cloneRoot = process.env.BITBUCKET_CLONE_DIR ? resolve(process.env.BITBUCKET_CLONE_DIR) : "";
-  const rawTarget = typeof target === "string" ? target : "";
-  const targetPath = isAbsolute(rawTarget) ? rawTarget : resolve(process.cwd(), rawTarget || ".");
-  if (cloneRoot && pathStartsWithin(cloneRoot, targetPath)) return cloneRoot;
-
-  const start = safeIsFile(targetPath) ? dirname(targetPath) : targetPath;
-  for (let current = start; ; current = dirname(current)) {
-    if (existsSync(resolve(current, ".git"))) return current;
-    const parent = dirname(current);
-    if (parent === current) return cloneRoot || process.cwd();
-  }
-}
-
-function safeIsFile(filePath) {
-  try {
-    return existsSync(filePath) && statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function pathStartsWithin(parent, child) {
-  const relativePath = relative(parent, child);
-  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
-}
-
-function pathStartsWith(filePath, prefix) {
-  return filePath === prefix || filePath.startsWith(`${prefix}/`);
+function bitbucketIssuePath(file) {
+  const preferredRoot = process.env.BITBUCKET_CLONE_DIR ? resolve(process.env.BITBUCKET_CLONE_DIR) : "";
+  return repoRelativeIssuePath(normalizeSlashPath(file), result, { preferredRoot });
 }
 
 function numberSummary(key) {
@@ -238,36 +199,10 @@ function numberSeverity(severity) {
   return Number(result.summary?.bySeverity?.[severity] ?? 0);
 }
 
-function parseMaxAnnotations(value) {
-  if (!value) return 100;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 1000) {
-    throw new Error(`Invalid Bitbucket annotation max count "${value}". Expected an integer from 0 to 1000.`);
-  }
-  return parsed;
-}
-
 function chunks(values, size) {
   const result = [];
   for (let index = 0; index < values.length; index += size) {
     result.push(values.slice(index, index + size));
   }
   return result;
-}
-
-function compareIssues(left, right) {
-  const severityDelta = severityRank(right.severity) - severityRank(left.severity);
-  if (severityDelta !== 0) return severityDelta;
-  const confidenceDelta = Number(right.confidence ?? 0) - Number(left.confidence ?? 0);
-  if (confidenceDelta !== 0) return confidenceDelta;
-  const fileDelta = String(left.file ?? "").localeCompare(String(right.file ?? ""));
-  if (fileDelta !== 0) return fileDelta;
-  return Number(left.location?.startLine ?? 0) - Number(right.location?.startLine ?? 0);
-}
-
-function severityRank(severity) {
-  if (severity === "high") return 4;
-  if (severity === "medium") return 3;
-  if (severity === "low") return 2;
-  return 1;
 }

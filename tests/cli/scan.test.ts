@@ -385,6 +385,32 @@ describe("debtlens scan output formats", () => {
     }
   });
 
+  it("prints scan warnings and profile diagnostics before budget breaches", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-budget-diagnostics-"));
+    try {
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(join(dir, "src", "a.ts"), "// TODO remove after launch\nexport const a = 1;\n");
+      writeFileSync(join(dir, "src", "b.ts"), "export const b = 1;\n");
+      const configPath = join(dir, "debtlens.config.json");
+      writeFileSync(configPath, JSON.stringify({
+        rules: ["todo-comment"],
+        budgets: { "src": { maxIssues: 0 } },
+      }));
+
+      const result = runScan([".", "--cwd", dir, "--config", configPath, "--max-files", "1", "--profile", "--format", "json"]);
+      const warningIndex = result.stderr.indexOf("DebtLens warning: DebtLens scanned the first 1 of 2 matched files");
+      const profileIndex = result.stderr.indexOf("DebtLens profile (per-rule ms):");
+      const budgetIndex = result.stderr.indexOf("DebtLens budget breach:");
+
+      assert.equal(result.status, 1);
+      assert.ok(warningIndex >= 0);
+      assert.ok(profileIndex > warningIndex);
+      assert.ok(budgetIndex > profileIndex);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("prints budget report without failing when --budget-report is set", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-budget-report-"));
     try {

@@ -3,6 +3,7 @@ import type { ScanResult, Severity } from "../core/types.js";
 import { renderDebtTreemapSvg, renderImportGraphSvg } from "./graphReporter.js";
 import { renderPayoffSectionHtml } from "./payoffSection.js";
 import { formatFilterStats } from "./filterStats.js";
+import { escapeHtml } from "./htmlEscape.js";
 import {
   formatSuppressionAuditSummary,
   formatSuppressionDirectiveLine,
@@ -149,15 +150,6 @@ function renderSuppressionAudit(result: ScanResult): string {
 ${rows}
     </tbody>
   </table>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function capitalize(value: string): string {

@@ -85,6 +85,22 @@ describe("config JSON schema", () => {
     assert.equal(typeof example.respectGitignore, "boolean");
   });
 
+  it("validates the repo self-scan config against known schema fields", () => {
+    const selfConfig = JSON.parse(readFileSync("debtlens.self.config.json", "utf8")) as {
+      $schema: string;
+      include: string[];
+      exclude: string[];
+      respectGitignore: boolean;
+      duplicatedLiteral?: { ignoreStrings?: string[] };
+    };
+
+    assert.equal(selfConfig.$schema, SCHEMA_ID);
+    assert.ok(selfConfig.include.some((pattern) => pattern.startsWith("src/")));
+    assert.ok(selfConfig.exclude.includes("examples/**"));
+    assert.equal(selfConfig.respectGitignore, true);
+    assert.ok(selfConfig.duplicatedLiteral?.ignoreStrings?.includes("terminal"));
+  });
+
   it("includes failOn with the canonical severity set", () => {
     const built = buildConfigSchema() as { properties: { failOn?: { enum: string[] } } };
     assert.deepEqual(built.properties.failOn?.enum, [...severities]);

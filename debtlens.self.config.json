@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.config.schema.json",
+  "include": [
+    "src/**/*.{ts,tsx,js,jsx}",
+    "scripts/**/*.mjs",
+    "extensions/vscode/**/*.js"
+  ],
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "out/**",
+    "coverage/**",
+    "examples/**",
+    "tests/**",
+    "docs/**",
+    "schema/**"
+  ],
+  "minSeverity": "low",
+  "pack": "core,node,ai-assisted-maintainer,oss-maintainer,feature-flags",
+  "respectGitignore": true,
+  "thresholds": {
+    "duplicate-logic.maxSnippets": 700,
+    "duplicated-literal.minCount": 4
+  },
+  "duplicatedLiteral": {
+    "ignoreStrings": [
+      "info",
+      "low",
+      "medium",
+      "high",
+      "terminal",
+      "json",
+      "markdown",
+      "pr-comment",
+      "sarif",
+      "html",
+      "junit",
+      "gitlab-codequality",
+      "badge",
+      "string",
+      "number",
+      "boolean",
+      "object",
+      "array",
+      "--format <format>",
+      "--config <path>",
+      "--cwd <path>",
+      "working directory",
+      "directory or file to scan"
+    ]
+  }
+}

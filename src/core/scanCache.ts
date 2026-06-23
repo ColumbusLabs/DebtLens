@@ -1,9 +1,10 @@
-import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import type { Detector, ScanOptions, ScanResult } from "./types.js";
 import { toCacheKeyPayload } from "./types.js";
 import { packageVersion } from "../utils/packageInfo.js";
+import { cleanupTempFile } from "../utils/tempFile.js";
 
 const CACHE_VERSION = 2;
 const MAX_ENTRIES = 20;
@@ -59,11 +60,7 @@ export function writeCachedScan(cachePath: string, key: string, files: FileSnaps
     writeFileSync(tempPath, payload, "utf8");
     renameSync(tempPath, cachePath);
   } catch (error) {
-    try {
-      unlinkSync(tempPath);
-    } catch {
-      // Best-effort cleanup of the temp file.
-    }
+    cleanupTempFile(tempPath, "cache");
     throw error;
   }
 }

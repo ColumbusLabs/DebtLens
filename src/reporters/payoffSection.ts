@@ -1,5 +1,6 @@
 import { topPayoffIssues } from "../core/priority.js";
 import type { DebtIssue, ScanResult } from "../core/types.js";
+import { escapeHtml } from "./htmlEscape.js";
 
 export function hasPayoffScores(issues: DebtIssue[]): boolean {
   return issues.some((issue) => issue.payoffScore !== undefined);
@@ -37,13 +38,4 @@ export function renderPayoffSectionHtml(issues: DebtIssue[], limit = 10): string
 
 export function scanHasPayoffData(result: ScanResult): boolean {
   return hasPayoffScores(result.issues);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 }

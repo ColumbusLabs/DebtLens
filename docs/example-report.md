@@ -36,7 +36,7 @@ Review prompt: Can data ownership move closer to consumers via composition, cont
 
 ### Duplicate logic — `src/duplicateOne.ts:1`
 
-normalizeMovieRelease is 100% structurally similar to normalizeGameRelease.
+normalizeMovieRelease (src/duplicateOne.ts:1) is 100% structurally similar to normalizeGameRelease (src/duplicateTwo.ts:1).
 
 Confidence: **100%**
 

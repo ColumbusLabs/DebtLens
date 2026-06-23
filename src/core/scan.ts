@@ -6,7 +6,7 @@ import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } f
 import { buildImportGraphFromFiles } from "./importGraph.js";
 import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
 import { resolveConcurrency } from "./parallelScan.js";
-import { canonicalize, resolveFileSelection } from "./resolveFiles.js";
+import { canonicalize, resolveFileSelection, type FileSelection } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
 import { applyInlineSuppressions } from "./suppressions.js";
@@ -14,8 +14,58 @@ import { suggestClosest } from "../utils/didYouMean.js";
 import { computeIssueFingerprint } from "../utils/fingerprint.js";
 import type { DebtIssue, Detector, DetectorContext, ReportedDebtIssue, ScanOptions, ScanResult, SourceFileInfo, SourceLanguage } from "./types.js";
 
+interface CoreScanInputs {
+  fileSelection: FileSelection;
+  registry: Detector[];
+  detectors: Detector[];
+  snapshots: FileSnapshot[];
+  cacheDisabledReason?: string;
+  cachePath?: string;
+  cacheKey?: string;
+}
+
+interface NormalizedIssueState {
+  issues: DebtIssue[];
+  filteredByMinSeverity: number;
+  filteredByConfidenceFloor: number;
+  ruleTimingsMs: Record<string, number>;
+}
+
 export async function scan(options: ScanOptions): Promise<ScanResult> {
   const startedAt = Date.now();
+  const inputs = await prepareCoreScanInputs(options);
+  const cached = tryReadScanCache(inputs, options, startedAt);
+  if (cached) return cached;
+
+  const project = createScanProject();
+  const files = await loadSourceFiles(project, inputs.snapshots, options);
+  const warnings = collectInitialWarnings(inputs, options);
+  const detectorResults = await runDetectors(inputs.detectors, {
+    project,
+    files,
+    options,
+    getThreshold: (key, fallback) => getThreshold(options, key, fallback),
+  });
+  appendDetectorWarnings(warnings, detectorResults);
+
+  const normalizedIssues = normalizeAndFilterDetectorIssues(detectorResults, options);
+  const result = buildScanResult({
+    files,
+    inputs,
+    normalizedIssues,
+    options,
+    startedAt,
+    warnings,
+  });
+
+  if (inputs.cachePath && inputs.cacheKey) {
+    writeCachedScan(inputs.cachePath, inputs.cacheKey, inputs.snapshots, result);
+  }
+
+  return result;
+}
+
+async function prepareCoreScanInputs(options: ScanOptions): Promise<CoreScanInputs> {
   const fileSelection = await resolveFileSelection(options);
   const filePaths = fileSelection.paths;
   const registry = [...allDetectors, ...(options.pluginDetectors ?? [])];
@@ -27,22 +77,40 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const cachePath = options.cache && !cacheDisabledReason ? getScanCachePath(options) : undefined;
   const cacheKey = cachePath ? buildScanCacheKey(options, detectors) : undefined;
 
-  if (cachePath && cacheKey) {
-    const cached = readCachedScan(cachePath, cacheKey, snapshots);
-    if (cached) {
-      cached.summary.elapsedMs = Date.now() - startedAt;
-      cached.summary.performance = {
-        ...(cached.summary.performance ?? {}),
-        cache: { enabled: true, hit: true, path: cachePath },
-        ...(options.batchSize ? { batchSize: options.batchSize } : {}),
-        ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
-        ...(options.concurrency ? { concurrency: options.concurrency } : {}),
-      };
-      return cached;
-    }
-  }
+  return {
+    fileSelection,
+    registry,
+    detectors,
+    snapshots,
+    cacheDisabledReason,
+    cachePath,
+    cacheKey,
+  };
+}
 
-  const project = new Project({
+function tryReadScanCache(
+  inputs: CoreScanInputs,
+  options: ScanOptions,
+  startedAt: number,
+): ScanResult | undefined {
+  if (!inputs.cachePath || !inputs.cacheKey) return undefined;
+
+  const cached = readCachedScan(inputs.cachePath, inputs.cacheKey, inputs.snapshots);
+  if (!cached) return undefined;
+
+  cached.summary.elapsedMs = Date.now() - startedAt;
+  cached.summary.performance = {
+    ...(cached.summary.performance ?? {}),
+    cache: { enabled: true, hit: true, path: inputs.cachePath },
+    ...(options.batchSize ? { batchSize: options.batchSize } : {}),
+    ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
+    ...(options.concurrency ? { concurrency: options.concurrency } : {}),
+  };
+  return cached;
+}
+
+function createScanProject(): Project {
+  return new Project({
     compilerOptions: {
       allowJs: true,
       checkJs: false,
@@ -52,36 +120,38 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     },
     skipAddingFilesFromTsConfig: true,
   });
+}
 
-  const files = await loadSourceFiles(project, snapshots, options);
-  let issues: DebtIssue[] = [];
+function collectInitialWarnings(inputs: CoreScanInputs, options: ScanOptions): string[] {
   const warnings: string[] = [];
-  let filteredByMinSeverity = 0;
-  let filteredByConfidenceFloor = 0;
-  const ruleTimingsMs: Record<string, number> = {};
-
-  if (cacheDisabledReason) {
-    warnings.push(cacheDisabledReason);
+  if (inputs.cacheDisabledReason) {
+    warnings.push(inputs.cacheDisabledReason);
   }
-  if (fileSelection.maxFilesApplied) {
-    warnings.push(buildMaxFilesWarning(fileSelection.paths.length, fileSelection.totalMatchedFiles));
+  if (inputs.fileSelection.maxFilesApplied) {
+    warnings.push(buildMaxFilesWarning(inputs.fileSelection.paths.length, inputs.fileSelection.totalMatchedFiles));
   }
-  for (const warning of validatePerRuleOverrides(registry, options)) {
+  for (const warning of validatePerRuleOverrides(inputs.registry, options)) {
     if (!warnings.includes(warning)) warnings.push(warning);
   }
+  return warnings;
+}
 
-  const detectorResults = await runDetectors(detectors, {
-    project,
-    files,
-    options,
-    getThreshold: (key, fallback) => getThreshold(options, key, fallback),
-  });
-
+function appendDetectorWarnings(warnings: string[], detectorResults: DetectorRunResult[]): void {
   for (const { warnings: detectorWarnings } of detectorResults) {
     for (const warning of detectorWarnings) {
       if (!warnings.includes(warning)) warnings.push(warning);
     }
   }
+}
+
+function normalizeAndFilterDetectorIssues(
+  detectorResults: DetectorRunResult[],
+  options: ScanOptions,
+): NormalizedIssueState {
+  const issues: DebtIssue[] = [];
+  let filteredByMinSeverity = 0;
+  let filteredByConfidenceFloor = 0;
+  const ruleTimingsMs: Record<string, number> = {};
 
   for (const { detector, issues: detectorIssues, elapsedMs } of detectorResults) {
     for (const issue of detectorIssues) {
@@ -106,76 +176,100 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
     }
   }
 
-  issues.sort((a, b) => {
-    const severity = compareSeverityDesc(a.severity, b.severity);
-    if (severity !== 0) return severity;
-    const byFile = a.file.localeCompare(b.file);
-    if (byFile !== 0) return byFile;
-    return (a.location?.startLine ?? 0) - (b.location?.startLine ?? 0);
-  });
+  return {
+    issues,
+    filteredByMinSeverity,
+    filteredByConfidenceFloor,
+    ruleTimingsMs,
+  };
+}
 
-  const validRuleIds = new Set(registry.map((detector) => detector.id));
-  const evaluatedRuleIds = new Set(detectors.map((detector) => detector.id));
-  const suppression = applyInlineSuppressions(issues, files, validRuleIds, evaluatedRuleIds);
-  issues = suppression.issues;
+function buildScanResult(input: {
+  files: SourceFileInfo[];
+  inputs: CoreScanInputs;
+  normalizedIssues: NormalizedIssueState;
+  options: ScanOptions;
+  startedAt: number;
+  warnings: string[];
+}): ScanResult {
+  const issues = sortIssues(input.normalizedIssues.issues);
+  const validRuleIds = new Set(input.inputs.registry.map((detector) => detector.id));
+  const evaluatedRuleIds = new Set(input.inputs.detectors.map((detector) => detector.id));
+  const suppression = applyInlineSuppressions(issues, input.files, validRuleIds, evaluatedRuleIds);
   for (const warning of suppression.warnings) {
-    if (!warnings.includes(warning)) warnings.push(warning);
+    if (!input.warnings.includes(warning)) input.warnings.push(warning);
   }
 
   const filterStats = {
-    ...(filteredByMinSeverity > 0 ? { filteredByMinSeverity } : {}),
-    ...(filteredByConfidenceFloor > 0 ? { filteredByConfidenceFloor } : {}),
+    ...(input.normalizedIssues.filteredByMinSeverity > 0
+      ? { filteredByMinSeverity: input.normalizedIssues.filteredByMinSeverity }
+      : {}),
+    ...(input.normalizedIssues.filteredByConfidenceFloor > 0
+      ? { filteredByConfidenceFloor: input.normalizedIssues.filteredByConfidenceFloor }
+      : {}),
     ...(suppression.suppressedByInline > 0 ? { suppressedByInline: suppression.suppressedByInline } : {}),
   };
-
-  const reportedIssues = toReportedIssues(issues);
+  const reportedIssues = toReportedIssues(suppression.issues);
   const issueSummary = summarizeIssues(reportedIssues);
   const correlations = buildRuleCorrelations(reportedIssues);
   const duplicateClusters = buildDuplicateLogicClusters(reportedIssues);
-  const importGraph = buildImportGraphFromFiles(files.filter((file) => file.language === "tsjs"), true);
-  const result: ScanResult = {
+  const importGraph = buildImportGraphFromFiles(input.files.filter((file) => file.language === "tsjs"), true);
+
+  return {
     schemaVersion: 1,
     issues: reportedIssues,
     ...(suppression.suppressions.length > 0 ? { suppressions: suppression.suppressions } : {}),
-    ...(options.auditSuppressions && suppression.suppressionDirectives.length > 0
+    ...(input.options.auditSuppressions && suppression.suppressionDirectives.length > 0
       ? { suppressionDirectives: suppression.suppressionDirectives }
       : {}),
     summary: {
       totalIssues: issueSummary.totalIssues,
       bySeverity: issueSummary.bySeverity,
       byRule: issueSummary.byRule,
-      filesScanned: files.length,
-      rulesRun: detectors.length,
-      elapsedMs: Date.now() - startedAt,
-      ...(warnings.length ? { warnings } : {}),
+      filesScanned: input.files.length,
+      rulesRun: input.inputs.detectors.length,
+      elapsedMs: Date.now() - input.startedAt,
+      ...(input.warnings.length ? { warnings: input.warnings } : {}),
       ...(Object.keys(filterStats).length > 0 ? { filterStats } : {}),
       ...(correlations.length > 0 ? { correlations } : {}),
       ...(duplicateClusters.length > 0 ? { duplicateClusters } : {}),
       importGraph,
-      ...(options.profile ? { profile: { ruleTimingsMs } } : {}),
-      ...(cachePath || options.batchSize || options.parallel || (options.concurrency ?? 0) > 1 ? {
-        performance: {
-          ...(cachePath ? { cache: { enabled: true, hit: false, path: cachePath } } : {}),
-          ...(options.batchSize ? { batchSize: options.batchSize } : {}),
-          ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
-        ...(options.concurrency ? { concurrency: options.concurrency } : {}),
-        },
-      } : {}),
+      ...(input.options.profile ? { profile: { ruleTimingsMs: input.normalizedIssues.ruleTimingsMs } } : {}),
+      ...buildPerformanceSummary(input.inputs, input.options),
     },
     options: {
-      target: options.target,
-      include: options.include,
-      exclude: options.exclude,
-      minSeverity: options.minSeverity,
-      rules: options.rules,
+      target: input.options.target,
+      include: input.options.include,
+      exclude: input.options.exclude,
+      minSeverity: input.options.minSeverity,
+      rules: input.options.rules,
     },
   };
+}
 
-  if (cachePath && cacheKey) {
-    writeCachedScan(cachePath, cacheKey, snapshots, result);
+function sortIssues(issues: DebtIssue[]): DebtIssue[] {
+  return issues.sort((a, b) => {
+    const severity = compareSeverityDesc(a.severity, b.severity);
+    if (severity !== 0) return severity;
+    const byFile = a.file.localeCompare(b.file);
+    if (byFile !== 0) return byFile;
+    return (a.location?.startLine ?? 0) - (b.location?.startLine ?? 0);
+  });
+}
+
+function buildPerformanceSummary(inputs: CoreScanInputs, options: ScanOptions): Pick<ScanResult["summary"], "performance"> {
+  if (!inputs.cachePath && !options.batchSize && !options.parallel && (options.concurrency ?? 0) <= 1) {
+    return {};
   }
 
-  return result;
+  return {
+    performance: {
+      ...(inputs.cachePath ? { cache: { enabled: true, hit: false, path: inputs.cachePath } } : {}),
+      ...(options.batchSize ? { batchSize: options.batchSize } : {}),
+      ...(options.parallel || (options.concurrency ?? 0) > 1 ? { parallel: true } : {}),
+      ...(options.concurrency ? { concurrency: options.concurrency } : {}),
+    },
+  };
 }
 
 function buildMaxFilesWarning(scannedFiles: number, totalMatchedFiles: number): string {

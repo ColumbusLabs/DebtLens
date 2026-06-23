@@ -51,8 +51,14 @@ export function applyInlineSuppressions(
       directiveAudits.set(
         directive.id,
         evaluatedRuleIds.has(directive.ruleId)
-          ? buildUnusedDirectiveAudit(directive)
-          : buildNotEvaluatedDirectiveAudit(directive),
+          ? buildDirectiveAudit(directive, {
+            status: "unused",
+            recommendedAction: "Remove this suppression if the finding no longer exists.",
+          })
+          : buildDirectiveAudit(directive, {
+            status: "not-evaluated",
+            recommendedAction: "Run this rule in the audit scan before deciding whether this suppression is stale.",
+          }),
       );
     }
   }
@@ -198,7 +204,10 @@ function addWarning(warnings: string[], warning: string): void {
   if (!warnings.includes(warning)) warnings.push(warning);
 }
 
-function buildUnusedDirectiveAudit(directive: SuppressionDirective): SuppressionDirectiveAudit {
+function buildDirectiveAudit(
+  directive: SuppressionDirective,
+  outcome: Pick<SuppressionDirectiveAudit, "recommendedAction" | "status">,
+): SuppressionDirectiveAudit {
   return {
     ruleId: directive.ruleId,
     file: directive.file,
@@ -206,23 +215,9 @@ function buildUnusedDirectiveAudit(directive: SuppressionDirective): Suppression
     reason: directive.reason,
     directiveLine: directive.directiveLine,
     ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
-    status: "unused",
+    status: outcome.status,
     suppressedIssueCount: 0,
-    recommendedAction: "Remove this suppression if the finding no longer exists.",
-  };
-}
-
-function buildNotEvaluatedDirectiveAudit(directive: SuppressionDirective): SuppressionDirectiveAudit {
-  return {
-    ruleId: directive.ruleId,
-    file: directive.file,
-    kind: directive.kind,
-    reason: directive.reason,
-    directiveLine: directive.directiveLine,
-    ...(directive.targetLine ? { targetLine: directive.targetLine } : {}),
-    status: "not-evaluated",
-    suppressedIssueCount: 0,
-    recommendedAction: "Run this rule in the audit scan before deciding whether this suppression is stale.",
+    recommendedAction: outcome.recommendedAction,
   };
 }
 

@@ -6,7 +6,7 @@ import { mergeConfig } from "../../config/mergeConfig.js";
 import { RULE_PACK_IDS } from "../../config/packs.js";
 import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
-import { evaluateBudgets, renderBudgetReport } from "../../core/budgets.js";
+import { evaluateBudgets, renderBudgetReport, type BudgetEvaluation } from "../../core/budgets.js";
 import { buildOwnershipReport, renderOwnershipReportTerminal } from "../../core/ownershipReport.js";
 import { enrichIssuesWithPayoffScores, sortIssuesByPayoff } from "../../core/priority.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
@@ -14,7 +14,7 @@ import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
 import { canonicalizePath, getChangedFiles, getFileChurn, getStagedFiles } from "../../utils/git.js";
 import { parseSeverity } from "../../core/severity.js";
-import type { DebtIssue, OutputFormat, ScanOptions, ScanResult } from "../../core/types.js";
+import type { DebtIssue, DebtLensConfig, OutputFormat, ScanOptions, ScanResult, Severity, TerminalGroupBy } from "../../core/types.js";
 import { detectorIds } from "../../detectors/index.js";
 import { renderReport } from "../../reporters/index.js";
 import { renderBadgeEndpoint, parseBadgeThresholds } from "../../reporters/badgeReporter.js";
@@ -36,6 +36,7 @@ import {
 import {
   enrichIssuesWithBlameAge,
   loadConfiguredPlugins,
+  type PluginContribution,
   resolveFailOn,
   resolveFailOnConfidence,
   resolveReportedIssues,
@@ -48,6 +49,25 @@ export interface ScanCommandResult {
   report: string;
   exitCode: number;
   stderr: string;
+}
+
+interface PreparedScanCommandContext {
+  rawOptions: Record<string, unknown>;
+  format: OutputFormat;
+  groupBy: TerminalGroupBy;
+  junitFailOn?: Severity;
+  cwd: string;
+  scanTarget: string;
+  fileConfig: DebtLensConfig;
+  minSeverity: Severity;
+  failOn?: Severity;
+  failOnConfidence?: number;
+  pluginContribution?: PluginContribution;
+}
+
+interface GitScanScope {
+  changedFiles?: string[];
+  fileContents?: Record<string, string>;
 }
 
 export function registerScanCommand(program: Command): void {
@@ -134,137 +154,34 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     stderrChunks.push(text);
   };
 
-  const format = parseFormat(String(rawOptions.format ?? "terminal"));
-  const groupBy = parseGroupBy(String(rawOptions.groupBy ?? "severity"));
-  const junitFailOn = rawOptions.junitFailOn !== undefined ? parseSeverity(String(rawOptions.junitFailOn), "info") : undefined;
-  const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
-  let scanTarget = target;
-  let packageDirectory: string | undefined;
-  if (rawOptions.package) {
-    const workspacePackage = resolveWorkspacePackage(cwd, String(rawOptions.package));
-    scanTarget = workspacePackage.directory;
-    packageDirectory = workspacePackage.directory;
-  }
-  const effectiveConfig = loadEffectiveConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined, packageDirectory);
-  const fileConfig = effectiveConfig.config;
-  const gate = applyGatePresetDefaults(rawOptions, fileConfig);
-  rawOptions = gate.rawOptions;
-  const pluginContribution = await loadConfiguredPlugins(cwd, rawOptions, fileConfig, effectiveConfig.pluginConfigDir, writeStderr);
-  const minSeverity = parseSeverity(String(rawOptions.minSeverity ?? "low"), "low");
-  const failOn = resolveFailOn(rawOptions, fileConfig);
-  const failOnConfidence = resolveFailOnConfidence(rawOptions, fileConfig);
+  const context = await prepareScanCommandContext(target, rawOptions, writeStderr);
+  rawOptions = context.rawOptions;
+  const { cwd, failOn, failOnConfidence, fileConfig, format, groupBy, junitFailOn } = context;
+  const gitScope = resolveGitScanScope(context.cwd, rawOptions, writeStderr);
+  const options = buildMergedScanOptions(context, gitScope);
 
-  let changedFiles: string[] | undefined;
-  let fileContents: Record<string, string> | undefined;
-  if (rawOptions.staged === true && rawOptions.changed !== undefined) {
-    throw new Error("Use either --staged or --changed, not both.");
-  }
-
-  if (rawOptions.changed) {
-    const base = rawOptions.changed === true ? undefined : String(rawOptions.changed);
-    const changed = getChangedFiles(cwd, base);
-    if (changed === null) {
-      writeStderr("DebtLens: --changed ignored (not a git repository).\n");
-    } else {
-      changedFiles = changed.files;
-    }
-  } else if (rawOptions.staged === true) {
-    const staged = getStagedFiles(cwd);
-    if (staged === null) {
-      writeStderr("DebtLens: --staged ignored (not a git repository).\n");
-    } else {
-      changedFiles = staged.files;
-      fileContents = staged.contents;
-    }
-  }
-
-  const options = mergeConfig(scanTarget, fileConfig, {
-    cwd,
-    include: parseCommaList(rawOptions.include as string | undefined),
-    exclude: parseCommaList(rawOptions.exclude as string | undefined),
-    rules: parseRuleList(rawOptions.rules as string | undefined),
-    pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
-    thresholds: parseThresholds(rawOptions.threshold as string | undefined),
-    minSeverity,
-    maxFiles: rawOptions.maxFiles as number | undefined,
-    cache: rawOptions.cache !== undefined || rawOptions.cacheDir !== undefined ? true : undefined,
-    cachePath: typeof rawOptions.cache === "string" ? rawOptions.cache : undefined,
-    parallel: rawOptions.parallel === true ? true : undefined,
-    concurrency: rawOptions.concurrency as number | undefined,
-    cacheDir: typeof rawOptions.cacheDir === "string" ? rawOptions.cacheDir : undefined,
-    batchSize: rawOptions.batchSize as number | undefined,
-    respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
-    changedFiles,
-    fileContents,
-    profile: rawOptions.profile === true,
-    auditSuppressions: rawOptions.auditSuppressions === true,
-    pluginDetectors: pluginContribution?.detectors,
-    pluginThresholds: pluginContribution?.thresholds,
-    pluginVocabulary: pluginContribution?.vocabulary,
-  });
-
-  if (rawOptions.writeBaseline && rawOptions.baseline) {
-    throw new Error("Use either --write-baseline or --baseline, not both.");
-  }
-  if (rawOptions.diffBase && rawOptions.baseline) {
-    throw new Error("Use either --diff-base or --baseline, not both.");
-  }
-  if (rawOptions.failOnRegression === true && !rawOptions.baseline && !rawOptions.diffBase) {
-    throw new Error("Use --fail-on-regression with --baseline or --diff-base.");
-  }
+  validateScanModes(rawOptions);
 
   const result = await scan(options);
 
-  if (result.summary.filesScanned === 0) {
-    writeStderr(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined || rawOptions.staged === true));
-  }
-
-  if (result.summary.warnings?.length) {
-    for (const warning of result.summary.warnings) {
-      writeStderr(`DebtLens warning: ${warning}\n`);
-    }
-  }
-
-  if (rawOptions.profile === true && result.summary.profile) {
-    writeStderr(formatProfileReport(result.summary.profile.ruleTimingsMs));
-  }
+  emitScanDiagnostics(result, options, rawOptions, writeStderr);
 
   if (rawOptions.writeBaseline) {
-    const baselinePath = rawOptions.writeBaseline === true
-      ? DEFAULT_BASELINE_FILENAME
-      : String(rawOptions.writeBaseline);
-    const written = writeBaseline(cwd, baselinePath, createBaseline(result.issues));
     return {
-      report: `Wrote baseline with ${result.issues.length} issues to ${written}\n`,
+      report: writeBaselineReport(cwd, rawOptions.writeBaseline, result),
       exitCode: 0,
       stderr: stderrChunks.join(""),
     };
   }
 
-  const reported = await resolveReportedIssues(result, {
+  const reported = await prepareReportedScanResult({
     cwd,
-    baselinePath: rawOptions.baseline ? String(rawOptions.baseline) : undefined,
-    diffBase: rawOptions.diffBase ? String(rawOptions.diffBase) : undefined,
-    scanOptions: options,
+    fileConfig,
+    options,
+    rawOptions,
+    result,
+    writeStderr,
   });
-  if (rawOptions.blameAge === true) {
-    enrichIssuesWithBlameAge(cwd, options, reported);
-  }
-  enrichWithHotspots(cwd, options, reported, rawOptions, writeStderr);
-  enrichWithOwnership(cwd, options, reported, rawOptions, writeStderr);
-
-  if (rawOptions.sort === "payoff") {
-    enrichIssuesWithPayoffScores(reported.issues, {
-      hotspots: reported.summary.hotspots,
-      weights: fileConfig.priority,
-    });
-    reported.issues = sortIssuesByPayoff(reported.issues);
-  } else if (rawOptions.blameAge === true || reported.summary.hotspots) {
-    enrichIssuesWithPayoffScores(reported.issues, {
-      hotspots: reported.summary.hotspots,
-      weights: fileConfig.priority,
-    });
-  }
 
   const budgetEvaluation = evaluateBudgets(reported, options.budgets);
   const budgetReportOnly = rawOptions.budgetReport === true;
@@ -330,25 +247,242 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
     }
   }
 
-  let exitCode = 0;
-  if (failOn && reported.issues.some((issue) => shouldFailOnIssue(issue, failOn, failOnConfidence))) {
-    exitCode = 1;
-  }
-  if (rawOptions.failOnRegression === true && shouldFailOnRegression(reported)) {
-    exitCode = 1;
-  }
-  if (budgetEvaluation?.breached && !budgetReportOnly) {
-    for (const message of budgetEvaluation.messages) {
-      writeStderr(`DebtLens budget breach: ${message}\n`);
-    }
-    exitCode = 1;
-  }
+  const exitCode = computeScanExitCode({
+    budgetEvaluation,
+    budgetReportOnly,
+    failOn,
+    failOnConfidence,
+    rawOptions,
+    reported,
+    writeStderr,
+  });
 
   return {
     report,
     exitCode,
     stderr: stderrChunks.join(""),
   };
+}
+
+async function prepareScanCommandContext(
+  target: string,
+  rawOptions: Record<string, unknown>,
+  writeStderr: (text: string) => void,
+): Promise<PreparedScanCommandContext> {
+  const format = parseFormat(String(rawOptions.format ?? "terminal"));
+  const groupBy = parseGroupBy(String(rawOptions.groupBy ?? "severity"));
+  const junitFailOn = rawOptions.junitFailOn !== undefined ? parseSeverity(String(rawOptions.junitFailOn), "info") : undefined;
+  const cwd = resolve(String(rawOptions.cwd ?? process.cwd()));
+  let scanTarget = target;
+  let packageDirectory: string | undefined;
+
+  if (rawOptions.package) {
+    const workspacePackage = resolveWorkspacePackage(cwd, String(rawOptions.package));
+    scanTarget = workspacePackage.directory;
+    packageDirectory = workspacePackage.directory;
+  }
+
+  const effectiveConfig = loadEffectiveConfig(cwd, rawOptions.config ? String(rawOptions.config) : undefined, packageDirectory);
+  const fileConfig = effectiveConfig.config;
+  const gate = applyGatePresetDefaults(rawOptions, fileConfig);
+  const gatedOptions = gate.rawOptions;
+  const pluginContribution = await loadConfiguredPlugins(
+    cwd,
+    gatedOptions,
+    fileConfig,
+    effectiveConfig.pluginConfigDir,
+    writeStderr,
+  );
+
+  return {
+    rawOptions: gatedOptions,
+    format,
+    groupBy,
+    junitFailOn,
+    cwd,
+    scanTarget,
+    fileConfig,
+    minSeverity: parseSeverity(String(gatedOptions.minSeverity ?? "low"), "low"),
+    failOn: resolveFailOn(gatedOptions, fileConfig),
+    failOnConfidence: resolveFailOnConfidence(gatedOptions, fileConfig),
+    pluginContribution,
+  };
+}
+
+function resolveGitScanScope(
+  cwd: string,
+  rawOptions: Record<string, unknown>,
+  writeStderr: (text: string) => void,
+): GitScanScope {
+  if (rawOptions.staged === true && rawOptions.changed !== undefined) {
+    throw new Error("Use either --staged or --changed, not both.");
+  }
+
+  if (rawOptions.changed) {
+    const base = rawOptions.changed === true ? undefined : String(rawOptions.changed);
+    const changed = getChangedFiles(cwd, base);
+    if (changed === null) {
+      writeStderr("DebtLens: --changed ignored (not a git repository).\n");
+      return {};
+    }
+    return { changedFiles: changed.files };
+  }
+
+  if (rawOptions.staged === true) {
+    const staged = getStagedFiles(cwd);
+    if (staged === null) {
+      writeStderr("DebtLens: --staged ignored (not a git repository).\n");
+      return {};
+    }
+    return {
+      changedFiles: staged.files,
+      fileContents: staged.contents,
+    };
+  }
+
+  return {};
+}
+
+function buildMergedScanOptions(
+  context: PreparedScanCommandContext,
+  gitScope: GitScanScope,
+): ScanOptions {
+  const rawOptions = context.rawOptions;
+  return mergeConfig(context.scanTarget, context.fileConfig, {
+    cwd: context.cwd,
+    include: parseCommaList(rawOptions.include as string | undefined),
+    exclude: parseCommaList(rawOptions.exclude as string | undefined),
+    rules: parseRuleList(rawOptions.rules as string | undefined),
+    pack: rawOptions.pack ? String(rawOptions.pack) : undefined,
+    thresholds: parseThresholds(rawOptions.threshold as string | undefined),
+    minSeverity: context.minSeverity,
+    maxFiles: rawOptions.maxFiles as number | undefined,
+    cache: rawOptions.cache !== undefined || rawOptions.cacheDir !== undefined ? true : undefined,
+    cachePath: typeof rawOptions.cache === "string" ? rawOptions.cache : undefined,
+    parallel: rawOptions.parallel === true ? true : undefined,
+    concurrency: rawOptions.concurrency as number | undefined,
+    cacheDir: typeof rawOptions.cacheDir === "string" ? rawOptions.cacheDir : undefined,
+    batchSize: rawOptions.batchSize as number | undefined,
+    respectGitignore: rawOptions.respectGitignore === true ? true : undefined,
+    changedFiles: gitScope.changedFiles,
+    fileContents: gitScope.fileContents,
+    profile: rawOptions.profile === true,
+    auditSuppressions: rawOptions.auditSuppressions === true,
+    pluginDetectors: context.pluginContribution?.detectors,
+    pluginThresholds: context.pluginContribution?.thresholds,
+    pluginVocabulary: context.pluginContribution?.vocabulary,
+  });
+}
+
+function validateScanModes(rawOptions: Record<string, unknown>): void {
+  if (rawOptions.writeBaseline && rawOptions.baseline) {
+    throw new Error("Use either --write-baseline or --baseline, not both.");
+  }
+  if (rawOptions.diffBase && rawOptions.baseline) {
+    throw new Error("Use either --diff-base or --baseline, not both.");
+  }
+  if (rawOptions.failOnRegression === true && !rawOptions.baseline && !rawOptions.diffBase) {
+    throw new Error("Use --fail-on-regression with --baseline or --diff-base.");
+  }
+}
+
+function emitScanDiagnostics(
+  result: ScanResult,
+  options: ScanOptions,
+  rawOptions: Record<string, unknown>,
+  writeStderr: (text: string) => void,
+): void {
+  if (result.summary.filesScanned === 0) {
+    writeStderr(buildZeroFilesScannedWarning(options.target, options.include, rawOptions.changed !== undefined || rawOptions.staged === true));
+  }
+
+  if (result.summary.warnings?.length) {
+    for (const warning of result.summary.warnings) {
+      writeStderr(`DebtLens warning: ${warning}\n`);
+    }
+  }
+
+  if (rawOptions.profile === true && result.summary.profile) {
+    writeStderr(formatProfileReport(result.summary.profile.ruleTimingsMs));
+  }
+}
+
+function writeBaselineReport(cwd: string, rawWriteBaseline: unknown, result: ScanResult): string {
+  const baselinePath = rawWriteBaseline === true
+    ? DEFAULT_BASELINE_FILENAME
+    : String(rawWriteBaseline);
+  const written = writeBaseline(cwd, baselinePath, createBaseline(result.issues));
+  return `Wrote baseline with ${result.issues.length} issues to ${written}\n`;
+}
+
+async function prepareReportedScanResult(input: {
+  cwd: string;
+  fileConfig: DebtLensConfig;
+  options: ScanOptions;
+  rawOptions: Record<string, unknown>;
+  result: ScanResult;
+  writeStderr: (text: string) => void;
+}): Promise<ScanResult> {
+  const reported = await resolveReportedIssues(input.result, {
+    cwd: input.cwd,
+    baselinePath: input.rawOptions.baseline ? String(input.rawOptions.baseline) : undefined,
+    diffBase: input.rawOptions.diffBase ? String(input.rawOptions.diffBase) : undefined,
+    scanOptions: input.options,
+  });
+
+  if (input.rawOptions.blameAge === true) {
+    enrichIssuesWithBlameAge(input.cwd, input.options, reported);
+  }
+  enrichWithHotspots(input.cwd, input.options, reported, input.rawOptions, input.writeStderr);
+  enrichWithOwnership(input.cwd, input.options, reported, input.rawOptions, input.writeStderr);
+  enrichPayoffScores(reported, input.rawOptions, input.fileConfig);
+
+  return reported;
+}
+
+function enrichPayoffScores(
+  reported: ScanResult,
+  rawOptions: Record<string, unknown>,
+  fileConfig: DebtLensConfig,
+): void {
+  if (rawOptions.sort === "payoff") {
+    enrichIssuesWithPayoffScores(reported.issues, {
+      hotspots: reported.summary.hotspots,
+      weights: fileConfig.priority,
+    });
+    reported.issues = sortIssuesByPayoff(reported.issues);
+  } else if (rawOptions.blameAge === true || reported.summary.hotspots) {
+    enrichIssuesWithPayoffScores(reported.issues, {
+      hotspots: reported.summary.hotspots,
+      weights: fileConfig.priority,
+    });
+  }
+}
+
+function computeScanExitCode(input: {
+  budgetEvaluation?: BudgetEvaluation;
+  budgetReportOnly: boolean;
+  failOn?: Severity;
+  failOnConfidence?: number;
+  rawOptions: Record<string, unknown>;
+  reported: ScanResult;
+  writeStderr: (text: string) => void;
+}): number {
+  let exitCode = 0;
+  const failOn = input.failOn;
+  if (failOn && input.reported.issues.some((issue) => shouldFailOnIssue(issue, failOn, input.failOnConfidence))) {
+    exitCode = 1;
+  }
+  if (input.rawOptions.failOnRegression === true && shouldFailOnRegression(input.reported)) {
+    exitCode = 1;
+  }
+  if (input.budgetEvaluation?.breached && !input.budgetReportOnly) {
+    for (const message of input.budgetEvaluation.messages) {
+      input.writeStderr(`DebtLens budget breach: ${message}\n`);
+    }
+    exitCode = 1;
+  }
+  return exitCode;
 }
 
 function enrichWithHotspots(

@@ -1,5 +1,6 @@
 import type { ImportGraph } from "../core/importGraph.js";
 import type { DebtIssue } from "../core/types.js";
+import { escapeHtml } from "./htmlEscape.js";
 
 export function renderImportGraphSvg(graph: ImportGraph, width = 640, height = 360): string {
   if (graph.nodes.length === 0) return "";
@@ -14,7 +15,7 @@ export function renderImportGraphSvg(graph: ImportGraph, width = 640, height = 3
   const nodes = graph.nodes.map((node) => {
     const point = positions.get(node);
     if (!point) return "";
-    const label = escapeXml(truncate(node));
+    const label = escapeHtml(truncate(node));
     return `<g><circle cx="${point.x}" cy="${point.y}" r="16" fill="#eef2f5" stroke="#2f6feb" /><text x="${point.x}" y="${point.y + 28}" text-anchor="middle" font-size="10">${label}</text></g>`;
   }).join("\n");
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Import graph">${edges}${nodes}</svg>`;
@@ -31,8 +32,8 @@ export function renderDebtTreemapSvg(issues: DebtIssue[], width = 640, height = 
     const isLast = index === entries.length - 1;
     const proportional = Math.round((value.total / remainingTotal) * remainingWidth);
     const w = isLast ? remainingWidth : Math.max(24, Math.min(remainingWidth, proportional));
-    const escapedDirectory = escapeXml(directory);
-    const escapedLabel = escapeXml(truncate(directory, 18));
+    const escapedDirectory = escapeHtml(directory);
+    const escapedLabel = escapeHtml(truncate(directory, 18));
     const rect = `<rect x="${x}" y="0" width="${w}" height="${height}" fill="${heatColor(value.high, value.total)}" stroke="#fff"><title>${escapedDirectory}: ${value.total} issues</title></rect><text x="${x + 8}" y="20" font-size="11">${escapedLabel} (${value.total})</text>`;
     x += w;
     remainingWidth = Math.max(0, remainingWidth - w);
@@ -77,13 +78,4 @@ function heatColor(high: number, total: number): string {
 
 function truncate(value: string, max = 24): string {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&apos;");
 }

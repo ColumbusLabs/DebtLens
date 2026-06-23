@@ -86,7 +86,7 @@ export const duplicateLogicDetector: Detector = {
         confidence: similarity,
         file: a.file,
         location: { startLine: a.startLine, endLine: a.endLine },
-        message: `${a.name} is ${Math.round(similarity * 100)}% structurally similar to ${b.name}.`,
+        message: `${formatSnippetLabel(a)} is ${Math.round(similarity * 100)}% structurally similar to ${formatSnippetLabel(b)}.`,
         evidence: [
           `${a.file}:${a.startLine}-${a.endLine} (${a.lines} lines)`,
           `${b.file}:${b.startLine}-${b.endLine} (${b.lines} lines)`,
@@ -194,4 +194,8 @@ function fingerprintNorm(fingerprint: Map<string, number>): number {
 
 function isSameLocalSnippet(a: DuplicateLogicCandidateInput, b: DuplicateLogicCandidateInput): boolean {
   return a.file === b.file && Math.abs(a.startLine - b.startLine) < 4;
+}
+
+function formatSnippetLabel(snippet: Snippet): string {
+  return `${snippet.name} (${snippet.file}:${snippet.startLine})`;
 }

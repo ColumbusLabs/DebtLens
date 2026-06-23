@@ -112,6 +112,19 @@ describe("duplicate-logic detector", () => {
     assert.ok((issues[0]?.confidence ?? 0) >= 0.86);
   });
 
+  it("disambiguates same-name duplicates with file and line labels", async () => {
+    const duplicateA = movie.replace("normalizeMovieRelease", "normalizeRelease");
+    const duplicateB = game.replace("normalizeGameRelease", "normalizeRelease");
+    const issues = await runDetector(duplicateLogicDetector, {
+      "billing/movie.ts": duplicateA,
+      "games/release.ts": duplicateB,
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /normalizeRelease \(billing\/movie\.ts:\d+\)/);
+    assert.match(issues[0]?.message ?? "", /normalizeRelease \(games\/release\.ts:\d+\)/);
+  });
+
   it("still reports matching duplicates when unrelated snippets are pruned", async () => {
     const unrelatedWorker = `
 export async function loadAccountSnapshot(client, accountId) {

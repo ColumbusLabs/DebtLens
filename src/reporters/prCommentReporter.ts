@@ -1,6 +1,7 @@
 import { buildFixTargets, groupIssuesByFile, summarizeIssues } from "../core/issueAggregates.js";
 import type { DebtIssue, ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
+import { escapeHtml } from "./htmlEscape.js";
 import { escapeMarkdownTableCell, normalizeMarkdownText } from "./markdownEscape.js";
 import { getReviewPrompt } from "./ruleGuidance.js";
 import {
@@ -348,15 +349,6 @@ function encodePath(path: string): string {
 
 function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 function capitalize(value: string): string {

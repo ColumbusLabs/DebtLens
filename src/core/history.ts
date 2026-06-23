@@ -1,7 +1,8 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { summarizeIssues } from "./issueAggregates.js";
 import type { DebtIssue, ScanResult, Severity } from "./types.js";
+import { cleanupTempFile } from "../utils/tempFile.js";
 
 export interface HistoryEntry {
   timestamp: string;
@@ -72,11 +73,7 @@ export function appendHistoryEntry(
     writeFileSync(tempPath, `${current}${line}`, "utf8");
     renameSync(tempPath, historyPath);
   } catch (error) {
-    try {
-      unlinkSync(tempPath);
-    } catch {
-      // Best-effort cleanup.
-    }
+    cleanupTempFile(tempPath, "history");
     appendFileSync(historyPath, line, "utf8");
     if (error instanceof Error) throw error;
   }
@@ -136,11 +133,7 @@ function writeAtomic(path: string, contents: string): void {
     writeFileSync(tempPath, contents, "utf8");
     renameSync(tempPath, path);
   } catch (error) {
-    try {
-      unlinkSync(tempPath);
-    } catch {
-      // Best-effort cleanup.
-    }
+    cleanupTempFile(tempPath, "history");
     throw error;
   }
 }

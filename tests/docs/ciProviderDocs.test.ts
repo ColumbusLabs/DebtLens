@@ -92,6 +92,7 @@ describe("provider CI docs", () => {
   });
 
   it("ships provider helper scripts in the npm package", () => {
+    assert.ok(packageJson.files.includes("scripts/lib"));
     assert.ok(packageJson.files.includes("scripts/emit-azure-log-issues.mjs"));
     assert.ok(packageJson.files.includes("scripts/post-bitbucket-code-insights.mjs"));
   });

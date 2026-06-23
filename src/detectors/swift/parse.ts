@@ -1,4 +1,16 @@
 import type { SourceFileInfo } from "../../core/types.js";
+import {
+  countLineBreaks,
+  extractBraceBodyLines,
+  findMaskedBraceBlockEnd,
+  findMatchingDelimiter,
+  fingerprintNormalizedSnippet,
+  maskScannedRanges,
+  normalizeSnippetText,
+  scanSlashTrivia,
+  splitDelimitedArgs,
+  type TriviaScannerCallbacks,
+} from "../shared/parsePrimitives.js";
 
 export interface SwiftFunction {
   name: string;
@@ -128,7 +140,7 @@ export function extractSwiftFunctions(file: SourceFileInfo): SwiftFunction[] {
       startLine: index + 1,
       endLine: endIndex + 1,
       text: textLines.join("\n"),
-      bodyLines: extractBlockBodyLines(textLines),
+      bodyLines: extractBraceBodyLines(textLines),
       parentViewStruct: parentView?.name,
       isViewBody,
     });
@@ -181,53 +193,18 @@ export function parseSwiftParams(raw: string): string[] {
 }
 
 export function splitSwiftArgs(raw: string): string[] {
-  const args: string[] = [];
-  let current = "";
-  let depth = 0;
-  let quote: string | undefined;
-
-  for (let index = 0; index < raw.length; index += 1) {
-    const char = raw[index] ?? "";
-    const previous = raw[index - 1];
-    if (quote) {
-      current += char;
-      if (char === quote && previous !== "\\") quote = undefined;
-      continue;
-    }
-    if (char === "\"" || char === "'") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if ("([{<".includes(char)) depth += 1;
-    if (")]}>".includes(char)) depth = Math.max(0, depth - 1);
-    if (char === "," && depth === 0) {
-      if (current.trim()) args.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-
-  if (current.trim()) args.push(current.trim());
-  return args;
+  return splitDelimitedArgs(raw, { includeAngleBrackets: true });
 }
 
 export function normalizeSwiftSnippet(text: string): string {
-  return maskSwiftComments(text)
-    .replace(/("""[\s\S]*?"""|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, " STR ")
-    .replace(/\b\d+(?:\.\d+)?\b/g, " NUM ")
-    .replace(/\b[A-Za-z_]\w*\b/g, (token) => swiftKeywords.has(token) ? token : "ID")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeSnippetText(text, {
+    maskComments: maskSwiftComments,
+    keywords: swiftKeywords,
+  });
 }
 
 export function fingerprintSwift(normalized: string): Map<string, number> {
-  const fingerprint = new Map<string, number>();
-  for (const token of normalized.match(/[A-Za-z_]+|[()[\]{}:,.=+\-*/<>]/g) ?? []) {
-    fingerprint.set(token, (fingerprint.get(token) ?? 0) + 1);
-  }
-  return fingerprint;
+  return fingerprintNormalizedSnippet(normalized);
 }
 
 export function countSwiftBranches(fn: SwiftFunction): number {
@@ -361,59 +338,8 @@ function findBodyDelimiter(text: string, start: number): SwiftFunctionSignature[
   return undefined;
 }
 
-function findMatchingDelimiter(text: string, start: number, open: string, close: string): number {
-  let depth = 0;
-  let quote: string | undefined;
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index] ?? "";
-    const previous = text[index - 1];
-    if (quote) {
-      if (char === quote && previous !== "\\") quote = undefined;
-      continue;
-    }
-    if (char === "\"" || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (char === open) depth += 1;
-    if (char === close) {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
-}
-
 function findSwiftBlockEnd(lines: string[], startIndex: number, bodyDelimiterIndex: number): number {
-  const text = lines.slice(startIndex).join("\n");
-  const code = maskSwiftTrivia(text);
-  let depth = 0;
-  let seenBlock = false;
-
-  for (let index = bodyDelimiterIndex; index < code.length; index += 1) {
-    const char = code[index] ?? "";
-    if (char === "{") {
-      seenBlock = true;
-      depth += 1;
-    } else if (char === "}" && seenBlock) {
-      depth -= 1;
-      if (depth === 0) return startIndex + countLineBreaks(text.slice(0, index));
-    }
-  }
-
-  return startIndex;
-}
-
-function countLineBreaks(text: string): number {
-  return text.match(/\n/g)?.length ?? 0;
-}
-
-function extractBlockBodyLines(textLines: string[]): string[] {
-  const text = textLines.join("\n");
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return [];
-  return text.slice(start + 1, end).split(/\r?\n/);
+  return findMaskedBraceBlockEnd(lines, startIndex, bodyDelimiterIndex, maskSwiftTrivia);
 }
 
 function parseSwiftParamName(rawParam: string): string {
@@ -543,106 +469,18 @@ function stripLeadingAttributes(text: string): string {
 }
 
 function maskSwiftComments(text: string): string {
-  const chars = [...text];
-  scanSwift(text, {
-    onComment: (_comment, _line, start, end) => maskRange(chars, start, end),
-  });
-  return chars.join("");
+  return maskScannedRanges(text, scanSwift);
 }
 
 export function maskSwiftTrivia(text: string): string {
-  const chars = [...text];
-  scanSwift(text, {
-    onComment: (_comment, _line, start, end) => maskRange(chars, start, end),
-    onString: (start, end) => maskRange(chars, start, end),
-  });
-  return chars.join("");
-}
-
-interface SwiftScannerCallbacks {
-  onComment?: (text: string, line: number, start: number, end: number) => void;
-  onString?: (start: number, end: number) => void;
+  return maskScannedRanges(text, scanSwift, { includeStrings: true });
 }
 
 function scanSwift(text: string, callbacks: SwiftScannerCallbacks): void {
-  let index = 0;
-  let line = 1;
-
-  while (index < text.length) {
-    const char = text[index] ?? "";
-    const next = text[index + 1] ?? "";
-    const nextThree = text.slice(index, index + 3);
-
-    if (nextThree === "\"\"\"") {
-      const start = index;
-      index += 3;
-      while (index < text.length && text.slice(index, index + 3) !== "\"\"\"") {
-        if (text[index] === "\n") line += 1;
-        index += 1;
-      }
-      index = Math.min(text.length, index + 3);
-      callbacks.onString?.(start, index);
-      continue;
-    }
-
-    if (char === "\"" || char === "'") {
-      const start = index;
-      const quote = char;
-      index += 1;
-      while (index < text.length) {
-        const current = text[index] ?? "";
-        if (current === "\n") line += 1;
-        if (current === quote && text[index - 1] !== "\\") {
-          index += 1;
-          break;
-        }
-        index += 1;
-      }
-      callbacks.onString?.(start, index);
-      continue;
-    }
-
-    if (char === "/" && next === "/") {
-      const start = index;
-      const commentLine = line;
-      while (index < text.length && text[index] !== "\n") index += 1;
-      callbacks.onComment?.(text.slice(start, index), commentLine, start, index);
-      continue;
-    }
-
-    if (char === "/" && next === "*") {
-      const start = index;
-      const commentLine = line;
-      index += 2;
-      let depth = 1;
-      while (index < text.length && depth > 0) {
-        if (text[index] === "\n") line += 1;
-        if (text[index] === "/" && text[index + 1] === "*") {
-          depth += 1;
-          index += 2;
-          continue;
-        }
-        if (text[index] === "*" && text[index + 1] === "/") {
-          depth -= 1;
-          index += 2;
-          continue;
-        }
-        index += 1;
-      }
-      callbacks.onComment?.(text.slice(start, index), commentLine, start, index);
-      continue;
-    }
-
-    if (char === "\n") line += 1;
-    index += 1;
-  }
+  scanSlashTrivia(text, callbacks);
 }
 
-function maskRange(chars: string[], start: number, end: number): void {
-  for (let index = start; index < end; index += 1) {
-    if (chars[index] !== "\n") chars[index] = " ";
-  }
-}
+type SwiftScannerCallbacks = TriviaScannerCallbacks;
 
 const swiftKeywords = new Set([
   "as",

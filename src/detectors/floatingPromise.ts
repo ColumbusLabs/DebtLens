@@ -25,7 +25,7 @@ export const floatingPromiseDetector: Detector = {
         const call = extractFloatingCall(statement, allowVoid);
         if (!call) continue;
         if (isSkippedContext(call)) continue;
-        if (hasCatchOnChain(call) || hasRejectionOnlyThenHandler(call)) continue;
+        if (chainUsesMethod(call, "catch") || hasRejectionOnlyThenHandler(call)) continue;
 
         const promiseLike = assessPromiseLike(call, context);
         if (!promiseLike) continue;
@@ -95,25 +95,6 @@ function isPassedAsArgument(node: MorphNode): boolean {
   if (!parent) return false;
   if (!Node.isCallExpression(parent) && !Node.isNewExpression(parent)) return false;
   return parent.getArguments().some((argument) => argument === node);
-}
-
-function hasCatchOnChain(call: CallExpression): boolean {
-  let current: MorphNode = call;
-  while (Node.isCallExpression(current)) {
-    const callee = current.getExpression();
-    if (Node.isPropertyAccessExpression(callee) && callee.getName() === "catch") {
-      return true;
-    }
-
-    if (Node.isPropertyAccessExpression(callee) && Node.isCallExpression(callee.getExpression())) {
-      current = callee.getExpression();
-      continue;
-    }
-
-    break;
-  }
-
-  return false;
 }
 
 function hasRejectionOnlyThenHandler(call: CallExpression): boolean {

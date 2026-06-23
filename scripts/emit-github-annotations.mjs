@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
+import {
+  compareIssues,
+  parseAnnotationLimit,
+  pathStartsWith,
+} from "./lib/report-utils.mjs";
 
 const reportPath = process.argv[2];
 if (!reportPath) {
@@ -8,7 +13,10 @@ if (!reportPath) {
 }
 
 const result = JSON.parse(readFileSync(reportPath, "utf8"));
-const maxAnnotations = parseMaxAnnotations(process.env.DEBTLENS_ANNOTATIONS_MAX_COUNT);
+const maxAnnotations = parseAnnotationLimit(process.env.DEBTLENS_ANNOTATIONS_MAX_COUNT, {
+  defaultValue: 50,
+  name: "annotations max count",
+});
 const issues = Array.isArray(result.issues) ? result.issues : [];
 const selected = [...issues].sort(compareIssues).slice(0, maxAnnotations);
 
@@ -25,15 +33,6 @@ for (const issue of selected) {
 
 if (issues.length > selected.length) {
   console.log(`::notice title=${escapeProperty("DebtLens annotations capped")}::${escapeData(`${issues.length - selected.length} finding(s) omitted from workflow annotations. See the DebtLens report artifact for full details.`)}`);
-}
-
-function parseMaxAnnotations(value) {
-  if (!value) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`Invalid annotations max count "${value}". Expected a non-negative integer.`);
-  }
-  return parsed;
 }
 
 function annotationFilePath(issue, result) {
@@ -98,10 +97,6 @@ function canonicalPath(filePath) {
   }
 }
 
-function pathStartsWith(filePath, prefix) {
-  return filePath === prefix || filePath.startsWith(`${prefix}/`);
-}
-
 function normalizeWorkflowPath(filePath) {
   return String(filePath).replaceAll("\\", "/");
 }
@@ -110,23 +105,6 @@ function annotationLevel(severity) {
   if (severity === "high") return "error";
   if (severity === "info") return "notice";
   return "warning";
-}
-
-function compareIssues(left, right) {
-  const severityDelta = severityRank(right.severity) - severityRank(left.severity);
-  if (severityDelta !== 0) return severityDelta;
-  const confidenceDelta = Number(right.confidence ?? 0) - Number(left.confidence ?? 0);
-  if (confidenceDelta !== 0) return confidenceDelta;
-  const fileDelta = String(left.file ?? "").localeCompare(String(right.file ?? ""));
-  if (fileDelta !== 0) return fileDelta;
-  return Number(left.location?.startLine ?? 0) - Number(right.location?.startLine ?? 0);
-}
-
-function severityRank(severity) {
-  if (severity === "high") return 4;
-  if (severity === "medium") return 3;
-  if (severity === "low") return 2;
-  return 1;
 }
 
 function escapeData(value) {

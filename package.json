@@ -24,6 +24,7 @@
   "files": [
     "dist",
     "schema",
+    "scripts/lib",
     "scripts/emit-azure-log-issues.mjs",
     "scripts/post-bitbucket-code-insights.mjs",
     "README.md",
@@ -35,6 +36,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/cli/index.ts scan examples/react --format terminal",
     "scan:example": "tsx src/cli/index.ts scan examples/react --format markdown",
+    "scan:self": "tsx src/cli/index.ts scan . --config debtlens.self.config.json --respect-gitignore --audit-suppressions",
     "test": "node scripts/test.mjs",
     "test:all": "npm run typecheck && npm run typecheck:tests && npm run test",
     "typecheck": "tsc -p tsconfig.json --noEmit",

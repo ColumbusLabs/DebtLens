@@ -1,6 +1,12 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
+import {
+  compareIssues,
+  parseAnnotationLimit,
+  repoRelativeIssuePath,
+  severityRank,
+} from "./lib/report-utils.mjs";
 
 const reportPath = process.argv[2];
 if (!reportPath) {
@@ -9,7 +15,10 @@ if (!reportPath) {
 
 const result = JSON.parse(readFileSync(reportPath, "utf8"));
 const issues = Array.isArray(result.issues) ? result.issues : [];
-const maxIssues = parseMaxIssues(process.env.DEBTLENS_AZURE_MAX_COUNT);
+const maxIssues = parseAnnotationLimit(process.env.DEBTLENS_AZURE_MAX_COUNT, {
+  defaultValue: 50,
+  name: "Azure max count",
+});
 const errorOn = parseSeverity(process.env.DEBTLENS_AZURE_ERROR_ON || "high", "Azure error-on");
 const selected = [...issues].sort(compareIssues).slice(0, maxIssues);
 
@@ -29,15 +38,6 @@ if (issues.length > selected.length) {
   console.log(`##[warning]DebtLens Azure annotations capped: ${issues.length - selected.length} finding(s) omitted. See the DebtLens report artifact for full details.`);
 }
 
-function parseMaxIssues(value) {
-  if (!value) return 50;
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`Invalid Azure max count "${value}". Expected a non-negative integer.`);
-  }
-  return parsed;
-}
-
 function parseSeverity(value, name) {
   const normalized = String(value).toLowerCase();
   const severities = ["info", "low", "medium", "high"];
@@ -50,73 +50,9 @@ function azureIssueType(severity, errorOn) {
 }
 
 function sourcePath(file) {
-  const normalized = repoRelativeIssuePath(file);
+  const normalized = repoRelativeIssuePath(file, result);
   if (isAbsolute(normalized) || !process.env.BUILD_SOURCESDIRECTORY) return normalized;
   return resolve(process.env.BUILD_SOURCESDIRECTORY, normalized).replaceAll("\\", "/");
-}
-
-function repoRelativeIssuePath(file) {
-  const repoRoot = repoRootForTarget(result.options?.target);
-  const normalizedFile = String(file).replaceAll("\\", "/").replace(/^\.\//, "");
-  if (isAbsolute(normalizedFile)) {
-    const relativePath = relative(repoRoot, normalizedFile).replaceAll("\\", "/");
-    return relativePath && !relativePath.startsWith("..") ? relativePath : normalizedFile;
-  }
-
-  const targetPrefix = repoRelativeTargetPrefix(result.options?.target, repoRoot);
-  if (!targetPrefix || pathStartsWith(normalizedFile, targetPrefix)) {
-    return normalizedFile;
-  }
-  return `${targetPrefix}/${normalizedFile.replace(/^\/+/, "")}`;
-}
-
-function repoRelativeTargetPrefix(target, repoRoot) {
-  if (!target || target === ".") return "";
-  const targetPath = isAbsolute(target) ? target : resolve(repoRoot, target);
-  const issueRoot = safeIsFile(targetPath) ? dirname(targetPath) : targetPath;
-  const relativePath = relative(repoRoot, issueRoot).replaceAll("\\", "/");
-  if (!relativePath || relativePath === "." || relativePath.startsWith("..") || isAbsolute(relativePath)) return "";
-  return relativePath.replace(/\/+$/, "");
-}
-
-function repoRootForTarget(target) {
-  const rawTarget = typeof target === "string" ? target : "";
-  const targetPath = isAbsolute(rawTarget) ? rawTarget : resolve(process.cwd(), rawTarget || ".");
-  const start = safeIsFile(targetPath) ? dirname(targetPath) : targetPath;
-  for (let current = start; ; current = dirname(current)) {
-    if (existsSync(resolve(current, ".git"))) return current;
-    const parent = dirname(current);
-    if (parent === current) return process.cwd();
-  }
-}
-
-function safeIsFile(filePath) {
-  try {
-    return existsSync(filePath) && statSync(filePath).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function pathStartsWith(filePath, prefix) {
-  return filePath === prefix || filePath.startsWith(`${prefix}/`);
-}
-
-function compareIssues(left, right) {
-  const severityDelta = severityRank(right.severity) - severityRank(left.severity);
-  if (severityDelta !== 0) return severityDelta;
-  const confidenceDelta = Number(right.confidence ?? 0) - Number(left.confidence ?? 0);
-  if (confidenceDelta !== 0) return confidenceDelta;
-  const fileDelta = String(left.file ?? "").localeCompare(String(right.file ?? ""));
-  if (fileDelta !== 0) return fileDelta;
-  return Number(left.location?.startLine ?? 0) - Number(right.location?.startLine ?? 0);
-}
-
-function severityRank(severity) {
-  if (severity === "high") return 4;
-  if (severity === "medium") return 3;
-  if (severity === "low") return 2;
-  return 1;
 }
 
 function escapeData(value) {

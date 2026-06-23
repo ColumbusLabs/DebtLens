@@ -98,8 +98,8 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
   validateStringArrayRecord(errors, "vocabulary", typed.vocabulary);
   validateSeverityRecord(errors, "ruleSeverities", typed.ruleSeverities);
   validateConfidenceRecord(errors, "ruleConfidenceFloors", typed.ruleConfidenceFloors);
-  validatePropDrilling(errors, typed.propDrilling);
-  validateDuplicatedLiteral(errors, typed.duplicatedLiteral);
+  validateObjectWithStringArrayProperty(errors, "propDrilling", typed.propDrilling, "ignoreComponents");
+  validateObjectWithStringArrayProperty(errors, "duplicatedLiteral", typed.duplicatedLiteral, "ignoreStrings");
   validateNamingDrift(errors, typed.namingDrift);
   validateTodoComment(errors, typed.todoComment);
   validateBudgets(errors, typed.budgets);
@@ -179,24 +179,19 @@ function validateConfidenceRecord(errors: string[], key: string, value: unknown)
   }
 }
 
-function validatePropDrilling(errors: string[], value: unknown): void {
+function validateObjectWithStringArrayProperty(
+  errors: string[],
+  key: string,
+  value: unknown,
+  property: string,
+): void {
   if (value === undefined) return;
   if (!isPlainObject(value)) {
-    errors.push("propDrilling must be an object");
+    errors.push(`${key} must be an object`);
     return;
   }
-  validateAllowedKeys(errors, "propDrilling", value, ["ignoreComponents"]);
-  validateStringArray(errors, "propDrilling.ignoreComponents", value.ignoreComponents);
-}
-
-function validateDuplicatedLiteral(errors: string[], value: unknown): void {
-  if (value === undefined) return;
-  if (!isPlainObject(value)) {
-    errors.push("duplicatedLiteral must be an object");
-    return;
-  }
-  validateAllowedKeys(errors, "duplicatedLiteral", value, ["ignoreStrings"]);
-  validateStringArray(errors, "duplicatedLiteral.ignoreStrings", value.ignoreStrings);
+  validateAllowedKeys(errors, key, value, [property]);
+  validateStringArray(errors, `${key}.${property}`, value[property]);
 }
 
 function validateNamingDrift(errors: string[], value: unknown): void {

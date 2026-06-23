@@ -19,7 +19,9 @@ function activate(context) {
     const config = vscode.workspace.getConfiguration("debtlens");
     if (!config.get("scanOnSave", true)) return;
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
-    if (folder) scanWorkspaceFolder(folder);
+    if (folder) {
+      void scanWorkspaceFolder(folder);
+    }
   }));
 }
 

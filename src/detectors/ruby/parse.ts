@@ -1,4 +1,11 @@
 import type { SourceFileInfo } from "../../core/types.js";
+import {
+  findMatchingDelimiter,
+  fingerprintNormalizedSnippet,
+  maskScannedRanges,
+  normalizeSnippetText,
+  splitDelimitedArgs,
+} from "../shared/parsePrimitives.js";
 
 export interface RubyFunction {
   name: string;
@@ -23,7 +30,6 @@ interface RubyFunctionSignature {
   name: string;
   params: string;
   modifiers: string[];
-  headerEndIndex: number;
 }
 
 export function extractRubyFunctions(file: SourceFileInfo): RubyFunction[] {
@@ -44,7 +50,7 @@ export function extractRubyFunctions(file: SourceFileInfo): RubyFunction[] {
     if (!/^def\b/.test(trimmed)) continue;
 
     const header = collectRubyFunctionHeader(lines, index);
-    const signature = parseRubyFunctionSignature(header.text, header.endIndex);
+    const signature = parseRubyFunctionSignature(header.text);
     if (!signature) continue;
 
     const endIndex = findRubyMethodEnd(lines, index);
@@ -82,53 +88,20 @@ export function parseRubyParams(raw: string): string[] {
 }
 
 export function splitRubyArgs(raw: string): string[] {
-  const args: string[] = [];
-  let current = "";
-  let depth = 0;
-  let quote: string | undefined;
-
-  for (let index = 0; index < raw.length; index += 1) {
-    const char = raw[index] ?? "";
-    const previous = raw[index - 1];
-    if (quote) {
-      current += char;
-      if (char === quote && previous !== "\\") quote = undefined;
-      continue;
-    }
-    if (char === "\"" || char === "'") {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if ("([{".includes(char)) depth += 1;
-    if (")]}".includes(char)) depth = Math.max(0, depth - 1);
-    if (char === "," && depth === 0) {
-      if (current.trim()) args.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-
-  if (current.trim()) args.push(current.trim());
-  return args;
+  return splitDelimitedArgs(raw);
 }
 
 export function normalizeRubySnippet(text: string): string {
-  return maskRubyComments(text)
-    .replace(/("""[\s\S]*?"""|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, " STR ")
-    .replace(/\b\d+(?:\.\d+)?\b/g, " NUM ")
-    .replace(/\b[A-Za-z_]\w*[?!]?\b/g, (token) => rubyKeywords.has(token.replace(/[?!]$/, "")) ? token : "ID")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeSnippetText(text, {
+    maskComments: maskRubyComments,
+    keywords: rubyKeywords,
+    identifierPattern: /\b[A-Za-z_]\w*[?!]?\b/g,
+    isKeyword: (token) => rubyKeywords.has(token.replace(/[?!]$/, "")),
+  });
 }
 
 export function fingerprintRuby(normalized: string): Map<string, number> {
-  const fingerprint = new Map<string, number>();
-  for (const token of normalized.match(/[A-Za-z_]+|[()[\]{}:,.=+\-*/<>]/g) ?? []) {
-    fingerprint.set(token, (fingerprint.get(token) ?? 0) + 1);
-  }
-  return fingerprint;
+  return fingerprintNormalizedSnippet(normalized);
 }
 
 export function countRubyBranches(fn: RubyFunction): number {
@@ -178,7 +151,7 @@ function extractRubyExpressionBody(header: string, signature: RubyFunctionSignat
   return undefined;
 }
 
-function parseRubyFunctionSignature(headerText: string, headerEndIndex: number): RubyFunctionSignature | undefined {
+function parseRubyFunctionSignature(headerText: string): RubyFunctionSignature | undefined {
   const header = maskRubyComments(headerText).trimStart();
   const defIndex = header.search(/\bdef\b/);
   if (defIndex === -1) return undefined;
@@ -210,31 +183,7 @@ function parseRubyFunctionSignature(headerText: string, headerEndIndex: number):
     name,
     params,
     modifiers: [],
-    headerEndIndex: headerEndIndex,
   };
-}
-
-function findMatchingDelimiter(text: string, start: number, open: string, close: string): number {
-  let depth = 0;
-  let quote: string | undefined;
-  for (let index = start; index < text.length; index += 1) {
-    const char = text[index] ?? "";
-    const previous = text[index - 1];
-    if (quote) {
-      if (char === quote && previous !== "\\") quote = undefined;
-      continue;
-    }
-    if (char === "\"" || char === "'") {
-      quote = char;
-      continue;
-    }
-    if (char === open) depth += 1;
-    if (char === close) {
-      depth -= 1;
-      if (depth === 0) return index;
-    }
-  }
-  return -1;
 }
 
 function findRubyMethodEnd(lines: string[], startIndex: number): number {
@@ -285,10 +234,6 @@ function countRubyBlockClosers(line: string): number {
   return line.match(/\bend\b/g)?.length ?? 0;
 }
 
-function leadingWhitespace(line: string): string {
-  return line.match(/^\s*/)?.[0] ?? "";
-}
-
 function extractRubyBodyLines(textLines: string[]): string[] {
   if (textLines.length <= 1) return [];
   return textLines.slice(1, -1);
@@ -301,20 +246,11 @@ function isIgnorableFunctionPrefix(line: string): boolean {
 }
 
 export function maskRubyComments(text: string): string {
-  const chars = [...text];
-  scanRuby(text, {
-    onComment: (_comment, _line, start, end) => maskRange(chars, start, end),
-  });
-  return chars.join("");
+  return maskScannedRanges(text, scanRuby);
 }
 
 export function maskRubyTrivia(text: string): string {
-  const chars = [...text];
-  scanRuby(text, {
-    onComment: (_comment, _line, start, end) => maskRange(chars, start, end),
-    onString: (start, end) => maskRange(chars, start, end),
-  });
-  return chars.join("");
+  return maskScannedRanges(text, scanRuby, { includeStrings: true });
 }
 
 interface RubyScannerCallbacks {
@@ -370,12 +306,6 @@ function scanRuby(text: string, callbacks: RubyScannerCallbacks): void {
 
     if (char === "\n") line += 1;
     index += 1;
-  }
-}
-
-function maskRange(chars: string[], start: number, end: number): void {
-  for (let index = start; index < end; index += 1) {
-    if (chars[index] !== "\n") chars[index] = " ";
   }
 }
 

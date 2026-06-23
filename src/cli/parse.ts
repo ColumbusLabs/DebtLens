@@ -149,26 +149,32 @@ export function parseCompletionShell(value: string): CompletionShell {
 }
 
 export function renderRulesTable(rules: Array<{ id: string; name: string; defaultSeverity: string; description: string }>): string {
-  const idWidth = Math.max("Rule".length, ...rules.map((rule) => rule.id.length));
-  const severityWidth = Math.max("Severity".length, ...rules.map((rule) => rule.defaultSeverity.length));
-  const lines = [
-    `${"Rule".padEnd(idWidth)}  ${"Severity".padEnd(severityWidth)}  Description`,
-    `${"-".repeat(idWidth)}  ${"-".repeat(severityWidth)}  -----------`,
-    ...rules.map((rule) => `${rule.id.padEnd(idWidth)}  ${rule.defaultSeverity.padEnd(severityWidth)}  ${rule.description}`),
-  ];
-
-  return `${lines.join("\n")}\n`;
+  return renderTextTable(rules, [
+    { header: "Rule", underline: "-", value: (rule) => rule.id },
+    { header: "Severity", underline: "-", value: (rule) => rule.defaultSeverity },
+    { header: "Description", underline: "-", value: (rule) => rule.description },
+  ]);
 }
 
 export function renderPacksTable(packs: Array<{ id: string; description: string; rules: string[] }>): string {
-  const idWidth = Math.max("Pack".length, ...packs.map((pack) => pack.id.length));
-  const lines = [
-    `${"Pack".padEnd(idWidth)}  Rules  Description`,
-    `${"-".repeat(idWidth)}  -----  -----------`,
-    ...packs.map((pack) => `${pack.id.padEnd(idWidth)}  ${String(pack.rules.length).padEnd(5)}  ${pack.description}`),
-  ];
+  return renderTextTable(packs, [
+    { header: "Pack", underline: "-", value: (pack) => pack.id },
+    { header: "Rules", underline: "-", value: (pack) => String(pack.rules.length) },
+    { header: "Description", underline: "-", value: (pack) => pack.description },
+  ]);
+}
 
-  return `${lines.join("\n")}\n`;
+function renderTextTable<Row>(
+  rows: Row[],
+  columns: Array<{ header: string; underline: string; value: (row: Row) => string }>,
+): string {
+  const widths = columns.map((column) => Math.max(column.header.length, ...rows.map((row) => column.value(row).length)));
+  const header = columns.map((column, index) => column.header.padEnd(widths[index] ?? column.header.length)).join("  ");
+  const divider = columns.map((column, index) => column.underline.repeat(widths[index] ?? column.header.length)).join("  ");
+  const body = rows.map((row) =>
+    columns.map((column, index) => column.value(row).padEnd(widths[index] ?? column.header.length)).join("  "));
+
+  return `${[header, divider, ...body].join("\n")}\n`;
 }
 
 export function formatProfileReport(ruleTimingsMs: Record<string, number>): string {

@@ -191,6 +191,8 @@ debtlens init --pack core # starter config using the core rule pack preset
 debtlens init --policy @org/debtlens-policy # starter config from a shared policy package
 debtlens init --from-eslint eslint.config.json # print a migration suggestion without writing
 debtlens adopt            # adoption report (dry run; recommends minSeverity)
+debtlens calibrate .      # suggest percentile-based threshold overrides
+debtlens triage .         # interactively keep, baseline, or suppress findings
 debtlens watch examples/react --rules todo-comment # rescan on file changes
 debtlens completions zsh  # print shell completions
 debtlens mcp              # stdio MCP server for Cursor/Claude-style agents
@@ -342,6 +344,39 @@ debtlens adopt --write-config --write-baseline --force
 The second command writes `debtlens.config.json` and `debtlens-baseline.json` (baseline write is skipped when zero issues are found). For established repositories, follow the generated plan's baseline or `--diff-base` CI commands so pull requests focus on newly introduced debt; add `--fail-on-regression` when you want count increases to fail as well.
 
 For serious open-source repositories and broad monorepos, treat adoption as a scoped rollout instead of a whole-repo gate on day one. Run `adopt` first, then start with `--changed origin/main` or a maintained source subdirectory, add `--package` for workspaces, keep generated/dependency outputs excluded, and narrow expensive or noisy rules with `--rules`, thresholds, baselines, or confidence floors before widening coverage. If the default 2,000-file cap appears, either raise it with `--max-files` for a deliberate full scan or make the target more precise with `--package`, `--include`, `--exclude`, `--changed`, or `--respect-gitignore`.
+
+### Tune, prioritize, triage, and budget
+
+After `adopt` picks rules, use these commands to finish a low-noise rollout:
+
+```bash
+# 1. Tune numeric thresholds to your repo's distributions
+debtlens calibrate . --percentile 90
+debtlens calibrate . --percentile 90 --write   # merge into debtlens.config.json
+
+# 2. Review highest-ROI findings first (enable hotspots when git history is available)
+debtlens scan . --sort payoff --hotspots
+
+# 3. Walk the backlog interactively (requires a TTY; use --dry-run to preview)
+debtlens triage .
+
+# 4. Protect cleaned areas with per-path budgets in debtlens.config.json
+debtlens scan . --budget-report
+debtlens scan . --fail-on high   # budget breaches also fail the gate
+```
+
+Example `budgets` block:
+
+```json
+{
+  "budgets": {
+    "src/payments": { "maxIssues": 20, "maxHigh": 0 },
+    "src/legacy": { "maxIssues": 250 }
+  }
+}
+```
+
+See [`docs/prioritization.md`](./docs/prioritization.md) for the payoff formula, `priority` weights, and budget glob matching.
 
 Named quality-gate presets give teams a shared rollout vocabulary:
 

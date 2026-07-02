@@ -8,9 +8,12 @@ All notable changes to DebtLens are documented here. This project adheres to
 ### Added
 
 - `debtlens history record` / `history show` with `.debtlens/history.jsonl` ledger and timeline reports.
-- Payoff ranking via `--sort payoff`, JSON `payoffScore`, and top-payoff report sections.
-- `debtlens calibrate` for percentile-based threshold suggestions with optional `--write`.
-- Interactive `debtlens triage` for keep/baseline/suppress workflows.
+- Payoff ranking via `--sort payoff`, JSON `payoffScore`, and top-payoff report sections
+  ([#251](https://github.com/ColumbusLabs/DebtLens/issues/251)).
+- `debtlens calibrate` for percentile-based threshold suggestions with optional `--write`
+  ([#256](https://github.com/ColumbusLabs/DebtLens/issues/256)).
+- Interactive `debtlens triage` for keep/baseline/suppress workflows
+  ([#255](https://github.com/ColumbusLabs/DebtLens/issues/255)).
 - `debtlens fix` dry-run autofix allowlist for duplicated literals.
 - Opt-in `feature-flags` pack with `stale-feature-flag` detector.
 - `--concurrency` and `--cache-dir` scan controls for large-repo performance.
@@ -22,7 +25,8 @@ All notable changes to DebtLens are documented here. This project adheres to
   ([#260](https://github.com/ColumbusLabs/DebtLens/issues/260),
   [#261](https://github.com/ColumbusLabs/DebtLens/issues/261),
   [#262](https://github.com/ColumbusLabs/DebtLens/issues/262)).
-- Config `budgets` block and `debtlens scan --budget-report` for per-area debt SLO gating.
+- Config `budgets` block and `debtlens scan --budget-report` for per-area debt SLO gating
+  ([#252](https://github.com/ColumbusLabs/DebtLens/issues/252)).
 - `debtlens scan --format badge` emits a self-contained SVG badge plus shields.io endpoint JSON
   ([#265](https://github.com/ColumbusLabs/DebtLens/issues/265)).
 - Scan results now warn when matched files exceed `maxFiles`; terminal output prints the

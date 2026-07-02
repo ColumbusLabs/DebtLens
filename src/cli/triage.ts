@@ -20,6 +20,8 @@ export interface TriageInput {
   cliOptions?: Record<string, unknown>;
   input?: NodeJS.ReadableStream;
   output?: NodeJS.WritableStream;
+  /** Injectable prompt for tests; defaults to readline when omitted. */
+  ask?: (message: string) => Promise<string>;
 }
 
 export interface TriageActionResult {
@@ -56,18 +58,22 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
   const suppressions: string[] = [];
   const counts: TriageActionResult = { kept: 0, baselined: 0, suppressed: 0, skipped: 0 };
 
-  const rl = createInterface({
-    input: input.input ?? process.stdin,
-    output: input.output ?? process.stdout,
-  });
+  const output = input.output ?? process.stdout;
+  const rl = input.ask
+    ? undefined
+    : createInterface({
+      input: input.input ?? process.stdin,
+      output,
+    });
+  const ask = input.ask ?? ((message: string) => rl!.question(message));
 
   try {
     for (let index = 0; index < issues.length; index += 1) {
       const issue = issues[index];
       if (!issue) continue;
       const rendered = formatIssue(issue, index + 1, issues.length);
-      process.stdout.write(`\n${rendered}\n`);
-      const rawAnswer = (await rl.question("Action [k]eep [b]aseline [s]uppress [n]ext [q]uit [B]atch rule: ")).trim();
+      output.write(`\n${rendered}\n`);
+      const rawAnswer = (await ask("Action [k]eep [b]aseline [s]uppress [n]ext [q]uit [B]atch rule: ")).trim();
       const answer = rawAnswer.toLowerCase();
 
       if (answer === "q" || answer === "quit") break;
@@ -76,7 +82,10 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
         continue;
       }
       if (rawAnswer === "B" || answer === "batch" || answer === "b-rule") {
-        const batchAction = (await rl.question("Apply to all remaining findings of this rule with [k]eep [b]aseline [s]uppress? ")).trim().toLowerCase();
+        const batchAction = (await ask("Apply to all remaining findings of this rule with [k]eep [b]aseline [s]uppress? ")).trim().toLowerCase();
+        const suppressReason = isSuppressAction(batchAction)
+          ? await promptSuppressReason(ask, output)
+          : undefined;
         for (let cursor = index; cursor < issues.length; cursor += 1) {
           const candidate = issues[cursor];
           if (!candidate || candidate.ruleId !== issue.ruleId) continue;
@@ -86,29 +95,37 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
             fingerprints,
             suppressions,
             counts,
+            suppressReason,
           });
         }
         break;
       }
 
+      const suppressReason = isSuppressAction(answer)
+        ? await promptSuppressReason(ask, output)
+        : undefined;
       applyTriageAction(issue, answer, {
         dryRun: input.dryRun,
         baseline,
         fingerprints,
         suppressions,
         counts,
+        suppressReason,
       });
     }
   } finally {
-    rl.close();
+    rl?.close();
   }
 
   if (!input.dryRun) {
     writeBaseline(cwd, baselinePath, baseline);
     if (suppressions.length > 0) {
-      process.stdout.write("\nSuggested suppression directives:\n");
-      for (const directive of suppressions) process.stdout.write(directive);
+      output.write("\nSuggested suppression directives:\n");
+      for (const directive of suppressions) output.write(directive);
     }
+  } else if (suppressions.length > 0) {
+    output.write("\nSuggested suppression directives (dry run):\n");
+    for (const directive of suppressions) output.write(directive);
   }
 
   return counts;
@@ -123,6 +140,7 @@ function applyTriageAction(
     fingerprints: Set<string>;
     suppressions: string[];
     counts: TriageActionResult;
+    suppressReason?: string;
   },
 ): void {
   const fingerprint = issue.fingerprint ?? issue.id;
@@ -133,12 +151,30 @@ function applyTriageAction(
     return;
   }
   if (action === "s" || action === "suppress") {
-    const reason = "triaged via debtlens triage";
+    const reason = context.suppressReason?.trim();
+    if (!reason) {
+      throw new Error("Suppression reason is required.");
+    }
     context.suppressions.push(runSuppress({ ruleId: issue.ruleId, reason }));
     context.counts.suppressed += 1;
     return;
   }
   context.counts.kept += 1;
+}
+
+function isSuppressAction(action: string): boolean {
+  return action === "s" || action === "suppress";
+}
+
+async function promptSuppressReason(
+  ask: (message: string) => Promise<string>,
+  output: NodeJS.WritableStream,
+): Promise<string> {
+  while (true) {
+    const reason = (await ask("Suppression reason (required): ")).trim();
+    if (reason) return reason;
+    output.write("A reason is required for suppressions.\n");
+  }
 }
 
 function formatIssue(issue: DebtIssue, index: number, total: number): string {

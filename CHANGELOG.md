@@ -15,11 +15,16 @@ All notable changes to DebtLens are documented here. This project adheres to
 - Opt-in `feature-flags` pack with `stale-feature-flag` detector.
 - `--concurrency` and `--cache-dir` scan controls for large-repo performance.
 - `--ownership-report` scorecards with count and payoff leaderboards.
-- HTML reports now include import-graph SVG and directory debt treemap views.
+- HTML reports now include import-graph SVG and directory debt treemap views
+  ([#264](https://github.com/ColumbusLabs/DebtLens/issues/264)).
 - Core rules: `long-parameter-list`, `god-file`, and `cognitive-complexity` for function/module
-  design smells beyond single-axis size checks.
+  design smells beyond single-axis size checks
+  ([#260](https://github.com/ColumbusLabs/DebtLens/issues/260),
+  [#261](https://github.com/ColumbusLabs/DebtLens/issues/261),
+  [#262](https://github.com/ColumbusLabs/DebtLens/issues/262)).
 - Config `budgets` block and `debtlens scan --budget-report` for per-area debt SLO gating.
-- `debtlens scan --format badge` emits a self-contained SVG badge plus shields.io endpoint JSON.
+- `debtlens scan --format badge` emits a self-contained SVG badge plus shields.io endpoint JSON
+  ([#265](https://github.com/ColumbusLabs/DebtLens/issues/265)).
 - Scan results now warn when matched files exceed `maxFiles`; terminal output prints the
   advisory and JSON reports include it in `summary.warnings` while keeping
   `summary.filesScanned` as the actual scanned count.

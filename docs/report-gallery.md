@@ -10,9 +10,18 @@ reviewers already work.
 | Markdown | `debtlens scan examples/react --format markdown --output debtlens-report.md` | PR descriptions, release notes, and maintainer handoffs. |
 | PR comment | `debtlens scan examples/react --format pr-comment --output debtlens-pr-comment.md` | Compact GitHub review comments with prioritized fix targets and optional caps. |
 | SARIF | `debtlens scan examples/react --format sarif --sarif-category examples-react --output debtlens.sarif` | GitHub code scanning and compatible quality dashboards. |
-| HTML | `debtlens scan examples/react --format html --output debtlens-report.html` | Shareable human-readable artifact. |
+| HTML | `debtlens scan examples/react --format html --output debtlens-report.html` | Shareable human-readable artifact with findings, import-graph SVG, and debt treemap. |
+| Badge | `debtlens scan examples/react --format badge --output debtlens-badge.svg` | README / status badge SVG; also writes shields.io endpoint JSON beside the SVG. |
 | JUnit | `debtlens scan examples/react --format junit --junit-fail-on high --output debtlens-junit.xml` | CI systems that surface test-style failures while keeping lower severities visible. |
 | GitLab Code Quality | `debtlens scan examples/react --format gitlab-codequality --output gl-code-quality-report.json` | Native GitLab Merge Request Code Quality widgets. |
+
+HTML reports are self-contained (inline SVG, no CDN assets). When the scan builds an
+import graph for TypeScript/JavaScript files, the HTML includes an import-graph view with
+cycle edges highlighted, plus a directory debt treemap sized by finding density.
+
+Badge output writes a self-contained SVG. When `--output` ends in `.svg`, DebtLens also
+writes a sibling `*.json` shields.io endpoint payload. Configure color thresholds with a
+`badge` block in `debtlens.config.json` (`greenMax` / `yellowMax`).
 
 The GitHub Action runs one canonical JSON scan and renders requested reports from that
 result so counts, filters, baselines, suppressions, and source links stay aligned.

@@ -1102,16 +1102,25 @@ When this is a false positive:
 
 ## `cognitive-complexity`
 
-Scores functions with a Sonar-style cognitive complexity model that penalizes nesting more than flat branching.
+Scores functions with a Sonar-style cognitive complexity model that penalizes nesting more than flat branching. Prefer this when readability/nesting is the concern; keep `complex-control-flow` when raw branch/cyclomatic pressure is the concern.
 
 Default thresholds:
 
 - `cognitive-complexity.max`: `15`
 
+Scoring model (summary):
+
+- +1 for each control-flow structure (`if`, loops, `catch`, ternary, etc.)
+- +1 additional per nesting level when that structure is nested
+- sequences of boolean operators add incremental cost
+- a flat `switch` does not accumulate nesting the way nested `if` chains do
+
 When this is a false positive:
 
 - generated parsers or dispatch tables with intentionally flat `switch` blocks
 - compare with `complex-control-flow` when only cyclomatic count is high
+
+Confidence scales with how far the score exceeds `cognitive-complexity.max`.
 
 ## `python-error-handling`
 

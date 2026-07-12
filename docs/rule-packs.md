@@ -42,6 +42,9 @@ For a user-facing selection table, see [`pack-chooser.md`](./pack-chooser.md).
 | `swallowed-error` | **core** | Catch blocks that only log without rethrowing or returning | Medium |
 | `floating-promise` | **core** | Unawaited promise-returning calls and effect fire-and-forget | Medium |
 | `commented-out-code` | **core** | Contiguous comment lines that look like dead code | Low |
+| `long-parameter-list` | **core** | Functions with too many parameters or boolean flag parameters | Medium |
+| `god-file` | **core** | Kitchen-sink modules that exceed multiple sprawl thresholds together | Medium |
+| `cognitive-complexity` | **core** | Sonar-style cognitive complexity that penalizes nesting more than flat branching | Medium |
 | `large-component` | **react** | React-style components with too many lines, hooks, or branch points | Medium |
 | `state-sprawl` | **react** | Components/hooks with many local stateful hooks | Medium |
 | `effect-complexity` | **react** | Long or overloaded React effect hooks | Medium |
@@ -111,6 +114,9 @@ These apply to any TypeScript or JavaScript codebase:
 - **`swallowed-error`** — catch blocks that only log without rethrowing or returning a handled result.
 - **`floating-promise`** — promise-returning calls that are not awaited, returned, void-marked, or error-handled.
 - **`commented-out-code`** — contiguous comment blocks that look like dead code.
+- **`long-parameter-list`** — functions with too many parameters or multiple boolean flags.
+- **`god-file`** — kitchen-sink modules that cross several independent sprawl axes at once.
+- **`cognitive-complexity`** — nested control-flow difficulty complementary to `complex-control-flow`.
 
 Future core rules may expand these signals into language-specific packs or richer project graph analysis.
 

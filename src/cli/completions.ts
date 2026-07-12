@@ -26,7 +26,7 @@ const baselineFlags = [
   "--parallel",
   "--batch-size",
 ];
-const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit", "gitlab-codequality"];
+const formats = ["terminal", "json", "markdown", "pr-comment", "sarif", "html", "junit", "gitlab-codequality", "badge"];
 const baselineFormats = ["terminal", "json"];
 const compareFormats = ["terminal", "markdown", "json"];
 const scanFlags = [...SCAN_ARG_FLAGS, "--from-eslint", "--debounce"];

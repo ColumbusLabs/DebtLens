@@ -10,6 +10,22 @@ import { resolveFilePaths } from "../../src/core/resolveFiles.js";
 import { scan } from "../../src/core/scan.js";
 
 describe("scan integration", () => {
+  it("keeps opt-in detectors out of default scans while explicit rules and packs include them", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-opt-in-detector-"));
+    try {
+      writeFileSync(join(dir, "flags.ts"), "const enableCheckout = true;\nif (enableCheckout) launch();\n");
+      const defaultResult = await scan(mergeConfig(".", {}, { cwd: dir }));
+      const explicitResult = await scan(mergeConfig(".", {}, { cwd: dir, rules: ["stale-feature-flag"] }));
+      const packResult = await scan(mergeConfig(".", { pack: "feature-flags" }, { cwd: dir }));
+
+      assert.equal(defaultResult.summary.byRule["stale-feature-flag"], undefined);
+      assert.equal(explicitResult.summary.byRule["stale-feature-flag"], 1);
+      assert.equal(packResult.summary.byRule["stale-feature-flag"], 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("runs the full pipeline against examples/react", async () => {
     const cwd = process.cwd();
     const result = await scan({

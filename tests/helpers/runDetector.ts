@@ -1,6 +1,6 @@
 import { Project, ScriptTarget, ts } from "ts-morph";
 import { parseSourceFile } from "../../src/core/languages.js";
-import type { DebtIssue, Detector, ScanOptions, ScanThresholds, Severity, SourceFileInfo, SourceLanguage } from "../../src/core/types.js";
+import type { DebtIssue, Detector, FeatureFlagsConfig, ScanOptions, ScanThresholds, Severity, SourceFileInfo, SourceLanguage } from "../../src/core/types.js";
 import { compileTodoCommentMarkers } from "../../src/detectors/todoComment.js";
 
 export interface RunDetectorOptions {
@@ -34,6 +34,8 @@ export interface RunDetectorOptions {
   changedFiles?: string[];
   /** Override file contents keyed by relative path. */
   fileContents?: Record<string, string>;
+  /** Feature-flag access patterns, registry globs, and constant-name patterns. */
+  featureFlags?: FeatureFlagsConfig;
 }
 
 function inferSourceLanguage(relativePath: string, override?: SourceLanguage): SourceLanguage {
@@ -102,6 +104,7 @@ export async function runDetector(
       : undefined,
     changedFiles: options.changedFiles,
     fileContents: options.fileContents,
+    featureFlags: options.featureFlags,
   };
 
   const issues = await detector.detect({

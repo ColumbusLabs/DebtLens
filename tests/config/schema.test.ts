@@ -149,4 +149,24 @@ describe("config JSON schema", () => {
     assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /compose/);
     assert.match(built.properties.pack?.anyOf[1]?.pattern ?? "", /svelte/);
   });
+
+  it("includes the featureFlags configuration contract", () => {
+    const built = buildConfigSchema() as {
+      properties: {
+        featureFlags?: {
+          type: string;
+          properties: {
+            accessPatterns: { type: string; items: { required: string[] } };
+            registryGlobs: { type: string };
+            constantNamePatterns: { type: string };
+          };
+        };
+      };
+    };
+
+    assert.equal(built.properties.featureFlags?.type, "object");
+    assert.deepEqual(built.properties.featureFlags?.properties.accessPatterns.items.required, ["callee"]);
+    assert.equal(built.properties.featureFlags?.properties.registryGlobs.type, "array");
+    assert.equal(built.properties.featureFlags?.properties.constantNamePatterns.type, "array");
+  });
 });

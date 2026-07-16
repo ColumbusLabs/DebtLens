@@ -90,11 +90,26 @@ export function mergeDebtLensConfig(base: DebtLensConfig, override: DebtLensConf
     ),
     namingDrift: mergeRecord(base.namingDrift, override.namingDrift),
     todoComment: mergeRecord(base.todoComment, override.todoComment),
+    featureFlags: mergeFeatureFlagsConfig(base.featureFlags, override.featureFlags),
     ruleSeverities: mergeRecord(base.ruleSeverities, override.ruleSeverities),
     ruleConfidenceFloors: mergeRecord(base.ruleConfidenceFloors, override.ruleConfidenceFloors),
     budgets: mergeRecord(base.budgets, override.budgets),
     badge: mergeRecord(base.badge, override.badge),
   });
+}
+
+function mergeFeatureFlagsConfig(
+  base: DebtLensConfig["featureFlags"],
+  override: DebtLensConfig["featureFlags"],
+): DebtLensConfig["featureFlags"] {
+  if (!base && !override) return undefined;
+  return {
+    ...base,
+    ...override,
+    accessPatterns: override?.accessPatterns ?? base?.accessPatterns,
+    registryGlobs: mergeStringArrays(base?.registryGlobs, override?.registryGlobs),
+    constantNamePatterns: override?.constantNamePatterns ?? base?.constantNamePatterns,
+  };
 }
 
 function mergeStringArrays(base?: string[], override?: string[]): string[] | undefined {

@@ -129,6 +129,22 @@ describe("mergeConfig", () => {
     assert.deepEqual(options.ruleConfidenceFloors, { "prop-drilling": 0.8 });
   });
 
+  it("merges feature-flag config and preserves conservative defaults", () => {
+    const options = mergeConfig(".", {
+      featureFlags: {
+        accessPatterns: [{ callee: "featureClient.enabled", keyArgument: 1 }],
+        registryGlobs: ["src/flags/**"],
+        constantNamePatterns: ["^rollout[A-Z]"],
+      },
+    }, { cwd: process.cwd() });
+
+    assert.deepEqual(options.featureFlags?.accessPatterns, [
+      { callee: "featureClient.enabled", keyArgument: 1 },
+    ]);
+    assert.deepEqual(options.featureFlags?.registryGlobs, ["src/flags/**"]);
+    assert.deepEqual(options.featureFlags?.constantNamePatterns, ["^rollout[A-Z]"]);
+  });
+
   it("rejects invalid ruleSeverities values", () => {
     assert.throws(
       () => mergeConfig(".", { ruleSeverities: { "naming-drift": "loud" as never } }, { cwd: process.cwd() }),

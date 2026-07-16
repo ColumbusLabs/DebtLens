@@ -5,7 +5,7 @@ import { allDetectors } from "../detectors/index.js";
 import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
 import { buildImportGraphFromFiles } from "./importGraph.js";
 import { DEFAULT_SOURCE_LANGUAGE, detectSourceLanguage, languagesForDetector, parseSourceFile } from "./languages.js";
-import { resolveConcurrency } from "./parallelScan.js";
+import { isCrossFileDetector, resolveConcurrency, runBuiltinDetectorsInWorkers, shouldUseWorkerPool } from "./parallelScan.js";
 import { canonicalize, resolveFileSelection, type FileSelection } from "./resolveFiles.js";
 import { buildScanCacheKey, getScanCachePath, hashContent, readCachedScan, writeCachedScan, type FileSnapshot } from "./scanCache.js";
 import { compareSeverityDesc, meetsMinSeverity } from "./severity.js";
@@ -40,7 +40,7 @@ export async function scan(options: ScanOptions): Promise<ScanResult> {
   const project = createScanProject();
   const files = await loadSourceFiles(project, inputs.snapshots, options);
   const warnings = collectInitialWarnings(inputs, options);
-  const detectorResults = await runDetectors(inputs.detectors, {
+  const detectorResults = await runDetectors(inputs.detectors, inputs.snapshots, {
     project,
     files,
     options,
@@ -75,7 +75,7 @@ async function prepareCoreScanInputs(options: ScanOptions): Promise<CoreScanInpu
     ? "scan cache disabled when plugin detectors are loaded because plugin implementations cannot be content-hash invalidated"
     : undefined;
   const cachePath = options.cache && !cacheDisabledReason ? getScanCachePath(options) : undefined;
-  const cacheKey = cachePath ? buildScanCacheKey(options, detectors) : undefined;
+  const cacheKey = cachePath ? buildScanCacheKey(options, detectors, snapshots) : undefined;
 
   return {
     fileSelection,
@@ -95,7 +95,7 @@ function tryReadScanCache(
 ): ScanResult | undefined {
   if (!inputs.cachePath || !inputs.cacheKey) return undefined;
 
-  const cached = readCachedScan(inputs.cachePath, inputs.cacheKey, inputs.snapshots);
+  const cached = readCachedScan(inputs.cachePath, inputs.cacheKey, inputs.snapshots, options.target);
   if (!cached) return undefined;
 
   cached.summary.elapsedMs = Date.now() - startedAt;
@@ -281,6 +281,9 @@ function loadFileSnapshots(filePaths: string[], options: ScanOptions): FileSnaps
     const content = getContentOverride(options, absolutePath) ?? readFileSync(absolutePath, "utf8");
     return {
       absolutePath,
+      cacheIdentity: absolutePath === options.target
+        ? basename(absolutePath)
+        : relative(options.target, absolutePath).replaceAll("\\", "/"),
       content,
       hash: hashContent(content),
     };
@@ -323,6 +326,7 @@ interface DetectorRunResult {
 
 async function runDetectors(
   detectors: Detector[],
+  snapshots: FileSnapshot[],
   contextBase: Omit<DetectorContext, "addWarning">,
 ): Promise<DetectorRunResult[]> {
   const runOne = async (detector: Detector): Promise<DetectorRunResult> => {
@@ -344,11 +348,40 @@ async function runDetectors(
     };
   };
 
-  if (contextBase.options.parallel || (contextBase.options.concurrency ?? 0) > 1) {
-    const concurrency = contextBase.options.concurrency !== undefined
-      ? resolveConcurrency(contextBase.options)
-      : Math.max(1, detectors.length);
-    return runWithConcurrency(detectors, concurrency, runOne);
+  if (shouldUseWorkerPool(contextBase.options)) {
+    const builtinIds = new Set(allDetectors.map((detector) => detector.id));
+    const builtinDetectors = detectors.filter((detector) => builtinIds.has(detector.id));
+    const pluginDetectors = detectors.filter((detector) => !builtinIds.has(detector.id));
+    const crossFileDetectors = builtinDetectors.filter(isCrossFileDetector);
+    const fileLocalDetectors = builtinDetectors.filter((detector) => !isCrossFileDetector(detector));
+    const concurrency = resolveConcurrency(contextBase.options);
+    const [workerResults, crossFileResults, pluginResults] = await Promise.all([
+      runBuiltinDetectorsInWorkers({
+        detectors: fileLocalDetectors,
+        snapshots,
+        options: contextBase.options,
+        concurrency,
+      }),
+      // Repository-wide rules are their own explicit aggregation phase. They
+      // run once with all files after discovery, never once per file shard.
+      runWithConcurrency(crossFileDetectors, concurrency, runOne),
+      // Plugin functions cannot be structured-cloned. Retain the established
+      // in-process execution path for them while built-ins use worker threads.
+      runWithConcurrency(pluginDetectors, concurrency, runOne),
+    ]);
+    const detectorById = new Map(detectors.map((detector) => [detector.id, detector]));
+    const merged = [
+      ...workerResults.map((result) => ({
+        detector: detectorById.get(result.detectorId) as Detector,
+        issues: result.issues,
+        elapsedMs: result.elapsedMs,
+        warnings: result.warnings,
+      })),
+      ...crossFileResults,
+      ...pluginResults,
+    ];
+    const byId = new Map(merged.map((result) => [result.detector.id, result]));
+    return detectors.map((detector) => byId.get(detector.id) as DetectorRunResult);
   }
 
   const results: DetectorRunResult[] = [];
@@ -406,7 +439,9 @@ function selectDetectors(
   sourceLanguages: SourceLanguage[],
 ): Detector[] {
   if (!ruleIds || ruleIds.length === 0) {
-    return registry.filter((detector) => detectorCanRunOnSourceLanguages(detector, sourceLanguages));
+    return registry.filter((detector) =>
+      detector.defaultEnabled !== false
+      && detectorCanRunOnSourceLanguages(detector, sourceLanguages));
   }
 
   const requested = new Set(ruleIds);

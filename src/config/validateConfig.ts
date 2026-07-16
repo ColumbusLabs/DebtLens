@@ -23,6 +23,7 @@ const knownRootKeys = new Set([
   "duplicatedLiteral",
   "todoComment",
   "namingDrift",
+  "featureFlags",
   "failOn",
   "failOnConfidence",
   "gatePreset",
@@ -102,11 +103,66 @@ export function validateConfigShape(config: unknown): ConfigValidationResult {
   validateObjectWithStringArrayProperty(errors, "duplicatedLiteral", typed.duplicatedLiteral, "ignoreStrings");
   validateNamingDrift(errors, typed.namingDrift);
   validateTodoComment(errors, typed.todoComment);
+  validateFeatureFlags(errors, typed.featureFlags);
   validateBudgets(errors, typed.budgets);
   validateBadge(errors, typed.badge);
   validatePriority(errors, typed.priority);
 
   return { valid: errors.length === 0, errors };
+}
+
+function validateFeatureFlags(errors: string[], value: unknown): void {
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    errors.push("featureFlags must be an object");
+    return;
+  }
+  validateAllowedKeys(errors, "featureFlags", value, ["accessPatterns", "registryGlobs", "constantNamePatterns"]);
+  validateStringArray(errors, "featureFlags.registryGlobs", value.registryGlobs);
+  validateStringArray(errors, "featureFlags.constantNamePatterns", value.constantNamePatterns);
+  validateNonEmptyStringEntries(errors, "featureFlags.registryGlobs", value.registryGlobs);
+  validateNonEmptyStringEntries(errors, "featureFlags.constantNamePatterns", value.constantNamePatterns);
+
+  if (Array.isArray(value.constantNamePatterns)) {
+    value.constantNamePatterns.forEach((pattern, index) => {
+      if (typeof pattern !== "string") return;
+      try {
+        new RegExp(pattern);
+      } catch {
+        errors.push(`featureFlags.constantNamePatterns[${index}] must be a valid regular expression`);
+      }
+    });
+  }
+
+  if (value.accessPatterns !== undefined) {
+    if (!Array.isArray(value.accessPatterns)) {
+      errors.push("featureFlags.accessPatterns must be an array");
+      return;
+    }
+    value.accessPatterns.forEach((pattern, index) => {
+      const prefix = `featureFlags.accessPatterns[${index}]`;
+      if (!isPlainObject(pattern)) {
+        errors.push(`${prefix} must be an object`);
+        return;
+      }
+      validateAllowedKeys(errors, prefix, pattern, ["callee", "keyArgument"]);
+      if (typeof pattern.callee !== "string" || pattern.callee.trim().length === 0) {
+        errors.push(`${prefix}.callee must be a non-empty string`);
+      }
+      if (pattern.keyArgument !== undefined && (!Number.isInteger(pattern.keyArgument) || Number(pattern.keyArgument) < 0)) {
+        errors.push(`${prefix}.keyArgument must be a non-negative integer`);
+      }
+    });
+  }
+}
+
+function validateNonEmptyStringEntries(errors: string[], key: string, value: unknown): void {
+  if (!Array.isArray(value)) return;
+  value.forEach((entry, index) => {
+    if (typeof entry === "string" && entry.trim().length === 0) {
+      errors.push(`${key}[${index}] must be a non-empty string`);
+    }
+  });
 }
 
 function validateUniqueStrings(errors: string[], key: string, value: unknown): void {

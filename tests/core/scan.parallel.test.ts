@@ -24,11 +24,26 @@ describe("scan parallel dispatch", () => {
     const serial = await scan(baseOptions);
     const parallel = await scan({ ...baseOptions, parallel: true });
 
-    assert.deepEqual(
-      parallel.issues.map((issue) => [issue.ruleId, issue.file, issue.location?.startLine]),
-      serial.issues.map((issue) => [issue.ruleId, issue.file, issue.location?.startLine]),
-    );
+    assert.equal(JSON.stringify(parallel.issues), JSON.stringify(serial.issues));
     assert.equal(parallel.summary.performance?.parallel, true);
+  });
+
+  it("keeps --concurrency 1 on the serial execution path", async () => {
+    const cwd = process.cwd();
+    const result = await scan({
+      cwd,
+      target: resolve("examples/react"),
+      include: defaultConfig.include,
+      exclude: [],
+      minSeverity: "medium",
+      rules: ["duplicate-logic", "duplicated-literal", "import-cycle"],
+      thresholds: {},
+      maxFiles: defaultConfig.maxFiles,
+      concurrency: 1,
+    });
+
+    assert.equal(result.summary.performance?.parallel, undefined);
+    assert.equal(result.summary.performance, undefined);
   });
 
   it("keeps concurrency-based dispatch equivalent to serial dispatch", async () => {
@@ -52,6 +67,70 @@ describe("scan parallel dispatch", () => {
       serial.issues.map((issue) => [issue.ruleId, issue.file, issue.location?.startLine]),
     );
     assert.equal(parallel.summary.performance?.parallel, true);
+  });
+
+  it("runs cross-file aggregation once with complete repository context", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cross-file-parallel-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "a.ts"), `import "./b";\nexport const a = "shared-domain-literal";\n`);
+      writeFileSync(join(dir, "src", "b.ts"), `import "./a";\nexport const b = "shared-domain-literal";\n`);
+      writeFileSync(join(dir, "src", "c.ts"), `export const c = "shared-domain-literal";\n`);
+      const baseOptions = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["duplicated-literal", "import-cycle"],
+        thresholds: defaultConfig.thresholds,
+      };
+
+      const serial = await scan({ ...baseOptions, concurrency: 1 });
+      const parallel = await scan({ ...baseOptions, concurrency: 3 });
+
+      assert.ok(serial.issues.some((issue) => issue.ruleId === "duplicated-literal"));
+      assert.ok(serial.issues.some((issue) => issue.ruleId === "import-cycle"));
+      assert.equal(JSON.stringify(parallel.issues), JSON.stringify(serial.issues));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps cross-file feature flag references byte-identical in parallel scans", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-feature-flag-parallel-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "flags.ts"), "export const enableCheckout = true;\n");
+      writeFileSync(
+        join(dir, "src", "app.ts"),
+        'import { enableCheckout } from "./flags";\nexport const route = enableCheckout ? "/new" : "/old";\n',
+      );
+      const baseOptions = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["stale-feature-flag"],
+        thresholds: defaultConfig.thresholds,
+        featureFlags: {
+          registryGlobs: ["src/flags.ts"],
+          accessPatterns: [],
+          constantNamePatterns: [],
+        },
+      };
+
+      const serial = await scan({ ...baseOptions, concurrency: 1 });
+      const parallel = await scan({ ...baseOptions, concurrency: 2 });
+
+      assert.equal(serial.issues.length, 1);
+      assert.match(serial.issues[0]?.message ?? "", /hardcoded to true/);
+      assert.doesNotMatch(serial.issues[0]?.message ?? "", /never referenced/);
+      assert.equal(JSON.stringify(parallel.issues), JSON.stringify(serial.issues));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("caps concurrent detector dispatch when concurrency is set", async () => {

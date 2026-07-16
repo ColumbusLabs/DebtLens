@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -1092,6 +1092,41 @@ describe("debtlens scan performance flags", () => {
       assert.equal(second.status, 0);
       assert.equal(secondJson.summary.performance.cache.hit, true);
       assert.equal(secondJson.summary.totalIssues, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts explicit worker concurrency and a restorable cache directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-cli-cache-dir-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "Widget.ts"), "// TODO remove later\nexport const value = 1;\n");
+      const args = [
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "todo-comment",
+        "--cache-dir",
+        "restored/debtlens",
+        "--concurrency",
+        "2",
+        "--format",
+        "json",
+      ];
+
+      const first = runScan(args);
+      const second = runScan(args);
+      const firstJson = JSON.parse(first.stdout);
+      const secondJson = JSON.parse(second.stdout);
+
+      assert.equal(first.status, 0);
+      assert.equal(firstJson.summary.performance.concurrency, 2);
+      assert.equal(firstJson.summary.performance.parallel, true);
+      assert.equal(existsSync(join(dir, "restored", "debtlens", "cache.json")), true);
+      assert.equal(second.status, 0);
+      assert.equal(secondJson.summary.performance.cache.hit, true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

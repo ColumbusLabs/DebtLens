@@ -3,6 +3,42 @@ import { describe, it } from "node:test";
 import { validateConfigShape } from "../../src/config/validateConfig.js";
 
 describe("validateConfigShape", () => {
+  it("validates feature-flag access and registry configuration", () => {
+    const valid = validateConfigShape({
+      featureFlags: {
+        accessPatterns: [{ callee: "featureClient.isEnabled", keyArgument: 1 }],
+        registryGlobs: ["src/flags/**"],
+        constantNamePatterns: ["^rollout[A-Z]"],
+      },
+    });
+    const invalid = validateConfigShape({
+      featureFlags: {
+        accessPatterns: [{ callee: "", keyArgument: -1 }],
+        constantNamePatterns: ["["],
+      },
+    });
+
+    assert.equal(valid.valid, true, valid.errors.join("; "));
+    assert.equal(invalid.valid, false);
+    assert.ok(invalid.errors.some((error) => error.includes("callee")));
+    assert.ok(invalid.errors.some((error) => error.includes("keyArgument")));
+    assert.ok(invalid.errors.some((error) => error.includes("regular expression")));
+  });
+
+  it("rejects empty feature-flag registry globs and constant-name patterns", () => {
+    const result = validateConfigShape({
+      featureFlags: {
+        registryGlobs: ["", "   "],
+        constantNamePatterns: ["", "\t"],
+      },
+    });
+
+    assert.equal(result.valid, false);
+    assert.match(result.errors.join("\n"), /featureFlags\.registryGlobs\[0\] must be a non-empty string/);
+    assert.match(result.errors.join("\n"), /featureFlags\.registryGlobs\[1\] must be a non-empty string/);
+    assert.match(result.errors.join("\n"), /featureFlags\.constantNamePatterns\[0\] must be a non-empty string/);
+    assert.match(result.errors.join("\n"), /featureFlags\.constantNamePatterns\[1\] must be a non-empty string/);
+  });
   it("accepts comma-separated built-in packs in config", () => {
     const result = validateConfigShape({ pack: "vue,svelte,kotlin,compose" });
 

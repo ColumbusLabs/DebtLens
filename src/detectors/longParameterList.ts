@@ -66,7 +66,7 @@ function maybePushIssue(
         : `${name} has ${params.length} parameters.`,
     evidence: [
       `Parameters: ${params.length} / ${maxParams}`,
-      ...(booleanCount > 0 ? [`Boolean parameters: ${booleanCount} / ${maxBooleans}`] : []),
+      `Boolean parameters: ${booleanCount} / ${maxBooleans}`,
       `Signature: ${truncateSignature(node)}`,
     ],
     suggestion: overBooleanBudget

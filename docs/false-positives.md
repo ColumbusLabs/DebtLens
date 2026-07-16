@@ -14,6 +14,35 @@ adding inline suppressions.
 | Low-confidence finding family | `ruleConfidenceFloors` or `--fail-on-confidence` | Keeps findings visible while preventing weak gates. |
 | One documented exception | Inline suppression with a reason | Auditable, local, and visible in JSON/SARIF output. |
 
+## Calibrate thresholds to your repo
+
+Default thresholds are deliberately generic. On a large legacy repo they can be noisy; on a small repo they can miss real debt. After `debtlens adopt` picks rules and severity, run calibration to tune the numbers:
+
+```bash
+# Preview percentile-based threshold suggestions (default p90)
+debtlens calibrate .
+
+# Tune aggressiveness and merge suggestions into debtlens.config.json
+debtlens calibrate . --percentile 85 --write
+```
+
+Calibration temporarily lowers supported numeric trigger thresholds so the sample
+includes below-threshold code, not just existing findings. The report also lists
+selected policy floors, boolean switches, similarity controls, and safety caps
+under **Not calibrated** when they cannot be inferred honestly from a distribution.
+
+Calibration scans the target, collects observed metrics for threshold-driven rules (function length, branch counts, and similar), and suggests values at the chosen percentile so roughly the worst N% is flagged. Review the printed config snippet before using `--write`; unrelated config keys are preserved.
+
+Pair calibration with payoff ranking and triage for a low-noise first rollout:
+
+```bash
+debtlens calibrate . --percentile 90
+debtlens scan . --sort payoff --hotspots
+debtlens triage .
+```
+
+See [`docs/prioritization.md`](./prioritization.md) for payoff scoring and per-area budgets.
+
 ## Baseline before suppressing
 
 ```bash

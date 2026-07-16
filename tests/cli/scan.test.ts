@@ -427,6 +427,44 @@ describe("debtlens scan output formats", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("sorts findings by payoff and prints top payoff targets", () => {
+    const result = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment,prop-drilling",
+      "--sort",
+      "payoff",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(result.status, 0);
+    const parsed = JSON.parse(result.stdout) as {
+      issues: Array<{ payoffScore?: number }>;
+      summary: { topPayoffTargets?: Array<{ payoffScore: number; fingerprint: string }> };
+    };
+    assert.ok(parsed.issues.length > 1);
+    assert.ok(parsed.issues.every((issue) => issue.payoffScore !== undefined));
+    for (let index = 1; index < parsed.issues.length; index += 1) {
+      const previous = parsed.issues[index - 1]?.payoffScore ?? 0;
+      const current = parsed.issues[index]?.payoffScore ?? 0;
+      assert.ok(previous >= current);
+    }
+    assert.ok(parsed.summary.topPayoffTargets);
+    assert.ok((parsed.summary.topPayoffTargets?.length ?? 0) <= 10);
+    assert.deepEqual(parsed.summary.topPayoffTargets?.map((target) => target.payoffScore), parsed.issues.slice(0, 10).map((issue) => issue.payoffScore));
+
+    const terminal = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment",
+      "--sort",
+      "payoff",
+    ]);
+    assert.equal(terminal.status, 0);
+    assert.match(terminal.stdout, /Top payoff targets/);
+  });
 });
 
 describe("debtlens scan fail-on confidence", () => {

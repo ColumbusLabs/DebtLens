@@ -1,5 +1,6 @@
 import { isSeverity, severities } from "../core/severity.js";
 import { gatePresets } from "../core/gatePresets.js";
+import { validateBudgetPattern } from "../core/budgets.js";
 import { RULE_PACK_IDS } from "./packs.js";
 import type { DebtLensConfig } from "../core/types.js";
 import { DEBTLENS_PLUGIN_API_VERSION } from "../plugins/version.js";
@@ -304,6 +305,8 @@ function validateBudgets(errors: string[], value: unknown): void {
     return;
   }
   for (const [pattern, budget] of Object.entries(value)) {
+    const patternError = validateBudgetPattern(pattern);
+    if (patternError) errors.push(`budgets.${pattern} ${patternError}`);
     if (!isPlainObject(budget)) {
       errors.push(`budgets.${pattern} must be an object`);
       continue;

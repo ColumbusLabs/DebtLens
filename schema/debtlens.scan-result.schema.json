@@ -376,6 +376,73 @@
           "type": "integer",
           "minimum": 0
         },
+        "topPayoffTargets": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "fingerprint",
+              "ruleId",
+              "file",
+              "severity",
+              "payoffScore"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fingerprint": {
+                "type": "string"
+              },
+              "ruleId": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "info",
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "payoffScore": {
+                "type": "number",
+                "minimum": 0
+              },
+              "location": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "startLine"
+                ],
+                "properties": {
+                  "startLine": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "startColumn": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "endLine": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "endColumn": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
         "warnings": {
           "type": "array",
           "items": {

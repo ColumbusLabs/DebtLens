@@ -37,6 +37,16 @@ export interface ReportedDebtIssue extends DebtIssue {
   fingerprint: string;
 }
 
+export interface PayoffTarget {
+  id: string;
+  fingerprint: string;
+  ruleId: string;
+  file: string;
+  severity: Severity;
+  payoffScore: number;
+  location?: IssueLocation;
+}
+
 export interface SourceFileInfo {
   absolutePath: string;
   relativePath: string;
@@ -541,6 +551,8 @@ export interface ScanSummary {
   profile?: ScanProfile;
   performance?: ScanPerformance;
   importGraph?: ImportGraph;
+  /** Deterministic, bounded payoff shortlist for machine consumers. */
+  topPayoffTargets?: PayoffTarget[];
 }
 
 export interface ScanResult {

@@ -9,6 +9,9 @@ export function registerCalibrateCommand(program: Command): void {
     .argument("[target]", "directory or file to scan", ".")
     .option("--cwd <path>", "working directory", process.cwd())
     .option("--config <path>", "path to debtlens.config.json")
+    .option("--pack <name>", "rule pack preset to scan with")
+    .option("--rules <rules>", "comma-separated rule ids to run")
+    .option("--threshold <thresholds>", "comma-separated key=value threshold overrides")
     .option("--percentile <count>", "percentile used for suggestions (50-99)", parseInteger)
     .option("--write", "merge suggested thresholds into debtlens.config.json")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {

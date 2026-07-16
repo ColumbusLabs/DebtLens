@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyBaseline,
+  addIssuesToBaseline,
   compareBaseline,
   compareBaselineDetailed,
   computeFingerprint,
@@ -132,6 +133,17 @@ describe("compareBaseline", () => {
 });
 
 describe("baseline maintenance helpers", () => {
+  it("adds triaged findings with summary and snapshot metadata kept consistent", () => {
+    const finding = issue({ ruleId: "todo-comment", severity: "low" });
+    const baseline = createBaseline([]);
+    addIssuesToBaseline(baseline, [finding]);
+
+    assert.equal(baseline.summary?.totalIssues, 1);
+    assert.equal(baseline.summary?.byRule["todo-comment"], 1);
+    assert.equal(baseline.summary?.bySeverity.low, 1);
+    assert.equal(baseline.issues?.[finding.fingerprint]?.ruleId, "todo-comment");
+    assert.equal(compareBaselineDetailed([finding], baseline).newIssues.length, 0);
+  });
   it("reports detailed new, resolved, stale, and changed fingerprint data with occurrence counts", () => {
     const repeated = issue({ fingerprint: "dl_repeated" });
     const fresh = issue({

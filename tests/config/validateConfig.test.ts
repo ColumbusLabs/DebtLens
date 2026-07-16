@@ -104,6 +104,12 @@ describe("validateConfigShape", () => {
     assert.deepEqual(result.errors, []);
   });
 
+  it("rejects negated budget globs instead of silently changing their meaning", () => {
+    const result = validateConfigShape({ budgets: { "!src/generated/**": { maxIssues: 0 } } });
+    assert.equal(result.valid, false);
+    assert.match(result.errors.join("\n"), /must not use negation/);
+  });
+
   it("rejects invalid budgets, badge, and payoff priority config", () => {
     const result = validateConfigShape({
       budgets: {

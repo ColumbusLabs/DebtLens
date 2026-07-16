@@ -121,6 +121,71 @@ export const route = enableCheckout ? "/new" : "/old";
     assert.match(issues[0]?.message ?? "", /checkout is hardcoded to false/);
   });
 
+  it("does not confuse same-named properties on unrelated receivers with registry access", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const flags = { checkout: true };\n",
+      "app.ts": "const cart = { checkout: false };\nif (cart.checkout) purchase();\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /checkout.*never referenced/);
+  });
+
+  it("does not let unrelated element access suppress unreferenced registry keys", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const flags = { checkout: true };\n",
+      "app.ts": "const values = [1];\nconsole.log(values[0]);\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /checkout.*never referenced/);
+  });
+
+  it("resolves literal property access through an imported registry alias", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const flags = { checkout: true };\n",
+      "app.ts": "import { flags as rolloutFlags } from './flags';\nif (rolloutFlags.checkout) launch();\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /checkout is hardcoded to true/);
+  });
+
+  it("scopes dynamic element access through an imported alias to that registry receiver", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const flags = { checkout: true };\n",
+      "otherFlags.ts": "export const otherFlags = { search: false };\n",
+      "app.ts": "import { flags as rolloutFlags } from './flags';\nif (rolloutFlags[currentFlag]) launch();\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts", "otherFlags.ts"],
+        accessPatterns: [],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(issues.length, 1);
+    assert.match(issues[0]?.message ?? "", /search.*never referenced/);
+  });
+
   it("suppresses unreferenced claims when configured access uses a dynamic key", async () => {
     const issues = await runDetector(featureFlagDebtDetector, {
       "flags.ts": "export const flags = { checkout: true };\n",

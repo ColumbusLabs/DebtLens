@@ -16,10 +16,10 @@ interface FlagDefinition {
   line: number;
   key: string;
   value: boolean;
-  kind: "constant" | "registry-key";
   registry: boolean;
   referenced?: boolean;
   conditionallyReferenced?: boolean;
+  unknownReference?: boolean;
 }
 
 interface References {
@@ -28,30 +28,33 @@ interface References {
   unknownKeyAccess: boolean;
 }
 
+interface RegistryReceiver {
+  declaration: MorphNode;
+  name: string;
+  definitionsByKey: Map<string, FlagDefinition[]>;
+}
+
 export const featureFlagDebtDetector: Detector = {
   id: "stale-feature-flag",
   name: "Stale feature flag",
   description: "Flags configured feature flags that are permanently enabled/disabled or unused.",
   defaultSeverity: "medium",
   tags: ["feature-flags", "cleanup", "maintainability"],
+  defaultEnabled: false,
   detect(context): DebtIssue[] {
     const config = resolveConfig(context.options.featureFlags);
     const registryMatchers = config.registryGlobs.map(globToRegExp);
     const nameMatchers = config.constantNamePatterns.map((pattern) => new RegExp(pattern));
-    const references = collectReferences(context.files, config.accessPatterns);
-    const definitions = collectDefinitions(context.files, registryMatchers, nameMatchers);
+    const { definitions, registryReceivers } = collectDefinitions(context.files, registryMatchers, nameMatchers);
+    const references = collectReferences(context.files, config.accessPatterns, registryReceivers);
 
     return definitions.flatMap((definition) => {
       const configuredKeyReference = definition.registry && references.keys.has(definition.key);
       const configuredConditionalReference = definition.registry && references.conditionalKeys.has(definition.key);
-      const referenced = definition.kind === "constant"
-        ? definition.referenced === true || configuredKeyReference
-        : references.keys.has(definition.key);
-      const conditionallyReferenced = definition.kind === "constant"
-        ? definition.conditionallyReferenced === true || configuredConditionalReference
-        : references.conditionalKeys.has(definition.key);
+      const referenced = definition.referenced === true || configuredKeyReference;
+      const conditionallyReferenced = definition.conditionallyReferenced === true || configuredConditionalReference;
 
-      if (definition.registry && !referenced && !references.unknownKeyAccess) {
+      if (definition.registry && !referenced && !definition.unknownReference && !references.unknownKeyAccess) {
         return [createIssue({
           detector: featureFlagDebtDetector,
           confidence: 0.9,
@@ -92,8 +95,9 @@ function collectDefinitions(
   files: SourceFileInfo[],
   registryMatchers: RegExp[],
   nameMatchers: RegExp[],
-): FlagDefinition[] {
+): { definitions: FlagDefinition[]; registryReceivers: RegistryReceiver[] } {
   const definitions: FlagDefinition[] = [];
+  const receiversByDeclaration = new Map<MorphNode, RegistryReceiver>();
 
   for (const file of files) {
     const isRegistry = registryMatchers.some((matcher) => matcher.test(normalizePath(file.relativePath)));
@@ -107,7 +111,7 @@ function collectDefinitions(
       const nameNode = declaration.getNameNode();
       const referenceNodes = Node.isIdentifier(nameNode) ? nameNode.findReferencesAsNodes() : [];
       definitions.push({
-        ...definitionFor(file, declaration, key, value, "constant", isRegistry),
+        ...definitionFor(file, declaration, key, value, isRegistry),
         referenced: referenceNodes.length > 0,
         conditionallyReferenced: referenceNodes.some(isUsedAsCondition),
       });
@@ -119,11 +123,29 @@ function collectDefinitions(
       const value = readBooleanLiteral(property.getInitializer());
       const key = readPropertyName(property.getNameNode());
       if (value === undefined || key === undefined) continue;
-      definitions.push(definitionFor(file, property, key, value, "registry-key", true));
+      const definition = definitionFor(file, property, key, value, true);
+      definitions.push(definition);
+
+      const objectLiteral = property.getParent();
+      const declaration = objectLiteral.getParent();
+      if (!Node.isVariableDeclaration(declaration)
+        || declaration.getInitializer() !== objectLiteral
+        || !isTopLevelVariable(declaration)) continue;
+      const nameNode = declaration.getNameNode();
+      if (!Node.isIdentifier(nameNode)) continue;
+      const receiver = receiversByDeclaration.get(declaration) ?? {
+        declaration,
+        name: nameNode.getText(),
+        definitionsByKey: new Map<string, FlagDefinition[]>(),
+      };
+      const keyDefinitions = receiver.definitionsByKey.get(key) ?? [];
+      keyDefinitions.push(definition);
+      receiver.definitionsByKey.set(key, keyDefinitions);
+      receiversByDeclaration.set(declaration, receiver);
     }
   }
 
-  return definitions;
+  return { definitions, registryReceivers: [...receiversByDeclaration.values()] };
 }
 
 function definitionFor(
@@ -131,7 +153,6 @@ function definitionFor(
   node: MorphNode,
   key: string,
   value: boolean,
-  kind: FlagDefinition["kind"],
   registry: boolean,
 ): FlagDefinition {
   return {
@@ -139,12 +160,15 @@ function definitionFor(
     line: nodeLineSpan(node).startLine,
     key,
     value,
-    kind,
     registry,
   };
 }
 
-function collectReferences(files: SourceFileInfo[], patterns: FeatureFlagAccessPattern[]): References {
+function collectReferences(
+  files: SourceFileInfo[],
+  patterns: FeatureFlagAccessPattern[],
+  registryReceivers: RegistryReceiver[],
+): References {
   const references: References = {
     keys: new Set(),
     conditionalKeys: new Set(),
@@ -153,17 +177,18 @@ function collectReferences(files: SourceFileInfo[], patterns: FeatureFlagAccessP
 
   for (const file of files) {
     for (const access of file.sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)) {
-      references.keys.add(access.getName());
-      if (isUsedAsCondition(access)) references.conditionalKeys.add(access.getName());
+      const receiver = findRegistryReceiver(access.getExpression(), registryReceivers);
+      if (receiver) markRegistryReference(receiver, access.getName(), isUsedAsCondition(access));
     }
     for (const access of file.sourceFile.getDescendantsOfKind(SyntaxKind.ElementAccessExpression)) {
+      const receiver = findRegistryReceiver(access.getExpression(), registryReceivers);
+      if (!receiver) continue;
       const key = readLiteralKey(access.getArgumentExpression());
       if (key === undefined) {
-        references.unknownKeyAccess = true;
+        markUnknownRegistryReference(receiver);
         continue;
       }
-      references.keys.add(key);
-      if (isUsedAsCondition(access)) references.conditionalKeys.add(key);
+      markRegistryReference(receiver, key, isUsedAsCondition(access));
     }
 
     for (const call of file.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
@@ -180,6 +205,58 @@ function collectReferences(files: SourceFileInfo[], patterns: FeatureFlagAccessP
   }
 
   return references;
+}
+
+function findRegistryReceiver(expression: MorphNode, receivers: RegistryReceiver[]): RegistryReceiver | undefined {
+  const symbol = expression.getSymbol();
+  const canonicalSymbol = symbol?.getAliasedSymbol() ?? symbol;
+  const declarations = canonicalSymbol?.getDeclarations() ?? [];
+  const symbolicMatch = receivers.find((receiver) => declarations.includes(receiver.declaration));
+  if (symbolicMatch) return symbolicMatch;
+  if (!Node.isIdentifier(expression)) return undefined;
+
+  const importedMatch = findImportedRegistryReceiver(expression, receivers);
+  if (importedMatch) return importedMatch;
+  if (declarations.length > 0) return undefined;
+
+  const nameMatches = receivers.filter((receiver) => receiver.name === expression.getText());
+  return nameMatches.length === 1 ? nameMatches[0] : undefined;
+}
+
+function findImportedRegistryReceiver(
+  expression: MorphNode,
+  receivers: RegistryReceiver[],
+): RegistryReceiver | undefined {
+  if (!Node.isIdentifier(expression)) return undefined;
+  const localName = expression.getText();
+  for (const importDeclaration of expression.getSourceFile().getImportDeclarations()) {
+    const importedSource = importDeclaration.getModuleSpecifierSourceFile();
+    if (!importedSource) continue;
+    for (const namedImport of importDeclaration.getNamedImports()) {
+      const importedLocalName = namedImport.getAliasNode()?.getText() ?? namedImport.getName();
+      if (importedLocalName !== localName) continue;
+      const receiver = receivers.find((candidate) =>
+        candidate.name === namedImport.getName()
+        && candidate.declaration.getSourceFile() === importedSource);
+      if (receiver) return receiver;
+    }
+  }
+  return undefined;
+}
+
+function markUnknownRegistryReference(receiver: RegistryReceiver): void {
+  for (const definitions of receiver.definitionsByKey.values()) {
+    for (const definition of definitions) {
+      definition.unknownReference = true;
+    }
+  }
+}
+
+function markRegistryReference(receiver: RegistryReceiver, key: string, conditional: boolean): void {
+  for (const definition of receiver.definitionsByKey.get(key) ?? []) {
+    definition.referenced = true;
+    if (conditional) definition.conditionallyReferenced = true;
+  }
 }
 
 function callMatchesPattern(call: CallExpression, pattern: FeatureFlagAccessPattern): boolean {

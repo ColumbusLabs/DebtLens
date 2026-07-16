@@ -439,7 +439,9 @@ function selectDetectors(
   sourceLanguages: SourceLanguage[],
 ): Detector[] {
   if (!ruleIds || ruleIds.length === 0) {
-    return registry.filter((detector) => detectorCanRunOnSourceLanguages(detector, sourceLanguages));
+    return registry.filter((detector) =>
+      detector.defaultEnabled !== false
+      && detectorCanRunOnSourceLanguages(detector, sourceLanguages));
   }
 
   const requested = new Set(ruleIds);

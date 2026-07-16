@@ -245,6 +245,8 @@ export interface Detector {
   description: string;
   defaultSeverity: Severity;
   tags: string[];
+  /** When false, the detector runs only when selected explicitly by rule id or pack. */
+  defaultEnabled?: boolean;
   /** Languages this detector understands. Omitted means TypeScript/JavaScript only. */
   languages?: SourceLanguage[];
   detect: (context: DetectorContext) => Promise<DebtIssue[]> | DebtIssue[];

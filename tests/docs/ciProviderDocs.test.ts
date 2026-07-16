@@ -46,6 +46,17 @@ describe("provider CI docs", () => {
     assert.match(reportGalleryDocs, /CODEOWNERS-based owner\s+summaries/);
   });
 
+  it("documents HTML graph/treemap and badge report surfaces", () => {
+    assert.match(reportGalleryDocs, /--format html --output debtlens-report\.html/);
+    assert.match(reportGalleryDocs, /import-graph SVG/);
+    assert.match(reportGalleryDocs, /debt treemap/);
+    assert.match(reportGalleryDocs, /self-contained \(inline SVG, no CDN assets\)/);
+    assert.match(reportGalleryDocs, /--format badge --output debtlens-badge\.svg/);
+    assert.match(reportGalleryDocs, /shields\.io endpoint/);
+    assert.match(readme, /--format badge --output debtlens-badge\.svg/);
+    assert.match(readme, /debtlens-badge\.json/);
+  });
+
   it("documents GitLab Code Quality baseline and new-code gates", () => {
     assert.match(gitLabDocs, /--format gitlab-codequality --output gl-code-quality-report\.json/);
     assert.match(gitLabDocs, /reports:\n\s+codequality: gl-code-quality-report\.json/);

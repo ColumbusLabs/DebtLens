@@ -799,25 +799,22 @@ jobs:
         run: echo "DebtLens total=${{ steps.debtlens.outputs.total-issues }} top=${{ steps.debtlens.outputs.top-rule }}"
 ```
 
-A Shields endpoint badge can be generated from the artifact by publishing a tiny JSON file derived from `summary.totalIssues`:
-
-```json
-{
-  "schemaVersion": 1,
-  "label": "DebtLens",
-  "message": "12 issues",
-  "color": "orange"
-}
-```
-
-For example:
+Generate a README status badge directly from a scan:
 
 ```bash
-jq '{schemaVersion: 1, label: "DebtLens", message: (.summary.totalIssues|tostring + " issues"), color: (if .summary.totalIssues == 0 then "brightgreen" elif .summary.bySeverity.high > 0 then "red" else "orange" end)}' debtlens-report.json > debtlens-badge.json
+debtlens scan . --format badge --output debtlens-badge.svg
 ```
 
-For a stricter "0 new high debt" badge after `--baseline` or `--diff-base`, derive the
-message from the remaining high-severity issues in the filtered report:
+That writes a self-contained SVG and a sibling `debtlens-badge.json` shields.io endpoint
+payload. Color thresholds are configurable via the `badge` config block (`greenMax` /
+`yellowMax`). Publish the JSON from any static endpoint:
+
+```markdown
+![DebtLens](https://img.shields.io/endpoint?url=https://example.com/debtlens-badge.json)
+```
+
+You can still derive a custom badge from a JSON report artifact with `jq` when you need a
+stricter "0 new high debt" message after `--baseline` or `--diff-base`:
 
 ```bash
 jq '{
@@ -826,12 +823,6 @@ jq '{
   message: (if [.issues[] | select(.severity == "high")] | length == 0 then "0 new high debt" else (([.issues[] | select(.severity == "high")] | length | tostring) + " new high") end),
   color: (if [.issues[] | select(.severity == "high")] | length == 0 then "brightgreen" else "red" end)
 }' debtlens-report.json > debtlens-high-badge.json
-```
-
-Publish that JSON file from any static endpoint and use the Shields endpoint badge:
-
-```markdown
-![DebtLens](https://img.shields.io/endpoint?url=https://example.com/debtlens-high-badge.json)
 ```
 
 Other CI templates: [GitLab](./docs/ci-gitlab.md), [Bitbucket](./docs/ci-bitbucket.md), and [Azure Pipelines](./docs/ci-azure.md).

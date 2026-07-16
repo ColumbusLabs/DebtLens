@@ -19,6 +19,20 @@ describe("graph reporter", () => {
     assert.match(treemap, /<svg/);
   });
 
+  it("highlights cycle edges in the import graph", () => {
+    const graph: ImportGraph = {
+      nodes: ["a.ts", "b.ts", "c.ts"],
+      edges: [
+        { from: "a.ts", to: "b.ts", inCycle: true },
+        { from: "b.ts", to: "c.ts", inCycle: false },
+      ],
+      cycles: [["a.ts", "b.ts"]],
+    };
+    const svg = renderImportGraphSvg(graph);
+    assert.match(svg, /stroke="#e05d44"/);
+    assert.match(svg, /stroke="#8c959f"/);
+  });
+
   it("escapes graph and treemap labels", () => {
     const graph: ImportGraph = {
       nodes: ["src/<owner>&file.ts", "b.ts"],

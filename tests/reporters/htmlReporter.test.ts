@@ -28,6 +28,39 @@ describe("html reporter", () => {
     assert.match(html, /Top payoff targets/);
     assert.match(html, /1 low-severity finding/);
     assert.match(html, /Debt Heatmap/);
+    assert.match(html, /Debt treemap/);
+    assert.match(html, /aria-label="Debt treemap"/);
+    assert.doesNotMatch(html, /https?:\/\//);
+  });
+
+  it("renders import graph with cycle edges when summary.importGraph is present", () => {
+    const result = makeResult([{
+      id: "1",
+      fingerprint: "1",
+      ruleId: "import-cycle",
+      ruleName: "Import cycle",
+      severity: "medium",
+      confidence: 0.8,
+      message: "Cycle detected",
+      file: "a.ts",
+      location: { startLine: 1 },
+      tags: [],
+    }]);
+    result.summary.importGraph = {
+      nodes: ["a.ts", "b.ts"],
+      edges: [
+        { from: "a.ts", to: "b.ts", inCycle: true },
+        { from: "b.ts", to: "a.ts", inCycle: true },
+      ],
+      cycles: [["a.ts", "b.ts"]],
+    };
+
+    const html = renderHtml(result);
+
+    assert.match(html, /Import graph/);
+    assert.match(html, /aria-label="Import graph"/);
+    assert.match(html, /stroke="#e05d44"/);
+    assert.doesNotMatch(html, /https?:\/\//);
   });
 
   it("renders an empty state", () => {

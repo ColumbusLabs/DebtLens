@@ -27,6 +27,7 @@ describe("debtlens completions", () => {
     assert.match(result.stdout, /\$\{COMP_WORDS\[1\]\}" == "compare" && "\$prev" == "--format"/);
     assert.match(result.stdout, /terminal markdown json/);
     assert.match(result.stdout, /gitlab-codequality/);
+    assert.match(result.stdout, /badge/);
     assert.match(result.stdout, /--dry-run/);
     assert.match(result.stdout, /--audit-suppressions/);
     assert.match(result.stdout, /--hotspots/);
@@ -78,7 +79,7 @@ describe("debtlens completions", () => {
     assert.match(fish.stdout, /-l codeowners/);
     assert.match(fish.stdout, /-l junit-fail-on -a "info low medium high"/);
     assert.match(fish.stdout, /-l gate -a "advisory new-code strict-new-code legacy-baseline"/);
-    assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline compare" -l format -a "terminal json markdown pr-comment sarif html junit gitlab-codequality"/);
+    assert.match(fish.stdout, /not __fish_seen_subcommand_from baseline compare" -l format -a "terminal json markdown pr-comment sarif html junit gitlab-codequality badge"/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from compare" -l format -a "terminal markdown json"/);
     assert.match(fish.stdout, /__fish_seen_subcommand_from baseline" -l format -a "terminal json"/);
   });

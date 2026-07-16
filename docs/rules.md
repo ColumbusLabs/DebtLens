@@ -1043,7 +1043,7 @@ When this is a false positive:
 - deliberate fire-and-forget marked with `void`
 - callbacks passed directly to APIs that manage promise lifecycle
 
-Confidence: **0.65–0.82**. Higher when the callee is clearly async or returns `Promise<...>`.
+Confidence: **0.68–0.88**. Higher when the callee is clearly async or returns `Promise<...>`.
 
 ## `commented-out-code`
 

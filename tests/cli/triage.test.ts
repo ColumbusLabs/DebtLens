@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
@@ -28,6 +28,34 @@ describe("debtlens triage", () => {
     }
   });
 
+  for (const [label, answers, expected] of [
+    ["quit", ["q"], { kept: 0, baselined: 0, suppressed: 0, skipped: 0 }],
+    ["keep", ["k"], { kept: 1, baselined: 0, suppressed: 0, skipped: 0 }],
+  ] as const) {
+    it(`does not create a baseline file after a non-dry-run ${label} flow`, async () => {
+      const dir = mkdtempSync(join(tmpdir(), `debtlens-triage-${label}-`));
+      try {
+        mkdirSync(join(dir, "src"));
+        writeFileSync(join(dir, "src", "app.ts"), "// TODO triage me\nexport const value = 1;\n");
+        const baselinePath = join(dir, "debtlens-baseline.json");
+        const queue = [...answers];
+        const counts = await runTriage({
+          target: ".",
+          cwd: dir,
+          baselinePath,
+          cliOptions: { rules: "todo-comment" },
+          output: new Writable({ write(_chunk, _encoding, callback) { callback(); } }),
+          ask: async () => queue.shift() ?? "q",
+        });
+
+        assert.deepEqual(counts, expected);
+        assert.equal(existsSync(baselinePath), false);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
   it("baselines a finding when requested", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-triage-baseline-"));
     try {
@@ -55,6 +83,42 @@ describe("debtlens triage", () => {
       assert.equal(baseline.summary.byRule["todo-comment"], 1);
       assert.equal(Object.values(baseline.issues)[0]?.ruleId, "todo-comment");
       assert.equal(Object.values(baseline.issues)[0]?.count, 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not re-present or inflate a finding already in the loaded baseline", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-triage-rerun-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), "// TODO triage me\nexport const value = 1;\n");
+      const baselinePath = join(dir, "debtlens-baseline.json");
+      await runTriage({
+        target: ".",
+        cwd: dir,
+        baselinePath,
+        cliOptions: { rules: "todo-comment" },
+        output: new Writable({ write(_chunk, _encoding, callback) { callback(); } }),
+        ask: async () => "b",
+      });
+      const before = readFileSync(baselinePath, "utf8");
+      let prompts = 0;
+      const output: string[] = [];
+
+      const counts = await runTriage({
+        target: ".",
+        cwd: dir,
+        baselinePath,
+        cliOptions: { rules: "todo-comment" },
+        output: new Writable({ write(chunk, _encoding, callback) { output.push(String(chunk)); callback(); } }),
+        ask: async () => { prompts += 1; return "b"; },
+      });
+
+      assert.deepEqual(counts, { kept: 0, baselined: 0, suppressed: 0, skipped: 0 });
+      assert.equal(prompts, 0);
+      assert.equal(output.join(""), "");
+      assert.equal(readFileSync(baselinePath, "utf8"), before);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -108,6 +172,7 @@ describe("debtlens triage", () => {
       });
 
       assert.equal(counts.suppressed, 1);
+      assert.equal(existsSync(join(dir, "debtlens-baseline.json")), false);
       assert.match(readFileSync(sourcePath, "utf8"), /^\/\/ debtlens-disable-next-line todo-comment -- tracked in PROJ-42\n\/\/ TODO/);
 
       const verificationAnswers = ["q"];

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { DEFAULT_BASELINE_FILENAME, addIssuesToBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
+import { DEFAULT_BASELINE_FILENAME, addIssuesToBaseline, createBaseline, filterIssues, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import type { DebtIssue, ScanOptions } from "../core/types.js";
 import { loadConfiguredPlugins } from "./scanPipeline.js";
@@ -51,9 +51,10 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
     pluginVocabulary: pluginContribution?.vocabulary,
   });
   const result = await scan(options);
-  const issues = [...result.issues];
   const baselinePath = resolve(cwd, input.baselinePath ?? DEFAULT_BASELINE_FILENAME);
-  const baseline = existsSync(baselinePath) ? loadBaseline(cwd, baselinePath) : createBaseline([]);
+  const baselineExists = existsSync(baselinePath);
+  const baseline = baselineExists ? loadBaseline(cwd, baselinePath) : createBaseline([]);
+  const issues = baselineExists ? filterIssues(result.issues, baseline) : [...result.issues];
   const suppressions: string[] = [];
   const processedIndexes = new Set<number>();
   const counts: TriageActionResult = { kept: 0, baselined: 0, suppressed: 0, skipped: 0 };
@@ -124,8 +125,10 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
     rl?.close();
   }
 
-  if (!input.dryRun) {
+  if (!input.dryRun && counts.baselined > 0) {
     writeBaseline(cwd, baselinePath, baseline);
+  }
+  if (!input.dryRun) {
     if (suppressions.length > 0) {
       output.write("\nApplied suppression directives:\n");
       for (const directive of suppressions) output.write(directive);

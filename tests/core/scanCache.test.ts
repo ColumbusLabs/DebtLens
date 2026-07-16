@@ -62,6 +62,36 @@ describe("scan cache", () => {
     );
   });
 
+  it("keeps keys portable across checkout roots and invalidates config or scanner versions", () => {
+    const makeOptions = (root: string): ScanOptions => ({
+      cwd: root,
+      target: join(root, "packages", "app"),
+      include: defaultConfig.include,
+      exclude: defaultConfig.exclude,
+      minSeverity: "low",
+      rules: ["todo-comment"],
+      thresholds: defaultConfig.thresholds,
+      changedFiles: [join(root, "packages", "app", "src", "index.ts")],
+    });
+    const first = makeOptions("/runner/one/checkout");
+    const restored = makeOptions("/different/root/checkout");
+
+    assert.equal(buildScanCacheKey(first, [stubDetector]), buildScanCacheKey(restored, [stubDetector]));
+    assert.notEqual(
+      buildScanCacheKey(first, [stubDetector]),
+      buildScanCacheKey({ ...first, thresholds: { ...first.thresholds, "todo-comment.limit": 2 } }, [stubDetector]),
+    );
+    assert.notEqual(
+      buildScanCacheKey(first, [stubDetector], [], "0.4.0"),
+      buildScanCacheKey(first, [stubDetector], [], "0.5.0"),
+    );
+    const source = join(first.target, "src", "index.ts");
+    assert.notEqual(
+      buildScanCacheKey(first, [stubDetector], [{ absolutePath: source, cacheIdentity: "src/index.ts", content: "one", hash: "one" }]),
+      buildScanCacheKey(first, [stubDetector], [{ absolutePath: source, cacheIdentity: "src/index.ts", content: "two", hash: "two" }]),
+    );
+  });
+
   it("writes cache files atomically without leaving temp files behind", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-cache-"));
     try {

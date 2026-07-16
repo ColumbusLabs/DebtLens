@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { resolveConcurrency, shardFiles } from "../../src/core/parallelScan.js";
+import { defaultConcurrency, resolveConcurrency, shardFiles } from "../../src/core/parallelScan.js";
 
 describe("parallel scan helpers", () => {
   it("shards files deterministically", async () => {
@@ -10,8 +10,9 @@ describe("parallel scan helpers", () => {
     assert.deepEqual(shards[1], ["b.ts", "d.ts"]);
   });
 
-  it("defaults concurrency to 1 unless configured", () => {
+  it("uses serial execution by default and a bounded CPU default for --parallel", () => {
     assert.equal(resolveConcurrency({ concurrency: 3 } as never), 3);
     assert.equal(resolveConcurrency({} as never), 1);
+    assert.equal(resolveConcurrency({ parallel: true } as never), defaultConcurrency());
   });
 });

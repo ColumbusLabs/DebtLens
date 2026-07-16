@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -179,6 +179,42 @@ describe("scan cache", () => {
       assert.equal(second.summary.performance?.cache?.hit, true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reuses a restored cache after the checkout root changes", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "debtlens-portable-cache-"));
+    const firstRoot = join(parent, "runner-one", "checkout");
+    const secondRoot = join(parent, "runner-two", "checkout");
+    const cacheDir = join(parent, "restored-cache");
+    try {
+      for (const root of [firstRoot, secondRoot]) {
+        mkdirSync(join(root, "src"), { recursive: true });
+        writeFileSync(join(root, "src", "app.ts"), "// TODO portable cache\nexport const value = 1;\n");
+      }
+      const makeOptions = (root: string) => ({
+        cwd: root,
+        target: root,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["todo-comment"],
+        thresholds: defaultConfig.thresholds,
+        cache: true,
+        cacheDir,
+      });
+
+      const first = await scan(makeOptions(firstRoot));
+      const restored = await scan(makeOptions(secondRoot));
+
+      assert.equal(first.summary.performance?.cache?.hit, false);
+      assert.equal(restored.summary.performance?.cache?.hit, true);
+      assert.equal(restored.options.target, secondRoot);
+      assert.equal(JSON.stringify(restored.issues), JSON.stringify(first.issues));
+      const cacheText = readFileSync(join(cacheDir, "cache.json"), "utf8");
+      assert.doesNotMatch(cacheText, /runner-one/);
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
     }
   });
 

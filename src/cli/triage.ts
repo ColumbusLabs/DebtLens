@@ -2,7 +2,7 @@ import { createInterface } from "node:readline/promises";
 import { resolve } from "node:path";
 import { loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import type { DebtIssue, ScanOptions } from "../core/types.js";
@@ -56,6 +56,7 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
   const baseline = existsSync(baselinePath) ? loadBaseline(cwd, baselinePath) : createBaseline([]);
   const fingerprints = new Set(Object.keys(baseline.fingerprints));
   const suppressions: string[] = [];
+  const processedIndexes = new Set<number>();
   const counts: TriageActionResult = { kept: 0, baselined: 0, suppressed: 0, skipped: 0 };
 
   const output = input.output ?? process.stdout;
@@ -69,16 +70,22 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
 
   try {
     for (let index = 0; index < issues.length; index += 1) {
+      if (processedIndexes.has(index)) continue;
       const issue = issues[index];
       if (!issue) continue;
       const rendered = formatIssue(issue, index + 1, issues.length);
       output.write(`\n${rendered}\n`);
-      const rawAnswer = (await ask("Action [k]eep [b]aseline [s]uppress [n]ext [q]uit [B]atch rule: ")).trim();
+      const rawAnswer = (await ask("Action [k]eep [b]aseline [s]uppress [o]pen [n]ext [q]uit [B]atch rule: ")).trim();
       const answer = rawAnswer.toLowerCase();
 
       if (answer === "q" || answer === "quit") break;
       if (answer === "n" || answer === "next" || answer === "") {
         counts.skipped += 1;
+        continue;
+      }
+      if (answer === "o" || answer === "open") {
+        output.write(`\n${formatIssueCreationSnippet(issue)}\n`);
+        counts.kept += 1;
         continue;
       }
       if (rawAnswer === "B" || answer === "batch" || answer === "b-rule") {
@@ -96,9 +103,11 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
             suppressions,
             counts,
             suppressReason,
+            applySuppression: (directive) => applyInlineSuppression(cwd, options.target, candidate, directive, issues),
           });
+          processedIndexes.add(cursor);
         }
-        break;
+        continue;
       }
 
       const suppressReason = isSuppressAction(answer)
@@ -111,6 +120,7 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
         suppressions,
         counts,
         suppressReason,
+        applySuppression: (directive) => applyInlineSuppression(cwd, options.target, issue, directive, issues),
       });
     }
   } finally {
@@ -120,7 +130,7 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
   if (!input.dryRun) {
     writeBaseline(cwd, baselinePath, baseline);
     if (suppressions.length > 0) {
-      output.write("\nSuggested suppression directives:\n");
+      output.write("\nApplied suppression directives:\n");
       for (const directive of suppressions) output.write(directive);
     }
   } else if (suppressions.length > 0) {
@@ -141,6 +151,7 @@ function applyTriageAction(
     suppressions: string[];
     counts: TriageActionResult;
     suppressReason?: string;
+    applySuppression: (directive: string) => void;
   },
 ): void {
   const fingerprint = issue.fingerprint ?? issue.id;
@@ -155,11 +166,65 @@ function applyTriageAction(
     if (!reason) {
       throw new Error("Suppression reason is required.");
     }
-    context.suppressions.push(runSuppress({ ruleId: issue.ruleId, reason }));
+    const directive = runSuppress({ ruleId: issue.ruleId, reason });
+    context.suppressions.push(directive);
+    if (!context.dryRun) context.applySuppression(directive);
     context.counts.suppressed += 1;
     return;
   }
   context.counts.kept += 1;
+}
+
+function applyInlineSuppression(
+  cwd: string,
+  target: string,
+  issue: DebtIssue,
+  directive: string,
+  issues: DebtIssue[],
+): void {
+  const line = issue.location?.startLine;
+  if (!line) throw new Error(`Cannot suppress ${issue.ruleId} in ${issue.file}: finding has no line location.`);
+
+  const filePath = resolveIssueFile(cwd, target, issue.file);
+  const content = readFileSync(filePath, "utf8");
+  const newline = content.includes("\r\n") ? "\r\n" : "\n";
+  const lines = content.split(/\r?\n/);
+  const insertionIndex = line - 1;
+  const targetLine = lines[insertionIndex];
+  if (targetLine === undefined) {
+    throw new Error(`Cannot suppress ${issue.ruleId} in ${issue.file}:${line}: line is outside the file.`);
+  }
+
+  const indent = targetLine.match(/^\s*/)?.[0] ?? "";
+  const comment = suppressionCommentForFile(filePath, directive.trim());
+  lines.splice(insertionIndex, 0, `${indent}${comment}`);
+  writeFileSync(filePath, lines.join(newline), "utf8");
+
+  for (const candidate of issues) {
+    if (candidate.file !== issue.file || !candidate.location || candidate.location.startLine < line) continue;
+    candidate.location.startLine += 1;
+    if (candidate.location.endLine !== undefined) candidate.location.endLine += 1;
+  }
+}
+
+function resolveIssueFile(cwd: string, target: string, issueFile: string): string {
+  const resolvedTarget = resolve(cwd, target);
+  if (existsSync(resolvedTarget) && statSync(resolvedTarget).isFile()) return resolvedTarget;
+  return resolve(resolvedTarget, issueFile);
+}
+
+function suppressionCommentForFile(filePath: string, directive: string): string {
+  return /\.(?:py|rb)$/i.test(filePath) ? directive.replace(/^\/\//, "#") : directive;
+}
+
+function formatIssueCreationSnippet(issue: DebtIssue): string {
+  const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
+  return [
+    "Issue creation snippet:",
+    `Title: Address ${issue.ruleName} in ${issue.file}`,
+    `Body: DebtLens reported \`${issue.ruleId}\` at \`${location}\`. ${issue.message}`,
+    ...(issue.suggestion ? [`Suggested remediation: ${issue.suggestion}`] : []),
+  ].join("\n");
 }
 
 function isSuppressAction(action: string): boolean {

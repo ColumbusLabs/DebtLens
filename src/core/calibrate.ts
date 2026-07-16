@@ -1,4 +1,4 @@
-import { buildThresholdSuggestions, type ThresholdSuggestion } from "../cli/adoptionThresholds.js";
+import { collectThresholdObservations, type ThresholdSuggestion } from "../cli/adoptionThresholds.js";
 import type { ScanOptions, ScanResult } from "../core/types.js";
 
 export interface CalibrateOptions {
@@ -15,17 +15,22 @@ export function buildCalibrateSuggestions(
   options: ScanOptions,
   calibrateOptions: CalibrateOptions,
 ): CalibrateResult {
-  const base = buildThresholdSuggestions(result, options);
   const percentile = clampPercentile(calibrateOptions.percentile);
-  const suggestions = base.map((suggestion) => {
-    const observed = percentileValue(suggestion.observedValues ?? [suggestion.observedP90], percentile / 100);
-    const suggested = Math.max(Math.ceil(observed * 1.05), Math.ceil(suggestion.current));
-    return {
-      ...suggestion,
-      observedP90: observed,
-      suggested,
-    };
-  });
+  const suggestions = [...collectThresholdObservations(result).entries()]
+    .map(([key, observedValues]) => {
+      const current = options.thresholds[key] ?? 0;
+      const observed = percentileValue(observedValues, percentile / 100);
+      return {
+        key,
+        current,
+        suggested: Math.max(1, Math.ceil(observed * 1.05)),
+        observedP90: observed,
+        samples: observedValues.length,
+        observedValues: [...observedValues],
+      };
+    })
+    .filter((suggestion) => suggestion.current > 0)
+    .sort((left, right) => left.key.localeCompare(right.key));
   return { suggestions, percentile };
 }
 

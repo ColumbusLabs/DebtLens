@@ -7,7 +7,7 @@ DebtLens can rank findings by **payoff score** so teams fix the debt that costs 
 Each issue gets a `payoffScore` in JSON output when payoff ranking is enabled:
 
 - pass `--sort payoff` on `debtlens scan`, or
-- enable git churn hotspots (`hotspots: true` in config or `--hotspots` on the CLI), or
+- enable git churn hotspots with `--hotspots` on the CLI, or
 - pass `--blame-age` to include age in the score.
 
 Terminal, Markdown, and HTML reports include a **Top payoff targets** section when any issue carries a score.
@@ -39,7 +39,7 @@ debtlens scan . --sort payoff --hotspots
 debtlens scan . --sort payoff --format json
 ```
 
-Use `--hotspots` (or config `hotspots: true`) when git history is available so churn boosts files that change often. In CI, check out enough history (`fetch-depth: 0` or a bounded `--churn-range`).
+Use `--hotspots` when git history is available so churn boosts files that change often. In CI, check out enough history (`fetch-depth: 0` or a bounded `--churn-range`).
 
 ## Config weights
 

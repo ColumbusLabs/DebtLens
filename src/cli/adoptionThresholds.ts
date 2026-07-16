@@ -16,21 +16,47 @@ interface EvidenceThreshold {
 }
 
 const evidenceThresholds: EvidenceThreshold[] = [
-  { key: "large-component.maxLines", pattern: /^Lines: (\d+) \// },
-  { key: "large-component.maxHooks", pattern: /^Hook calls: (\d+) \// },
-  { key: "large-component.maxBranches", pattern: /^Branch points: (\d+) \// },
+  { key: "large-component.maxLines", pattern: /^Lines: (\d+) \//, ruleId: "large-component" },
+  { key: "large-component.maxHooks", pattern: /^Hook calls: (\d+) \//, ruleId: "large-component" },
+  { key: "large-component.maxBranches", pattern: /^Branch points: (\d+) \//, ruleId: "large-component" },
+  { key: "large-function.maxLines", pattern: /^Lines: (\d+) \//, ruleId: "large-function" },
+  { key: "large-function.maxBranches", pattern: /^Branch points: (\d+) \//, ruleId: "large-function" },
   { key: "effect-complexity.maxLines", pattern: /^Lines: (\d+) \//, ruleId: "effect-complexity" },
-  { key: "effect-complexity.maxDependencies", pattern: /^Dependencies: (\d+) \// },
+  { key: "effect-complexity.maxDependencies", pattern: /^Dependencies: (\d+) \//, ruleId: "effect-complexity" },
 ] as const;
 
-export function buildThresholdSuggestions(result: ScanResult, options: ScanOptions): ThresholdSuggestion[] {
+export const calibrationThresholdKeys = [
+  ...evidenceThresholds.map((threshold) => threshold.key),
+  "state-sprawl.maxStatefulHooks",
+  "prop-drilling.maxForwardedProps",
+] as const;
+
+export function collectThresholdObservations(result: ScanResult): Map<string, number[]> {
   const observed = new Map<string, number[]>();
 
+  collectObservedMetrics(result, observed);
+  return observed;
+}
+
+export function buildThresholdSuggestions(result: ScanResult, options: ScanOptions): ThresholdSuggestion[] {
+  const observed = collectThresholdObservations(result);
+
+  return [...observed.entries()]
+    .map(([key, values]) => {
+      const current = options.thresholds[key];
+      const observedP90 = percentile(values, 0.9);
+      const suggested = Math.max(Math.ceil(observedP90 * 1.1), Math.ceil(current ?? 0));
+      return { key, current: current ?? 0, suggested, observedP90, samples: values.length, observedValues: [...values] };
+    })
+    .filter((suggestion) => suggestion.current > 0 && suggestion.suggested > suggestion.current)
+    .sort((left, right) => left.key.localeCompare(right.key));
+}
+
+function collectObservedMetrics(result: ScanResult, observed: Map<string, number[]>): void {
   for (const issue of result.issues) {
     for (const evidence of issue.evidence ?? []) {
       for (const threshold of evidenceThresholds) {
         if (threshold.ruleId && threshold.ruleId !== issue.ruleId) continue;
-        if (!threshold.ruleId && threshold.key.startsWith("large-component.") && issue.ruleId !== "large-component") continue;
         const match = evidence.match(threshold.pattern);
         if (!match) continue;
         pushObserved(observed, threshold.key, Number(match[1]));
@@ -46,16 +72,6 @@ export function buildThresholdSuggestions(result: ScanResult, options: ScanOptio
       if (count) pushObserved(observed, "prop-drilling.maxForwardedProps", Number(count));
     }
   }
-
-  return [...observed.entries()]
-    .map(([key, values]) => {
-      const current = options.thresholds[key];
-      const observedP90 = percentile(values, 0.9);
-      const suggested = Math.max(Math.ceil(observedP90 * 1.1), Math.ceil(current ?? 0));
-      return { key, current: current ?? 0, suggested, observedP90, samples: values.length, observedValues: [...values] };
-    })
-    .filter((suggestion) => suggestion.current > 0 && suggestion.suggested > suggestion.current)
-    .sort((left, right) => left.key.localeCompare(right.key));
 }
 
 function pushObserved(observed: Map<string, number[]>, key: string, value: number): void {

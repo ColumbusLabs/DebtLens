@@ -77,6 +77,83 @@ describe("debtlens triage", () => {
 
       assert.deepEqual(counts, { kept: 0, baselined: 0, suppressed: 1, skipped: 0 });
       assert.match(output.join(""), /debtlens-disable-next-line todo-comment -- tracked in PROJ-42/);
+      assert.doesNotMatch(readFileSync(join(dir, "src", "app.ts"), "utf8"), /debtlens-disable-next-line/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("writes an inline suppression that hides the finding", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-triage-write-suppress-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      const sourcePath = join(dir, "src", "app.ts");
+      writeFileSync(sourcePath, "// TODO triage me\nexport const value = 1;\n");
+      const answers = ["s", "tracked in PROJ-42"];
+
+      const counts = await runTriage({
+        target: ".",
+        cwd: dir,
+        cliOptions: { rules: "todo-comment" },
+        output: new Writable({ write(_chunk, _encoding, callback) { callback(); } }),
+        ask: async () => answers.shift() ?? "q",
+      });
+
+      assert.equal(counts.suppressed, 1);
+      assert.match(readFileSync(sourcePath, "utf8"), /^\/\/ debtlens-disable-next-line todo-comment -- tracked in PROJ-42\n\/\/ TODO/);
+
+      const verificationAnswers = ["q"];
+      const verificationOutput: string[] = [];
+      const verified = await runTriage({
+        target: ".",
+        cwd: dir,
+        dryRun: true,
+        cliOptions: { rules: "todo-comment" },
+        output: new Writable({
+          write(chunk, _encoding, callback) {
+            verificationOutput.push(String(chunk));
+            callback();
+          },
+        }),
+        ask: async () => verificationAnswers.shift() ?? "q",
+      });
+      assert.deepEqual(verified, { kept: 0, baselined: 0, suppressed: 0, skipped: 0 });
+      assert.equal(verificationOutput.join(""), "");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("prints an issue snippet and continues after a batch-by-rule action", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-triage-batch-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "app.ts"), [
+        "// TODO first",
+        "// TODO second",
+        "try { run(); } catch (error) {}",
+        "",
+      ].join("\n"));
+      const output: string[] = [];
+      const answers = ["B", "k", "o"];
+
+      const counts = await runTriage({
+        target: ".",
+        cwd: dir,
+        dryRun: true,
+        cliOptions: { rules: "todo-comment,empty-catch" },
+        output: new Writable({
+          write(chunk, _encoding, callback) {
+            output.push(String(chunk));
+            callback();
+          },
+        }),
+        ask: async () => answers.shift() ?? "q",
+      });
+
+      assert.deepEqual(counts, { kept: 2, baselined: 0, suppressed: 0, skipped: 0 });
+      assert.match(output.join(""), /Issue creation snippet:/);
+      assert.match(output.join(""), /empty-catch/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

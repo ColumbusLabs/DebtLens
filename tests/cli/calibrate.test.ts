@@ -42,6 +42,62 @@ describe("debtlens calibrate", () => {
     assert.match(result.stdout, /Suggested config snippet/);
   });
 
+  it("collects below-threshold metrics and can recommend lower thresholds", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-calibrate-distribution-"));
+    try {
+      const sourcePath = join(dir, "src", "Widgets.tsx");
+      mkdirSync(join(dir, "src"), { recursive: true });
+      writeFileSync(sourcePath, [
+        "export function SmallWidget() {",
+        "  const value = 1;",
+        "  return <div>{value}</div>;",
+        "}",
+        "",
+        "export function MediumWidget() {",
+        "  const first = 1;",
+        "  const second = 2;",
+        "  return <div>{first + second}</div>;",
+        "}",
+        "",
+      ].join("\n"));
+      writeFileSync(join(dir, "src", "helpers.ts"), [
+        "export function addOne(value: number) {",
+        "  return value + 1;",
+        "}",
+        "",
+        "export function addTwo(value: number) {",
+        "  const next = value + 1;",
+        "  return next + 1;",
+        "}",
+        "",
+      ].join("\n"));
+
+      const result = runCli([
+        "calibrate",
+        ".",
+        "--cwd",
+        dir,
+        "--rules",
+        "large-component,large-function",
+        "--percentile",
+        "50",
+      ]);
+
+      assert.equal(result.status, 0, result.stderr);
+      const row = result.stdout.split("\n").find((line) => line.startsWith("large-component.maxLines"));
+      assert.ok(row);
+      const [, current, suggested, samples] = row.trim().split(/\s+/);
+      assert.equal(Number(current), 250);
+      assert.ok(Number(suggested) < Number(current));
+      assert.equal(Number(samples), 2);
+      const functionRow = result.stdout.split("\n").find((line) => line.startsWith("large-function.maxLines"));
+      assert.ok(functionRow);
+      assert.equal(Number(functionRow.trim().split(/\s+/)[3]), 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("merges suggested thresholds with --write", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-calibrate-write-"));
     try {
@@ -51,7 +107,7 @@ describe("debtlens calibrate", () => {
         rules: ["large-component"],
         minSeverity: "low",
         thresholds: {
-          "large-component.maxLines": 50,
+          "large-component.maxLines": 500,
           "large-component.maxHooks": 3,
           "large-component.maxBranches": 5,
         },
@@ -76,7 +132,7 @@ describe("debtlens calibrate", () => {
         thresholds: Record<string, number>;
       };
       assert.equal(config.minSeverity, "low");
-      assert.ok(config.thresholds["large-component.maxLines"] > 50);
+      assert.ok(config.thresholds["large-component.maxLines"] < 500);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

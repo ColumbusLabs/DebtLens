@@ -27,7 +27,9 @@ repository-wide duplicates, graphs, imports, or paired instruction files run onc
 on the coordinator with the complete file set. This includes `duplicate-logic`
 (and language variants), `duplicated-literal`, `import-cycle`,
 `test-duplication`, `story-only-component`, `config-drift`, and the AI instruction
-duplication/contradiction rules. They are never run independently on file shards.
+duplication/contradiction rules, plus `stale-feature-flag`, whose registry
+definitions and uses may live in different files. They are never run independently
+on file shards.
 
 Third-party plugin detectors are JavaScript functions and cannot be safely sent
 through the structured-clone boundary. When worker concurrency is enabled,

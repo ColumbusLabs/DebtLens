@@ -39,6 +39,7 @@ const CROSS_FILE_DETECTOR_IDS = new Set([
   "python-duplicate-logic",
   "ruby-duplicate-logic",
   "story-only-component",
+  "stale-feature-flag",
   "svelte-duplicate-logic",
   "swift-duplicate-logic",
   "test-duplication",

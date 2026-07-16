@@ -97,6 +97,42 @@ describe("scan parallel dispatch", () => {
     }
   });
 
+  it("keeps cross-file feature flag references byte-identical in parallel scans", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-feature-flag-parallel-"));
+    try {
+      mkdirSync(join(dir, "src"));
+      writeFileSync(join(dir, "src", "flags.ts"), "export const enableCheckout = true;\n");
+      writeFileSync(
+        join(dir, "src", "app.ts"),
+        'import { enableCheckout } from "./flags";\nexport const route = enableCheckout ? "/new" : "/old";\n',
+      );
+      const baseOptions = {
+        cwd: dir,
+        target: dir,
+        include: defaultConfig.include,
+        exclude: defaultConfig.exclude,
+        minSeverity: "low" as const,
+        rules: ["stale-feature-flag"],
+        thresholds: defaultConfig.thresholds,
+        featureFlags: {
+          registryGlobs: ["src/flags.ts"],
+          accessPatterns: [],
+          constantNamePatterns: [],
+        },
+      };
+
+      const serial = await scan({ ...baseOptions, concurrency: 1 });
+      const parallel = await scan({ ...baseOptions, concurrency: 2 });
+
+      assert.equal(serial.issues.length, 1);
+      assert.match(serial.issues[0]?.message ?? "", /hardcoded to true/);
+      assert.doesNotMatch(serial.issues[0]?.message ?? "", /never referenced/);
+      assert.equal(JSON.stringify(parallel.issues), JSON.stringify(serial.issues));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("caps concurrent detector dispatch when concurrency is set", async () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-scan-concurrency-cap-"));
     let active = 0;

@@ -131,12 +131,19 @@ function shardRoundRobin<T>(items: T[], concurrency: number): T[][] {
 function resolveWorkerUrl(): URL {
   const javascriptUrl = new URL("./parallelScanWorker.js", import.meta.url);
   if (existsSync(fileURLToPath(javascriptUrl))) return javascriptUrl;
-  return new URL("./parallelScanWorker.ts", import.meta.url);
+  return new URL("./parallelScanWorkerSource.js", import.meta.url);
 }
 
 function runWorker(workerUrl: URL, workerData: unknown): Promise<WorkerDetectorResult[]> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(workerUrl, { workerData });
+    const sourceWorker = workerUrl.pathname.endsWith("parallelScanWorkerSource.js");
+    const workerPayload = sourceWorker
+      ? {
+          ...(workerData as Record<string, unknown>),
+          sourceWorkerUrl: new URL("./parallelScanWorker.ts", import.meta.url).href,
+        }
+      : workerData;
+    const worker = new Worker(workerUrl, { workerData: workerPayload });
     let settled = false;
 
     worker.once("message", (message: WorkerMessage) => {

@@ -42,11 +42,13 @@ export const featureFlagDebtDetector: Detector = {
     const definitions = collectDefinitions(context.files, registryMatchers, nameMatchers);
 
     return definitions.flatMap((definition) => {
+      const configuredKeyReference = definition.registry && references.keys.has(definition.key);
+      const configuredConditionalReference = definition.registry && references.conditionalKeys.has(definition.key);
       const referenced = definition.kind === "constant"
-        ? definition.referenced === true
+        ? definition.referenced === true || configuredKeyReference
         : references.keys.has(definition.key);
       const conditionallyReferenced = definition.kind === "constant"
-        ? definition.conditionallyReferenced === true
+        ? definition.conditionallyReferenced === true || configuredConditionalReference
         : references.conditionalKeys.has(definition.key);
 
       if (definition.registry && !referenced && !references.unknownKeyAccess) {
@@ -156,7 +158,10 @@ function collectReferences(files: SourceFileInfo[], patterns: FeatureFlagAccessP
     }
     for (const access of file.sourceFile.getDescendantsOfKind(SyntaxKind.ElementAccessExpression)) {
       const key = readLiteralKey(access.getArgumentExpression());
-      if (key === undefined) continue;
+      if (key === undefined) {
+        references.unknownKeyAccess = true;
+        continue;
+      }
       references.keys.add(key);
       if (isUsedAsCondition(access)) references.conditionalKeys.add(key);
     }

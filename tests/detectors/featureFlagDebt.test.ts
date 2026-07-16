@@ -77,6 +77,34 @@ export const route = enableCheckout ? "/new" : "/old";
     assert.doesNotMatch(issues[0]?.message ?? "", /never referenced/);
   });
 
+  it("combines configured-key references with registry constant symbols", async () => {
+    const conditionalIssues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const checkout = true;\n",
+      "app.ts": "if (isEnabled(\"checkout\")) launch();\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [{ callee: "isEnabled" }],
+        constantNamePatterns: [],
+      },
+    });
+    const nonConditionalIssues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const checkout = true;\n",
+      "app.ts": "export const active = isEnabled(\"checkout\");\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [{ callee: "isEnabled" }],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(conditionalIssues.length, 1);
+    assert.match(conditionalIssues[0]?.message ?? "", /hardcoded to true/);
+    assert.doesNotMatch(conditionalIssues[0]?.message ?? "", /never referenced/);
+    assert.equal(nonConditionalIssues.length, 0);
+  });
+
   it("recognizes direct registry property checks", async () => {
     const issues = await runDetector(featureFlagDebtDetector, {
       "flags.ts": "export const flags = { checkout: false };\n",
@@ -101,6 +129,21 @@ export const route = enableCheckout ? "/new" : "/old";
       featureFlags: {
         registryGlobs: ["flags.ts"],
         accessPatterns: [{ callee: "isEnabled" }],
+        constantNamePatterns: [],
+      },
+    });
+
+    assert.equal(issues.length, 0);
+  });
+
+  it("suppresses unreferenced claims when direct element access uses a dynamic key", async () => {
+    const issues = await runDetector(featureFlagDebtDetector, {
+      "flags.ts": "export const flags = { checkout: true, search: false };\n",
+      "app.ts": "if (flags[currentFlag]) launch();\n",
+    }, {
+      featureFlags: {
+        registryGlobs: ["flags.ts"],
+        accessPatterns: [],
         constantNamePatterns: [],
       },
     });

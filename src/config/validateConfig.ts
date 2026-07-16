@@ -120,6 +120,8 @@ function validateFeatureFlags(errors: string[], value: unknown): void {
   validateAllowedKeys(errors, "featureFlags", value, ["accessPatterns", "registryGlobs", "constantNamePatterns"]);
   validateStringArray(errors, "featureFlags.registryGlobs", value.registryGlobs);
   validateStringArray(errors, "featureFlags.constantNamePatterns", value.constantNamePatterns);
+  validateNonEmptyStringEntries(errors, "featureFlags.registryGlobs", value.registryGlobs);
+  validateNonEmptyStringEntries(errors, "featureFlags.constantNamePatterns", value.constantNamePatterns);
 
   if (Array.isArray(value.constantNamePatterns)) {
     value.constantNamePatterns.forEach((pattern, index) => {
@@ -152,6 +154,15 @@ function validateFeatureFlags(errors: string[], value: unknown): void {
       }
     });
   }
+}
+
+function validateNonEmptyStringEntries(errors: string[], key: string, value: unknown): void {
+  if (!Array.isArray(value)) return;
+  value.forEach((entry, index) => {
+    if (typeof entry === "string" && entry.trim().length === 0) {
+      errors.push(`${key}[${index}] must be a non-empty string`);
+    }
+  });
 }
 
 function validateUniqueStrings(errors: string[], key: string, value: unknown): void {

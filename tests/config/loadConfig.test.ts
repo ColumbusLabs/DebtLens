@@ -28,4 +28,27 @@ describe("mergeDebtLensConfig", () => {
     assert.equal(merged.exclude, undefined);
     assert.equal(merged.rules, undefined);
   });
+
+  it("merges registry globs while package access and name contracts override", () => {
+    const merged = mergeDebtLensConfig(
+      {
+        featureFlags: {
+          registryGlobs: ["src/flags.ts"],
+          accessPatterns: [{ callee: "isEnabled" }],
+          constantNamePatterns: ["^enable"],
+        },
+      },
+      {
+        featureFlags: {
+          registryGlobs: ["packages/app/flags.ts"],
+          accessPatterns: [{ callee: "appFlags.enabled", keyArgument: 1 }],
+          constantNamePatterns: ["^rollout"],
+        },
+      },
+    );
+
+    assert.deepEqual(merged.featureFlags?.registryGlobs, ["src/flags.ts", "packages/app/flags.ts"]);
+    assert.deepEqual(merged.featureFlags?.accessPatterns, [{ callee: "appFlags.enabled", keyArgument: 1 }]);
+    assert.deepEqual(merged.featureFlags?.constantNamePatterns, ["^rollout"]);
+  });
 });

@@ -1211,6 +1211,31 @@ When this is a false positive:
 
 Confidence: **0.62**. Co-occurring domain synonyms are often legitimate vocabulary, so this rule stays advisory.
 
+## `stale-feature-flag`
+
+Flags feature flags that are hardcoded on/off in conditional control flow and configured
+registry entries that are not referenced anywhere in the scan. This rule runs only in
+the opt-in `feature-flags` pack (or when selected explicitly).
+
+Configuration:
+
+- `featureFlags.accessPatterns`: exact callee and zero-based literal-key argument shapes
+- `featureFlags.registryGlobs`: registry paths/globs relative to the scan target
+- `featureFlags.constantNamePatterns`: regexes for top-level boolean flag constants
+
+Why it matters: completed rollouts leave unreachable branches and unused registry entries
+that continue to tax testing and maintenance.
+
+When this is a false positive:
+
+- the literal is a deliberate build-time switch rather than a rollout flag
+- a registry is consumed through an unconfigured provider or non-TypeScript manifest
+- a computed/dynamic access cannot be attributed to one literal key
+
+Dynamic configured accesses suppress unused-registry claims, and non-registry constants
+must control a branch before they are reported. Confidence: **0.82–0.90**. See the
+[feature-flag RFC](./feature-flags-rfc.md) for the exact contract and non-goals.
+
 ## `ai-instruction-duplication`
 
 Flags the same normalized instruction block repeated across assistant instruction files such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/**`, and `.github/copilot-instructions.md`.

@@ -53,6 +53,13 @@ describe("scan cache", () => {
     assert.equal(payload.packageVersion, packageVersion);
     assert.match(key, /^[a-f0-9]{64}$/);
     assert.equal(buildScanCacheKey(options, [stubDetector]), key);
+    assert.notEqual(
+      buildScanCacheKey({
+        ...options,
+        featureFlags: { accessPatterns: [{ callee: "customFlags.enabled", keyArgument: 1 }] },
+      }, [stubDetector]),
+      key,
+    );
   });
 
   it("writes cache files atomically without leaving temp files behind", () => {

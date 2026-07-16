@@ -68,6 +68,15 @@ export function mergeConfig(target: string, fileConfig: DebtLensConfig, cliOptio
     todoCommentMarkers: fileConfig.todoComment?.markers?.length
       ? compileTodoCommentMarkers(fileConfig.todoComment.markers)
       : undefined,
+    featureFlags: {
+      accessPatterns: fileConfig.featureFlags?.accessPatterns ?? defaultConfig.featureFlags.accessPatterns,
+      registryGlobs: unique([
+        ...(defaultConfig.featureFlags.registryGlobs ?? []),
+        ...(fileConfig.featureFlags?.registryGlobs ?? []),
+      ]),
+      constantNamePatterns: fileConfig.featureFlags?.constantNamePatterns
+        ?? defaultConfig.featureFlags.constantNamePatterns,
+    },
     changedFiles: cliOptions.changedFiles,
     fileContents: cliOptions.fileContents,
     profile: cliOptions.profile,

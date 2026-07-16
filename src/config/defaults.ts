@@ -118,4 +118,17 @@ export const defaultConfig: Required<Omit<DebtLensConfig, "pack" | "failOn" | "f
   namingDrift: {
     disableBuiltInVocabulary: false,
   },
+  featureFlags: {
+    accessPatterns: [
+      { callee: "isEnabled", keyArgument: 0 },
+      { callee: "useFlag", keyArgument: 0 },
+      { callee: "flags", keyArgument: 0 },
+    ],
+    registryGlobs: [],
+    constantNamePatterns: [
+      "^(?:enable|enabled|disable|disabled|toggle)[A-Z0-9_]",
+      "(?:Feature|Flag)(?:Enabled|Disabled)?$",
+      "(?:^|_)(?:FEATURE|FLAG|ENABLE|ENABLED|TOGGLE)(?:_|$)",
+    ],
+  },
 };

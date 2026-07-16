@@ -51,6 +51,22 @@ export interface ScanThresholds {
   [key: string]: number;
 }
 
+export interface FeatureFlagAccessPattern {
+  /** Exact callee name, such as `isEnabled` or `featureClient.isEnabled`. */
+  callee: string;
+  /** Zero-based argument containing the literal flag key. Defaults to 0. */
+  keyArgument?: number;
+}
+
+export interface FeatureFlagsConfig {
+  /** Call shapes that read a flag by literal key. */
+  accessPatterns?: FeatureFlagAccessPattern[];
+  /** Registry file globs, relative to the scan target. */
+  registryGlobs?: string[];
+  /** Regexes identifying top-level boolean flag constants outside registries. */
+  constantNamePatterns?: string[];
+}
+
 export interface DebtLensConfig {
   include?: string[];
   exclude?: string[];
@@ -87,6 +103,8 @@ export interface DebtLensConfig {
     /** Built-in labels to disable (e.g. "todo marker"). */
     disableDefaults?: string[];
   };
+  /** Stale feature-flag detector configuration. */
+  featureFlags?: FeatureFlagsConfig;
   /** Plugin API version this config targets; must match the DebtLens runtime version. */
   pluginApiVersion?: number;
   /** Paths to local ESM plugin modules, resolved relative to the config file directory. */
@@ -147,6 +165,8 @@ export interface ScanOptions {
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
   todoCommentMarkers?: Array<{ regex: RegExp; severity: Severity; label: string }>;
+  /** Configurable feature-flag access, registry, and constant-name contract. */
+  featureFlags?: FeatureFlagsConfig;
   /** When true, collect per-rule timing in `summary.profile`. */
   profile?: boolean;
   /** When true, emit valid inline suppression directives, including unused entries, for stale-suppression audits. */
@@ -460,6 +480,7 @@ export interface CacheKeyInput {
   todoCommentReplaceDefaults?: boolean;
   todoCommentDisableDefaults?: string[];
   todoCommentMarkers?: Array<{ regex: string; severity: Severity; label: string }>;
+  featureFlags?: FeatureFlagsConfig;
 }
 
 export function toCacheKeyPayload(
@@ -497,6 +518,7 @@ export function toCacheKeyPayload(
       severity: marker.severity,
       label: marker.label,
     })),
+    featureFlags: options.featureFlags,
   };
 }
 

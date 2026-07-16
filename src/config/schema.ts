@@ -176,6 +176,36 @@ export function buildConfigSchema(): Record<string, unknown> {
         },
         additionalProperties: false,
       },
+      featureFlags: {
+        type: "object",
+        description: "Configuration for the opt-in stale feature-flag detector.",
+        properties: {
+          accessPatterns: {
+            type: "array",
+            description: "Call shapes that read a literal feature-flag key.",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                callee: { type: "string", minLength: 1 },
+                keyArgument: { type: "integer", minimum: 0, default: 0 },
+              },
+              required: ["callee"],
+            },
+          },
+          registryGlobs: {
+            type: "array",
+            items: { type: "string", minLength: 1 },
+            description: "Registry file globs relative to the scan target.",
+          },
+          constantNamePatterns: {
+            type: "array",
+            items: { type: "string", minLength: 1 },
+            description: "Regexes identifying top-level boolean flag constants outside registries.",
+          },
+        },
+        additionalProperties: false,
+      },
       failOn: {
         enum: [...severities],
         description: "Exit with code 1 when any reported issue meets this severity. The --fail-on CLI flag overrides this.",

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { DEFAULT_BASELINE_FILENAME, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
+import { DEFAULT_BASELINE_FILENAME, addIssuesToBaseline, createBaseline, loadBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import type { DebtIssue, ScanOptions } from "../core/types.js";
 import { loadConfiguredPlugins } from "./scanPipeline.js";
@@ -54,7 +54,6 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
   const issues = [...result.issues];
   const baselinePath = resolve(cwd, input.baselinePath ?? DEFAULT_BASELINE_FILENAME);
   const baseline = existsSync(baselinePath) ? loadBaseline(cwd, baselinePath) : createBaseline([]);
-  const fingerprints = new Set(Object.keys(baseline.fingerprints));
   const suppressions: string[] = [];
   const processedIndexes = new Set<number>();
   const counts: TriageActionResult = { kept: 0, baselined: 0, suppressed: 0, skipped: 0 };
@@ -99,7 +98,6 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
           applyTriageAction(candidate, batchAction, {
             dryRun: input.dryRun,
             baseline,
-            fingerprints,
             suppressions,
             counts,
             suppressReason,
@@ -116,7 +114,6 @@ export async function runTriage(input: TriageInput): Promise<TriageActionResult>
       applyTriageAction(issue, answer, {
         dryRun: input.dryRun,
         baseline,
-        fingerprints,
         suppressions,
         counts,
         suppressReason,
@@ -147,17 +144,14 @@ function applyTriageAction(
   context: {
     dryRun?: boolean;
     baseline: ReturnType<typeof loadBaseline>;
-    fingerprints: Set<string>;
     suppressions: string[];
     counts: TriageActionResult;
     suppressReason?: string;
     applySuppression: (directive: string) => void;
   },
 ): void {
-  const fingerprint = issue.fingerprint ?? issue.id;
   if (action === "b" || action === "baseline") {
-    context.baseline.fingerprints[fingerprint] = (context.baseline.fingerprints[fingerprint] ?? 0) + 1;
-    context.fingerprints.add(fingerprint);
+    addIssuesToBaseline(context.baseline, [issue]);
     context.counts.baselined += 1;
     return;
   }

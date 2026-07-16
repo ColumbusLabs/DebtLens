@@ -1,4 +1,10 @@
-import { collectThresholdObservations, type ThresholdSuggestion } from "../cli/adoptionThresholds.js";
+import {
+  calibrationDiagnosticsForRules,
+  calibrationMetrics,
+  collectThresholdObservations,
+  type CalibrationDiagnostic,
+  type ThresholdSuggestion,
+} from "../cli/adoptionThresholds.js";
 import type { ScanOptions, ScanResult } from "../core/types.js";
 
 export interface CalibrateOptions {
@@ -8,6 +14,7 @@ export interface CalibrateOptions {
 export interface CalibrateResult {
   suggestions: ThresholdSuggestion[];
   percentile: number;
+  diagnostics: CalibrationDiagnostic[];
 }
 
 export function buildCalibrateSuggestions(
@@ -16,7 +23,8 @@ export function buildCalibrateSuggestions(
   calibrateOptions: CalibrateOptions,
 ): CalibrateResult {
   const percentile = clampPercentile(calibrateOptions.percentile);
-  const suggestions = [...collectThresholdObservations(result).entries()]
+  const observations = collectThresholdObservations(result);
+  const suggestions = [...observations.entries()]
     .map(([key, observedValues]) => {
       const current = options.thresholds[key] ?? 0;
       const observed = percentileValue(observedValues, percentile / 100);
@@ -31,30 +39,47 @@ export function buildCalibrateSuggestions(
     })
     .filter((suggestion) => suggestion.current > 0)
     .sort((left, right) => left.key.localeCompare(right.key));
-  return { suggestions, percentile };
+  const selected = options.rules ? new Set(options.rules) : undefined;
+  const unavailable = calibrationMetrics
+    .filter((entry) => (!selected || entry.ruleIds.some((ruleId) => selected.has(ruleId))) && !observations.has(entry.key))
+    .map((entry) => ({
+      key: entry.key,
+      ruleIds: entry.ruleIds,
+      reason: "no raw metric observations were emitted for the selected target",
+    }));
+  return {
+    suggestions,
+    percentile,
+    diagnostics: [...calibrationDiagnosticsForRules(options.rules), ...unavailable]
+      .sort((left, right) => left.key.localeCompare(right.key)),
+  };
 }
 
 export function renderCalibrateReport(result: CalibrateResult): string {
-  if (result.suggestions.length === 0) {
-    return `No threshold suggestions at the p${result.percentile} percentile. Current defaults already match observed distributions.\n`;
-  }
   const lines = [
     `DebtLens calibrate (p${result.percentile})`,
     "",
-    "Threshold".padEnd(34),
-    "Current",
-    "Suggested",
-    "Samples",
-    "-".repeat(34),
-    ...result.suggestions.map((suggestion) =>
-      `${suggestion.key.padEnd(34)} ${String(suggestion.current).padEnd(7)} ${String(suggestion.suggested).padEnd(9)} ${suggestion.samples}`,
-    ),
-    "",
-    "Suggested config snippet:",
-    JSON.stringify({
-      thresholds: Object.fromEntries(result.suggestions.map((suggestion) => [suggestion.key, suggestion.suggested])),
-    }, null, 2),
   ];
+  if (result.suggestions.length > 0) {
+    lines.push(
+      "Threshold".padEnd(34),
+      "Current",
+      "Suggested",
+      "Samples",
+      "-".repeat(34),
+      ...result.suggestions.map((suggestion) =>
+        `${suggestion.key.padEnd(34)} ${String(suggestion.current).padEnd(7)} ${String(suggestion.suggested).padEnd(9)} ${suggestion.samples}`,
+      ),
+      "",
+      "Suggested config snippet:",
+      JSON.stringify({ thresholds: Object.fromEntries(result.suggestions.map((suggestion) => [suggestion.key, suggestion.suggested])) }, null, 2),
+    );
+  } else {
+    lines.push(`No numeric threshold suggestions at the p${result.percentile} percentile.`);
+  }
+  if (result.diagnostics.length > 0) {
+    lines.push("", "Not calibrated:", ...result.diagnostics.map((entry) => `- ${entry.key}: ${entry.reason}`));
+  }
   return `${lines.join("\n")}\n`;
 }
 

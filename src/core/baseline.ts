@@ -87,6 +87,22 @@ export function createBaseline(issues: DebtIssue[]): Baseline {
   };
 }
 
+/** Add findings to an existing baseline while keeping counts and snapshots in sync. */
+export function addIssuesToBaseline(baseline: Baseline, issues: DebtIssue[]): Baseline {
+  baseline.issues ??= {};
+  for (const issue of issues) {
+    const fingerprint = computeFingerprint(issue);
+    const count = (baseline.fingerprints[fingerprint] ?? 0) + 1;
+    baseline.fingerprints[fingerprint] = count;
+    baseline.issues[fingerprint] = snapshotIssue(issue, count);
+  }
+  baseline.fingerprints = sortRecord(baseline.fingerprints);
+  baseline.issues = sortRecord(baseline.issues);
+  baseline.summary = summarizeBaselineFingerprints(baseline);
+  baseline.generatedAt = new Date().toISOString();
+  return baseline;
+}
+
 export function writeBaseline(cwd: string, path: string, baseline: Baseline): string {
   const target = resolve(cwd, path);
   writeFileSync(target, `${JSON.stringify(baseline, null, 2)}\n`, "utf8");

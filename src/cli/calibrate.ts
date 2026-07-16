@@ -4,7 +4,7 @@ import { loadEffectiveConfig } from "../config/loadConfig.js";
 import { mergeConfig } from "../config/mergeConfig.js";
 import { mergeDebtLensConfig } from "../config/loadConfig.js";
 import { buildCalibrateSuggestions, renderCalibrateReport } from "../core/calibrate.js";
-import { calibrationThresholdKeys } from "./adoptionThresholds.js";
+import { calibrationThresholdOverrides } from "./adoptionThresholds.js";
 import { scan } from "../core/scan.js";
 import { parseSeverity } from "../core/severity.js";
 import { loadConfiguredPlugins } from "./scanPipeline.js";
@@ -41,7 +41,7 @@ export async function runCalibrate(input: CalibrateInput): Promise<string> {
     ...options,
     thresholds: {
       ...options.thresholds,
-      ...Object.fromEntries(calibrationThresholdKeys.map((key) => [key, 0])),
+      ...calibrationThresholdOverrides(options.rules),
     },
   });
   const calibrate = buildCalibrateSuggestions(result, options, {

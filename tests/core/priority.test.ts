@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computePayoffScore, sortIssuesByPayoff } from "../../src/core/priority.js";
+import { computePayoffScore, sortIssuesByPayoff, topPayoffIssues } from "../../src/core/priority.js";
 import type { DebtIssue } from "../../src/core/types.js";
 
 const baseIssue: DebtIssue = {
@@ -30,5 +30,21 @@ describe("payoff ranking", () => {
     const right: DebtIssue = { ...baseIssue, id: "right", file: "src/b.ts", payoffScore: 5 };
     const sorted = sortIssuesByPayoff([right, left]);
     assert.equal(sorted[0]?.id, "left");
+  });
+
+  it("uses rule and identity tie-breakers for otherwise identical targets", () => {
+    const first: DebtIssue = { ...baseIssue, id: "a", ruleId: "a-rule", payoffScore: 5 };
+    const second: DebtIssue = { ...baseIssue, id: "b", ruleId: "b-rule", payoffScore: 5 };
+    assert.deepEqual(sortIssuesByPayoff([second, first]).map((issue) => issue.id), ["a", "b"]);
+  });
+
+  it("bounds machine-facing payoff targets to ten by default", () => {
+    const issues = Array.from({ length: 12 }, (_, index) => ({
+      ...baseIssue,
+      id: String(index),
+      payoffScore: index,
+    }));
+    assert.equal(topPayoffIssues(issues).length, 10);
+    assert.equal(topPayoffIssues(issues)[0]?.payoffScore, 11);
   });
 });

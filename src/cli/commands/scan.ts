@@ -8,7 +8,7 @@ import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
 import { evaluateBudgets, renderBudgetReport, type BudgetEvaluation } from "../../core/budgets.js";
 import { buildOwnershipReport, renderOwnershipReportTerminal } from "../../core/ownershipReport.js";
-import { enrichIssuesWithPayoffScores, sortIssuesByPayoff } from "../../core/priority.js";
+import { enrichIssuesWithPayoffScores, sortIssuesByPayoff, topPayoffIssues } from "../../core/priority.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
@@ -456,6 +456,17 @@ function enrichPayoffScores(
       hotspots: reported.summary.hotspots,
       weights: fileConfig.priority,
     });
+  }
+  if (reported.issues.some((issue) => issue.payoffScore !== undefined)) {
+    reported.summary.topPayoffTargets = topPayoffIssues(reported.issues, 10).map((issue) => ({
+      id: issue.id,
+      fingerprint: issue.fingerprint,
+      ruleId: issue.ruleId,
+      file: issue.file,
+      severity: issue.severity,
+      payoffScore: issue.payoffScore ?? 0,
+      ...(issue.location ? { location: issue.location } : {}),
+    }));
   }
 }
 

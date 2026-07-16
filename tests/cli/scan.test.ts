@@ -440,7 +440,10 @@ describe("debtlens scan output formats", () => {
     ]);
 
     assert.equal(result.status, 0);
-    const parsed = JSON.parse(result.stdout) as { issues: Array<{ payoffScore?: number }> };
+    const parsed = JSON.parse(result.stdout) as {
+      issues: Array<{ payoffScore?: number }>;
+      summary: { topPayoffTargets?: Array<{ payoffScore: number; fingerprint: string }> };
+    };
     assert.ok(parsed.issues.length > 1);
     assert.ok(parsed.issues.every((issue) => issue.payoffScore !== undefined));
     for (let index = 1; index < parsed.issues.length; index += 1) {
@@ -448,6 +451,9 @@ describe("debtlens scan output formats", () => {
       const current = parsed.issues[index]?.payoffScore ?? 0;
       assert.ok(previous >= current);
     }
+    assert.ok(parsed.summary.topPayoffTargets);
+    assert.ok((parsed.summary.topPayoffTargets?.length ?? 0) <= 10);
+    assert.deepEqual(parsed.summary.topPayoffTargets?.map((target) => target.payoffScore), parsed.issues.slice(0, 10).map((issue) => issue.payoffScore));
 
     const terminal = runScan([
       "examples/react",

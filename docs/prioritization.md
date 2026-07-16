@@ -35,9 +35,14 @@ Churn metrics come from [`src/core/hotspots.ts`](../src/core/hotspots.ts). Age u
 # Sort findings by payoff and show top targets in the terminal report
 debtlens scan . --sort payoff --hotspots
 
-# JSON consumers read payoffScore on each issue
+# JSON consumers read payoffScore and a bounded top-target shortlist
 debtlens scan . --sort payoff --format json
 ```
+
+When payoff scores are enabled, JSON output also includes
+`summary.topPayoffTargets`. It contains at most 10 compact targets ordered
+deterministically by score, file, line, rule, and fingerprint. Full issue details
+remain in `issues`.
 
 Use `--hotspots` when git history is available so churn boosts files that change often. In CI, check out enough history (`fetch-depth: 0` or a bounded `--churn-range`).
 

@@ -45,8 +45,16 @@ describe("debtlens triage", () => {
       });
 
       assert.deepEqual(counts, { kept: 0, baselined: 1, suppressed: 0, skipped: 0 });
-      const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as { fingerprints: Record<string, number> };
+      const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as {
+        fingerprints: Record<string, number>;
+        summary: { totalIssues: number; byRule: Record<string, number> };
+        issues: Record<string, { ruleId: string; count: number }>;
+      };
       assert.equal(Object.keys(baseline.fingerprints).length, 1);
+      assert.equal(baseline.summary.totalIssues, 1);
+      assert.equal(baseline.summary.byRule["todo-comment"], 1);
+      assert.equal(Object.values(baseline.issues)[0]?.ruleId, "todo-comment");
+      assert.equal(Object.values(baseline.issues)[0]?.count, 1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

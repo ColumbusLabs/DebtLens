@@ -62,7 +62,11 @@ export function sortIssuesByPayoff<T extends DebtIssue>(issues: T[]): T[] {
     if (scoreDelta !== 0) return scoreDelta;
     const fileDelta = left.file.localeCompare(right.file);
     if (fileDelta !== 0) return fileDelta;
-    return (left.location?.startLine ?? 0) - (right.location?.startLine ?? 0);
+    const lineDelta = (left.location?.startLine ?? 0) - (right.location?.startLine ?? 0);
+    if (lineDelta !== 0) return lineDelta;
+    const ruleDelta = left.ruleId.localeCompare(right.ruleId);
+    if (ruleDelta !== 0) return ruleDelta;
+    return (left.fingerprint ?? left.id).localeCompare(right.fingerprint ?? right.id);
   });
 }
 

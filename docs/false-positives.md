@@ -26,6 +26,11 @@ debtlens calibrate .
 debtlens calibrate . --percentile 85 --write
 ```
 
+Calibration temporarily lowers supported numeric trigger thresholds so the sample
+includes below-threshold code, not just existing findings. The report also lists
+selected policy floors, boolean switches, similarity controls, and safety caps
+under **Not calibrated** when they cannot be inferred honestly from a distribution.
+
 Calibration scans the target, collects observed metrics for threshold-driven rules (function length, branch counts, and similar), and suggests values at the chosen percentile so roughly the worst N% is flagged. Review the printed config snippet before using `--write`; unrelated config keys are preserved.
 
 Pair calibration with payoff ranking and triage for a low-noise first rollout:

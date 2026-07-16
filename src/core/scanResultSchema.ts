@@ -48,6 +48,20 @@ export function buildScanResultSchema(): Record<string, unknown> {
       byRule: { type: "object", additionalProperties: { type: "integer", minimum: 0 } },
     },
   };
+  const payoffTarget = {
+    type: "object",
+    additionalProperties: false,
+    required: ["id", "fingerprint", "ruleId", "file", "severity", "payoffScore"],
+    properties: {
+      id: { type: "string" },
+      fingerprint: { type: "string" },
+      ruleId: { type: "string" },
+      file: { type: "string" },
+      severity: severityValue,
+      payoffScore: { type: "number", minimum: 0 },
+      location: issue.properties.location,
+    },
+  };
   const correlation = {
     type: "object",
     additionalProperties: false,
@@ -296,6 +310,7 @@ export function buildScanResultSchema(): Record<string, unknown> {
           filesScanned: { type: "integer", minimum: 0 },
           rulesRun: { type: "integer", minimum: 0 },
           elapsedMs: { type: "integer", minimum: 0 },
+          topPayoffTargets: { type: "array", maxItems: 10, items: payoffTarget },
           warnings: { type: "array", items: { type: "string" } },
           filterStats: {
             type: "object",

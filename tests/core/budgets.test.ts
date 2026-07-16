@@ -59,6 +59,16 @@ describe("budget evaluation", () => {
     assert.equal(evaluation?.areas[0]?.issueCount, 2);
   });
 
+  it("uses workspace-compatible brace and character-class globs", () => {
+    const result = makeResult([
+      { id: "1", fingerprint: "1", ruleId: "todo-comment", ruleName: "Todo", severity: "high", confidence: 1, file: "packages/api/src/a.ts", message: "todo", tags: [] },
+      { id: "2", fingerprint: "2", ruleId: "todo-comment", ruleName: "Todo", severity: "low", confidence: 1, file: "packages/docs/src/a.ts", message: "todo", tags: [] },
+    ]);
+    const evaluation = evaluateBudgets(result, { "packages/{api,web}/src/[a-z].ts": { maxHigh: 0 } });
+    assert.equal(evaluation?.areas[0]?.issueCount, 1);
+    assert.equal(evaluation?.breached, true);
+  });
+
   it("renders a budget report table", () => {
     const result = makeResult([]);
     const evaluation = evaluateBudgets(result, {

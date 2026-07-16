@@ -98,6 +98,16 @@ describe("debtlens calibrate", () => {
     }
   });
 
+  it("calibrates all numeric god-file axes and diagnoses the policy axis", () => {
+    const result = runCli(["calibrate", "examples/react", "--rules", "god-file", "--percentile", "90"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /god-file\.maxLines/);
+    assert.match(result.stdout, /god-file\.maxExports/);
+    assert.match(result.stdout, /god-file\.maxTopLevelDecls/);
+    assert.match(result.stdout, /god-file\.minAxes: minimum multi-axis trigger/);
+    assert.doesNotMatch(result.stdout, /Current defaults already match/);
+  });
+
   it("merges suggested thresholds with --write", () => {
     const dir = mkdtempSync(join(tmpdir(), "debtlens-calibrate-write-"));
     try {

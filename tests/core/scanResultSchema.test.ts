@@ -23,6 +23,7 @@ describe("ScanResult JSON schema", () => {
             deltaFromBaseline?: { required: string[] };
             correlations?: { items: { required: string[] } };
             duplicateClusters?: { items: { required: string[] } };
+            topPayoffTargets?: { maxItems: number; items: { required: string[] } };
             importGraph?: { required: string[]; properties: { edges: { items: { required: string[] } } } };
             hotspots?: {
               required: string[];
@@ -53,6 +54,8 @@ describe("ScanResult JSON schema", () => {
     assert.ok(schema.properties.summary.properties.deltaFromBaseline?.required.includes("totalDelta"));
     assert.ok(schema.properties.summary.properties.correlations?.items.required.includes("rules"));
     assert.ok(schema.properties.summary.properties.duplicateClusters?.items.required.includes("locations"));
+    assert.equal(schema.properties.summary.properties.topPayoffTargets?.maxItems, 10);
+    assert.ok(schema.properties.summary.properties.topPayoffTargets?.items.required.includes("payoffScore"));
     assert.ok(schema.properties.summary.properties.importGraph?.required.includes("edges"));
     assert.ok(schema.properties.summary.properties.importGraph?.properties.edges.items.required.includes("inCycle"));
     assert.ok(schema.properties.summary.properties.hotspots?.required.includes("ranking"));

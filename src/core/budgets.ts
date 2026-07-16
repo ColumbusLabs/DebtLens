@@ -1,5 +1,6 @@
 import { summarizeIssues } from "./issueAggregates.js";
 import type { DebtIssue, ScanResult, Severity } from "./types.js";
+import micromatch from "micromatch";
 
 export interface AreaBudget {
   maxIssues?: number;
@@ -119,36 +120,22 @@ function normalizePath(file: string): string {
   return file.replaceAll("\\", "/");
 }
 
-function pathMatchesPattern(path: string, pattern: string): boolean {
+export function validateBudgetPattern(pattern: string): string | undefined {
   const normalizedPattern = pattern.replaceAll("\\", "/");
-  if (normalizedPattern.endsWith("/**")) {
-    const prefix = normalizedPattern.slice(0, -3);
-    return path === prefix || path.startsWith(`${prefix}/`);
+  if (!normalizedPattern.trim()) return "must not be empty";
+  if (normalizedPattern.startsWith("!")) return "must not use negation";
+  try {
+    micromatch.makeRe(normalizedPattern, { nonegate: true });
+  } catch {
+    return "must be a valid workspace glob";
   }
-  if (normalizedPattern.includes("*")) {
-    let expression = "";
-    for (let index = 0; index < normalizedPattern.length; index += 1) {
-      const char = normalizedPattern[index];
-      const next = normalizedPattern[index + 1];
-      if (char === "*" && next === "*") {
-        if (normalizedPattern[index + 2] === "/") {
-          expression += "(?:.*/)?";
-          index += 2;
-        } else {
-          expression += ".*";
-          index += 1;
-        }
-      } else if (char === "*") {
-        expression += "[^/]*";
-      } else {
-        expression += escapeRegExp(char ?? "");
-      }
-    }
-    return new RegExp(`^${expression}$`).test(path);
-  }
-  return path === normalizedPattern || path.startsWith(`${normalizedPattern}/`);
+  return undefined;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+function pathMatchesPattern(path: string, pattern: string): boolean {
+  const normalizedPattern = pattern.replaceAll("\\", "/");
+  const candidatePatterns = /[*?{}()[\]]/.test(normalizedPattern)
+    ? [normalizedPattern]
+    : [normalizedPattern, `${normalizedPattern}/**`];
+  return candidatePatterns.some((candidate) => micromatch.isMatch(path, candidate, { dot: true, nonegate: true }));
 }

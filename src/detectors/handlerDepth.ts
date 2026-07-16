@@ -46,7 +46,7 @@ export const handlerDepthDetector: Detector = {
           evidence: [
             `Control depth: ${depth} / ${maxDepth}`,
             `Nested callbacks: ${nestedCallbacks} / ${maxDepth}`,
-            ...(middlewareCount > 0 ? [`Middleware arguments: ${middlewareCount} / ${maxMiddleware}`] : []),
+            `Middleware arguments: ${middlewareCount} / ${maxMiddleware}`,
           ],
           suggestion: "Move validation, loading, and response branches into named middleware or service helpers so the handler reads as a flat request workflow.",
         }));

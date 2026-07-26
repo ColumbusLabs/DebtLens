@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computePayoffScore, sortIssuesByPayoff, topPayoffIssues } from "../../src/core/priority.js";
-import type { DebtIssue } from "../../src/core/types.js";
+import { computePayoffScore, selectTopPayoffResult, sortIssuesByPayoff, topPayoffIssues } from "../../src/core/priority.js";
+import type { DebtIssue, ScanResult } from "../../src/core/types.js";
 
 const baseIssue: DebtIssue = {
   id: "1",
@@ -46,5 +46,38 @@ describe("payoff ranking", () => {
     }));
     assert.equal(topPayoffIssues(issues).length, 10);
     assert.equal(topPayoffIssues(issues)[0]?.payoffScore, 11);
+  });
+
+  it("builds a count-consistent presentation result without mutating the full scan", () => {
+    const issues = [
+      { ...baseIssue, id: "low", fingerprint: "low", severity: "low" as const, payoffScore: 2 },
+      { ...baseIssue, id: "high", fingerprint: "high", file: "src/b.ts", severity: "high" as const, payoffScore: 12 },
+    ];
+    const result: ScanResult = {
+      schemaVersion: 1,
+      issues,
+      summary: {
+        totalIssues: 2,
+        bySeverity: { info: 0, low: 1, medium: 0, high: 1 },
+        byRule: { "todo-comment": 2 },
+        filesScanned: 2,
+        rulesRun: 1,
+        elapsedMs: 1,
+      },
+      options: { target: ".", include: [], exclude: [], minSeverity: "low", rules: ["todo-comment"] },
+    };
+
+    const selected = selectTopPayoffResult(result, 1);
+
+    assert.equal(result.issues.length, 2);
+    assert.deepEqual(selected.issues.map((issue) => issue.id), ["high"]);
+    assert.equal(selected.summary.totalIssues, selected.issues.length);
+    assert.deepEqual(selected.summary.bySeverity, { info: 0, low: 0, medium: 0, high: 1 });
+    assert.deepEqual(selected.summary.issueSelection, {
+      strategy: "payoff",
+      limit: 1,
+      totalAvailable: 2,
+      omitted: 1,
+    });
   });
 });

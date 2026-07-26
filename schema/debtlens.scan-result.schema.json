@@ -443,6 +443,33 @@
             }
           }
         },
+        "issueSelection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "limit",
+            "totalAvailable",
+            "omitted"
+          ],
+          "properties": {
+            "strategy": {
+              "const": "payoff"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "totalAvailable": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "omitted": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
         "warnings": {
           "type": "array",
           "items": {

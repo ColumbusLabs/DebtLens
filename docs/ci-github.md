@@ -113,5 +113,33 @@ the baseline:
     diff-base: origin/${{ github.base_ref }}
     comment: true
     comment-delta-only: true
+    comment-max-findings: 20
     step-summary: true
 ```
+
+## Low-noise pull request comments
+
+For new or upgraded comment workflows, the recommended mode is delta-only feedback
+capped to the top 20 findings:
+
+```yaml
+- uses: ColumbusLabs/debtlens@v0
+  with:
+    diff-base: origin/${{ github.base_ref }}
+    comment: true
+    comment-delta-only: true
+    comment-max-findings: 20
+    comment-max-bytes: 60000
+```
+
+`diff-base` (or `baseline`) makes the scan contain only findings absent from the
+comparison. `comment-delta-only` labels that comparison clearly in the comment, while
+`comment-max-findings` limits detailed annotations. Detailed findings are selected by
+payoff score before the cap; omitted severity, rule, and file totals remain summarized.
+If the comparison contains no new findings, the comment reports the empty delta instead
+of implying that the repository has no maintainability debt.
+
+Existing workflows keep their current behavior because `comment-delta-only` remains
+`false` and `comment-max-findings` remains uncapped unless configured. To adopt the
+low-noise mode, add a baseline or `diff-base` first, then enable both comment inputs
+above. The independent 60,000-byte safety cap remains enabled by default.

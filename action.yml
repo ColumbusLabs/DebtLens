@@ -136,7 +136,7 @@ inputs:
     description: Optional previous ScanResult JSON path for step-summary trend comparison.
     default: ""
   comment-delta-only:
-    description: PR comment only - emphasize baseline or diff-base delta findings.
+    description: PR comment only - label findings as baseline or diff-base deltas. Pair with baseline or diff-base so the scan contains only new findings.
     default: "false"
   step-summary:
     description: Append a compact Markdown summary to the GitHub Actions step summary.

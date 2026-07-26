@@ -36,12 +36,13 @@ npx --yes --package=debtlens@latest debtlens scan . --pack core,python-web,vue,s
 ## 3. Get an adoption plan
 
 ```bash
-npx --yes --package=debtlens@latest debtlens adopt . --format markdown
+npx --yes --package=debtlens@latest debtlens adopt . --top 10 --format markdown
 ```
 
 Use the recommendation to decide whether the first CI run should be advisory, baseline
-only, or a high-severity gate. The named presets are the shortest way to express that
-choice:
+only, or a high-severity gate. `--top 10` keeps the report focused without weakening
+the scan; baseline writes and later gates always evaluate every finding. The named
+presets are the shortest way to express that choice:
 
 ```bash
 npx --yes --package=debtlens@latest debtlens scan . --gate advisory

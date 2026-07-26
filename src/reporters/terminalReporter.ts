@@ -22,6 +22,9 @@ export function renderTerminal(
   lines.push(color.bold("DebtLens Report"));
   lines.push(`Scanned ${result.summary.filesScanned} files with ${result.summary.rulesRun} rules in ${result.summary.elapsedMs}ms.`);
   lines.push(`Issues: ${result.summary.totalIssues} | high ${result.summary.bySeverity.high} | medium ${result.summary.bySeverity.medium} | low ${result.summary.bySeverity.low} | info ${result.summary.bySeverity.info}`);
+  if (result.summary.issueSelection) {
+    lines.push(`Showing ${result.summary.totalIssues} of ${result.summary.issueSelection.totalAvailable} findings ranked by payoff; gates and baseline writes use the full scan.`);
+  }
   const filterStats = formatFilterStats(result.summary.filterStats);
   if (filterStats) {
     lines.push(`Filtered: ${filterStats}`);

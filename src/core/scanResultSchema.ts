@@ -311,6 +311,17 @@ export function buildScanResultSchema(): Record<string, unknown> {
           rulesRun: { type: "integer", minimum: 0 },
           elapsedMs: { type: "integer", minimum: 0 },
           topPayoffTargets: { type: "array", maxItems: 10, items: payoffTarget },
+          issueSelection: {
+            type: "object",
+            additionalProperties: false,
+            required: ["strategy", "limit", "totalAvailable", "omitted"],
+            properties: {
+              strategy: { const: "payoff" },
+              limit: { type: "integer", minimum: 1 },
+              totalAvailable: { type: "integer", minimum: 0 },
+              omitted: { type: "integer", minimum: 0 },
+            },
+          },
           warnings: { type: "array", items: { type: "string" } },
           filterStats: {
             type: "object",

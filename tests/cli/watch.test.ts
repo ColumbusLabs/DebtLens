@@ -22,6 +22,7 @@ describe("debtlens watch", () => {
       ownership: true,
       codeowners: ".github/CODEOWNERS",
       auditSuppressions: true,
+      top: 5,
       debounce: 10,
     });
 
@@ -46,6 +47,8 @@ describe("debtlens watch", () => {
       "--ownership",
       "--codeowners",
       ".github/CODEOWNERS",
+      "--top",
+      "5",
     ]);
   });
 

@@ -50,6 +50,7 @@ export function registerWatchCommand(program: Command): void {
     .option("--sarif-category <category>", "with --format sarif, set runs[].automationDetails.id for separated code scanning runs")
     .option("--junit-fail-on <severity>", "with --format junit, mark findings at or above this severity as failed testcases")
     .option("--markdown-heatmap [limit]", "with --format markdown, append a debt heatmap table", parseOptionalInteger)
+    .option("--top <count>", "show only the top N payoff-ranked findings while evaluating the full scan", parseInteger)
     .option("--debounce <ms>", "watch debounce in milliseconds", parseInteger)
     .action((target: string, rawOptions: Record<string, unknown>) => {
       try {

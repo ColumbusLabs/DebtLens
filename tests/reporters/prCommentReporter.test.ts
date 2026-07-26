@@ -81,6 +81,21 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /<details><summary><code>src\/release plan\.ts<\/code> - 1 finding<\/summary>/);
   });
 
+  it("discloses a payoff-selected report view and its full-scan gate semantics", () => {
+    const result = makeResult([{ ...propIssue, payoffScore: 12 }]);
+    result.summary.issueSelection = {
+      strategy: "payoff",
+      limit: 1,
+      totalAvailable: 4,
+      omitted: 3,
+    };
+
+    const markdown = renderPrComment(result);
+
+    assert.match(markdown, /Showing 1 of 4 findings ranked by payoff/);
+    assert.match(markdown, /gates and baseline writes use the full scan/);
+  });
+
   it("renders baseline delta copy in delta-only mode", () => {
     const result = makeResult([propIssue]);
     result.summary.deltaFromBaseline = {
@@ -100,6 +115,28 @@ describe("pr-comment reporter", () => {
     assert.match(markdown, /Delta: -1 total, 1 new, 2 resolved, 1 changed/);
     assert.match(markdown, /Showing findings not covered by the compared baseline\. Changed findings are counted above\./);
     assert.doesNotMatch(markdown, /remain available in the JSON report/);
+  });
+
+  it("renders a clean empty delta state", () => {
+    const result = makeResult([]);
+    result.summary.deltaFromBaseline = {
+      new: 0,
+      resolved: 2,
+      changed: 0,
+      severityRegressions: 0,
+      totalDelta: -2,
+      baseline: { totalIssues: 2, bySeverity: { info: 0, low: 0, medium: 0, high: 2 }, byRule: { "prop-drilling": 2 } },
+      current: { totalIssues: 0, bySeverity: { info: 0, low: 0, medium: 0, high: 0 }, byRule: {} },
+      hasBaselineSummary: true,
+      byRule: { "prop-drilling": { baseline: 2, current: 0, delta: -2 } },
+    };
+
+    const markdown = renderPrComment(result, { deltaOnly: true, maxFindings: 20 });
+
+    assert.match(markdown, /Delta: -2 total, 0 new, 2 resolved, 0 changed/);
+    assert.match(markdown, /No new findings versus the compared baseline\./);
+    assert.doesNotMatch(markdown, /No maintainability debt found/);
+    assert.doesNotMatch(markdown, /Omitted finding summary|Grouped annotations/);
   });
 
   it("normalizes multi-line finding text for PR comments", () => {
@@ -237,6 +274,22 @@ describe("pr-comment reporter", () => {
     assert.doesNotMatch(markdown, /Naming drift \(`naming-drift`\) at/);
   });
 
+  it("selects top-N detailed findings by existing payoff score", () => {
+    const lowPayoffHighSeverity = { ...propIssue, payoffScore: 3 };
+    const highPayoffInfoSeverity = { ...namingIssue, payoffScore: 40 };
+    const mediumPayoff = { ...stateIssue, payoffScore: 12 };
+
+    const markdown = renderPrComment(
+      makeResult([lowPayoffHighSeverity, mediumPayoff, highPayoffInfoSeverity]),
+      { maxFindings: 1 },
+    );
+
+    assert.match(markdown, /Naming drift \(`naming-drift`\) at/);
+    assert.doesNotMatch(markdown, /Prop drilling \(`prop-drilling`\) at/);
+    assert.doesNotMatch(markdown, /State sprawl \(`state-sprawl`\) at/);
+    assert.match(markdown, /The 1 detailed finding shown was selected by payoff score before applying the cap\./);
+  });
+
   it("attributes omitted findings to the finding cap when a byte cap is also configured", () => {
     const markdown = renderPrComment(makeResult([propIssue, stateIssue, namingIssue]), {
       maxFindings: 1,
@@ -276,6 +329,21 @@ describe("pr-comment reporter", () => {
 
     assert.ok(new TextEncoder().encode(markdown).length <= 2200);
     assert.match(markdown, /### Omitted finding summary/);
+    assert.match(markdown, /configured 2200-byte comment cap/);
+  });
+
+  it("explains payoff selection when the byte cap truncates detailed findings", () => {
+    const issues = Array.from({ length: 8 }, (_, index) => ({
+      ...propIssue,
+      id: `payoff-long-${index}`,
+      fingerprint: `payoff-long-${index}`,
+      file: `src/PayoffLong${index}.tsx`,
+      message: `Long issue ${index} ${"x".repeat(300)}`,
+      payoffScore: index + 1,
+    }));
+    const markdown = renderPrComment(makeResult(issues), { maxBytes: 2200 });
+
+    assert.match(markdown, /selected by payoff score before applying the cap/);
     assert.match(markdown, /configured 2200-byte comment cap/);
   });
 

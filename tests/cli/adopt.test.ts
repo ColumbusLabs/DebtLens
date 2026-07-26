@@ -164,6 +164,32 @@ describe("debtlens adopt", () => {
     assert.match(result.stdout, /Rationale: .*Recommended first pack: core/);
   });
 
+  it("shows a stable top-N payoff shortlist without hiding the full adoption totals", () => {
+    writeFileSync(join(dir, "src", "second.ts"), [
+      "export function crowded(a: boolean, b: boolean, c: boolean, d: boolean, e: boolean, f: boolean) {",
+      "  return a || b || c || d || e || f;",
+      "}",
+      "",
+    ].join("\n"));
+
+    const result = runAdopt([
+      ".",
+      "--cwd",
+      dir,
+      "--rules",
+      "todo-comment,long-parameter-list",
+      "--top",
+      "1",
+    ]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /Total issues: 2/);
+    assert.match(result.stdout, /Highest-signal findings \(1 of 2\):/);
+    assert.match(result.stdout, /\[high\] Long parameter list/);
+    assert.match(result.stdout, /debtlens adopt .*--top 1 .*--gate advisory/);
+    assert.doesNotMatch(result.stdout, /debtlens scan .*--top 1/);
+  });
+
   it("prints threshold suggestions when adoption findings exceed defaults", () => {
     const result = runAdopt(["examples/react", "--rules", "large-component", "--threshold", "large-component.maxLines=20"]);
 

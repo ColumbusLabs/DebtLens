@@ -465,6 +465,102 @@ describe("debtlens scan output formats", () => {
     assert.equal(terminal.status, 0);
     assert.match(terminal.stdout, /Top payoff targets/);
   });
+
+  it("renders a count-consistent top-N payoff view while retaining the full available count", () => {
+    const json = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment,prop-drilling",
+      "--top",
+      "1",
+      "--format",
+      "json",
+    ]);
+
+    assert.equal(json.status, 0);
+    const parsed = JSON.parse(json.stdout) as {
+      issues: Array<{ fingerprint: string; ruleId: string; payoffScore?: number }>;
+      summary: {
+        totalIssues: number;
+        issueSelection?: { strategy: string; limit: number; totalAvailable: number; omitted: number };
+      };
+    };
+    assert.equal(parsed.issues.length, 1);
+    assert.equal(parsed.summary.totalIssues, parsed.issues.length);
+    assert.deepEqual(parsed.summary.issueSelection, {
+      strategy: "payoff",
+      limit: 1,
+      totalAvailable: 2,
+      omitted: 1,
+    });
+    assert.equal(parsed.issues[0]?.ruleId, "prop-drilling");
+    assert.ok(parsed.issues[0]?.payoffScore);
+
+    const terminal = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment,prop-drilling",
+      "--top",
+      "1",
+    ]);
+    assert.equal(terminal.status, 0);
+    assert.match(terminal.stdout, /Showing 1 of 2 findings ranked by payoff/);
+    assert.match(terminal.stdout, /Prop drilling/);
+    assert.doesNotMatch(terminal.stdout, /TODO comment/);
+
+    const markdown = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment,prop-drilling",
+      "--top",
+      "1",
+      "--format",
+      "markdown",
+    ]);
+    assert.equal(markdown.status, 0);
+    assert.match(markdown.stdout, /showing 1 of 2 findings ranked by payoff/);
+    assert.match(markdown.stdout, /Prop drilling/);
+    assert.doesNotMatch(markdown.stdout, /TODO comment/);
+
+    const prComment = runScan([
+      "examples/react",
+      "--rules",
+      "todo-comment,prop-drilling",
+      "--top",
+      "1",
+      "--format",
+      "pr-comment",
+    ]);
+    assert.equal(prComment.status, 0);
+    assert.match(prComment.stdout, /Showing 1 of 2 findings ranked by payoff/);
+    assert.match(prComment.stdout, /gates and baseline writes use the full scan/);
+    assert.match(prComment.stdout, /Prop drilling/);
+    assert.doesNotMatch(prComment.stdout, /TODO comment/);
+  });
+
+  it("writes the full baseline even when --top limits the report", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debtlens-top-baseline-"));
+    try {
+      const baselinePath = join(dir, "baseline.json");
+      const result = runScan([
+        "examples/react",
+        "--rules",
+        "todo-comment,prop-drilling",
+        "--top",
+        "1",
+        "--write-baseline",
+        baselinePath,
+      ]);
+
+      assert.equal(result.status, 0);
+      const baseline = JSON.parse(readFileSync(baselinePath, "utf8")) as {
+        summary: { totalIssues: number };
+      };
+      assert.equal(baseline.summary.totalIssues, 2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("debtlens scan fail-on confidence", () => {

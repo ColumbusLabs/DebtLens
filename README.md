@@ -251,6 +251,7 @@ Options:
 --sarif-category <category>    SARIF only: set runs[].automationDetails.id
 --junit-fail-on <severity>     JUnit only: failed testcase severity threshold
 --markdown-heatmap [limit]     Markdown only: append a debt heatmap table
+--top <count>                  show only the top N payoff-ranked findings; gates use the full scan
 --pr-comment-max-findings <count>  PR comment only: cap detailed findings
 --pr-comment-max-bytes <count>     PR comment only: cap rendered body bytes
 --pr-comment-full-report-url <url> PR comment only: link omitted findings to a full report
@@ -283,6 +284,10 @@ debtlens scan --format gitlab-codequality --output gl-code-quality-report.json
 
 # Package-scoped adoption report in a workspace
 debtlens adopt . --package web --format markdown
+
+# Keep a first evaluation focused on the ten highest-signal findings
+debtlens adopt . --top 10
+debtlens scan . --top 10 --format markdown
 
 # CI gate: allow low/medium debt but fail high-confidence high-severity debt
 debtlens scan --min-severity medium --fail-on high --fail-on-confidence 0.8
@@ -406,6 +411,12 @@ When matched files exceed `maxFiles`, DebtLens scans the first selected files, p
 `debtlens scan --format json` emits `schemaVersion: 1`. The stable JSON Schema URL is `https://raw.githubusercontent.com/ColumbusLabs/DebtLens/main/schema/debtlens.scan-result.schema.json`.
 
 Every reported issue includes a line-stable `fingerprint`. Inline suppressions with reasons are exported at the root `suppressions` array so compliance and CI consumers can audit what was hidden. Pass `--audit-suppressions` to also export `suppressionDirectives`, a directive-level audit of used, unused, and not-evaluated inline suppressions with file, line, rule, reason, hidden-finding count, and recommended action. When a baseline or `--diff-base` is used, `summary.deltaFromBaseline` reports new, resolved, changed, total, and per-rule count deltas. JSON and Markdown reports also surface `summary.correlations` for files where multiple rules cluster together.
+
+Pass `--top N` to render a deterministic payoff-ranked view for a noisy first run.
+Terminal, Markdown, PR-comment, and JSON output contain only the selected findings and
+include `summary.issueSelection` with the requested limit, full available count, and
+omitted count. Summary counts remain consistent with the selected `issues` array.
+Quality gates, area budgets, and baseline writes still evaluate the complete scan.
 
 Use `debtlens compare previous.json current.json --format terminal|markdown|json` to compare two ScanResult JSON files without rescanning. The compare report includes total, severity, and rule deltas; when both inputs contain issue arrays, it also reports exact new, resolved, changed, severity-regression, and top-new-file counts. Run compare with the same scan scope and options for meaningful trends.
 
@@ -647,7 +658,7 @@ guidance.
 
 ## Output formats
 
-Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards; findings include stable SARIF `partialFingerprints`, and `--sarif-category` can set `runs[].automationDetails.id` for package or pack-separated uploads. HTML is a self-contained human report. JUnit XML is for CI systems that expect test-style failures; `--junit-fail-on` can keep lower-severity findings visible as skipped testcases while only the selected severity threshold fails the suite. When omitted, every reported finding fails to preserve existing behavior. `gitlab-codequality` emits GitLab's Code Quality JSON array with stable fingerprints, repo-relative paths, lines, descriptions, rule names, and mapped severities.
+Terminal output is designed for local development. JSON is designed for integrations. Markdown is designed for release notes and maintainer handoffs. `pr-comment` is compact Markdown with prioritized fix targets, collapsible per-file sections, and optional caps for GitHub pull request comments. When payoff scores are present, capped detailed findings are selected by payoff before omitted findings are summarized. SARIF (2.1.0) is designed for GitHub code scanning and other security/quality dashboards; findings include stable SARIF `partialFingerprints`, and `--sarif-category` can set `runs[].automationDetails.id` for package or pack-separated uploads. HTML is a self-contained human report. JUnit XML is for CI systems that expect test-style failures; `--junit-fail-on` can keep lower-severity findings visible as skipped testcases while only the selected severity threshold fails the suite. When omitted, every reported finding fails to preserve existing behavior. `gitlab-codequality` emits GitLab's Code Quality JSON array with stable fingerprints, repo-relative paths, lines, descriptions, rule names, and mapped severities.
 
 ```bash
 debtlens scan --format json
@@ -867,6 +878,11 @@ For shared organization policy, see [policy packs as npm packages](./docs/policy
 For agent integrations, see the [MCP server setup](./docs/mcp.md).
 
 Set `comment: true` to upsert a stable pull request comment (requires `pull-requests: write`). Comment posting is warn-only by default so forked or permission-limited pull requests can still produce artifacts and annotations; set `comment-fail-on-error: true` when a missing comment should fail the Action.
+
+For low-noise pull request feedback, pair `diff-base` (or `baseline`) with
+`comment-delta-only: true` and `comment-max-findings: 20`. This reports only new
+findings and selects the capped detail by payoff score. Existing workflows remain
+uncapped unless they opt in; see the [GitHub CI upgrade guidance](./docs/ci-github.md#low-noise-pull-request-comments).
 
 ```yaml
 permissions:

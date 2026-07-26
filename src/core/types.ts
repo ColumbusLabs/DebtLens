@@ -47,6 +47,13 @@ export interface PayoffTarget {
   location?: IssueLocation;
 }
 
+export interface IssueSelectionSummary {
+  strategy: "payoff";
+  limit: number;
+  totalAvailable: number;
+  omitted: number;
+}
+
 export interface SourceFileInfo {
   absolutePath: string;
   relativePath: string;
@@ -553,6 +560,8 @@ export interface ScanSummary {
   importGraph?: ImportGraph;
   /** Deterministic, bounded payoff shortlist for machine consumers. */
   topPayoffTargets?: PayoffTarget[];
+  /** Presentation-only finding selection; gates and baseline writes still evaluate the full result. */
+  issueSelection?: IssueSelectionSummary;
 }
 
 export interface ScanResult {

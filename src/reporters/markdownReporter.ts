@@ -29,6 +29,9 @@ export function renderMarkdown(result: ScanResult, options: MarkdownOptions = {}
   for (const severity of severityOrder) {
     lines.push(`- ${capitalize(severity)}: **${result.summary.bySeverity[severity]}**`);
   }
+  if (result.summary.issueSelection) {
+    lines.push(`- Selection: **showing ${result.summary.totalIssues} of ${result.summary.issueSelection.totalAvailable} findings ranked by payoff**; gates and baseline writes use the full scan.`);
+  }
   const filterStats = formatFilterStats(result.summary.filterStats);
   if (filterStats) {
     lines.push(`- Filtered: **${filterStats}**`);

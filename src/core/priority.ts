@@ -1,4 +1,5 @@
-import type { DebtIssue, ScanHotspotSummary, Severity } from "./types.js";
+import { buildDuplicateLogicClusters, buildRuleCorrelations, summarizeIssues } from "./issueAggregates.js";
+import type { DebtIssue, ScanHotspotSummary, ScanResult, Severity } from "./types.js";
 
 const defaultSeverityWeight: Record<Severity, number> = {
   high: 16,
@@ -72,6 +73,47 @@ export function sortIssuesByPayoff<T extends DebtIssue>(issues: T[]): T[] {
 
 export function topPayoffIssues<T extends DebtIssue>(issues: T[], limit = 10): T[] {
   return sortIssuesByPayoff(issues).slice(0, Math.max(0, limit));
+}
+
+export function selectTopPayoffResult(result: ScanResult, limit: number): ScanResult {
+  const selectedIssues = topPayoffIssues(result.issues, limit);
+  const selectedCounts = summarizeIssues(selectedIssues);
+  const summary = {
+    ...result.summary,
+    ...selectedCounts,
+    issueSelection: {
+      strategy: "payoff" as const,
+      limit,
+      totalAvailable: result.issues.length,
+      omitted: Math.max(0, result.issues.length - selectedIssues.length),
+    },
+    topPayoffTargets: topPayoffIssues(selectedIssues, 10).map((issue) => ({
+      id: issue.id,
+      fingerprint: issue.fingerprint,
+      ruleId: issue.ruleId,
+      file: issue.file,
+      severity: issue.severity,
+      payoffScore: issue.payoffScore ?? 0,
+      ...(issue.location ? { location: issue.location } : {}),
+    })),
+  };
+
+  const correlations = buildRuleCorrelations(selectedIssues);
+  const duplicateClusters = buildDuplicateLogicClusters(selectedIssues);
+  if (correlations.length > 0) summary.correlations = correlations;
+  else delete summary.correlations;
+  if (duplicateClusters.length > 0) summary.duplicateClusters = duplicateClusters;
+  else delete summary.duplicateClusters;
+
+  // These aggregates describe the full issue set and would be misleading beside selected counts.
+  delete summary.hotspots;
+  delete summary.ownership;
+
+  return {
+    ...result,
+    issues: selectedIssues,
+    summary,
+  };
 }
 
 function buildChurnLookup(hotspots?: ScanHotspotSummary): Map<string, number> | undefined {

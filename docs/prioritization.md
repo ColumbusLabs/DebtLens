@@ -7,6 +7,7 @@ DebtLens can rank findings by **payoff score** so teams fix the debt that costs 
 Each issue gets a `payoffScore` in JSON output when payoff ranking is enabled:
 
 - pass `--sort payoff` on `debtlens scan`, or
+- pass `--top N` to render a bounded highest-signal view, or
 - enable git churn hotspots with `--hotspots` on the CLI, or
 - pass `--blame-age` to include age in the score.
 
@@ -37,12 +38,21 @@ debtlens scan . --sort payoff --hotspots
 
 # JSON consumers read payoffScore and a bounded top-target shortlist
 debtlens scan . --sort payoff --format json
+
+# Show only the ten highest-signal findings without weakening gates
+debtlens scan . --top 10 --format markdown
 ```
 
 When payoff scores are enabled, JSON output also includes
 `summary.topPayoffTargets`. It contains at most 10 compact targets ordered
 deterministically by score, file, line, rule, and fingerprint. Full issue details
 remain in `issues`.
+
+`--top N` is a presentation limit applied after baseline or diff filtering. Its JSON
+view keeps `summary.totalIssues` consistent with the selected `issues` array and adds
+`summary.issueSelection` with `limit`, `totalAvailable`, and `omitted`. Scanning,
+`--fail-on`, regression gates, area budgets, and `--write-baseline` still operate on
+the complete result, including findings omitted from the rendered view.
 
 Use `--hotspots` when git history is available so churn boosts files that change often. In CI, check out enough history (`fetch-depth: 0` or a bounded `--churn-range`).
 
@@ -67,7 +77,7 @@ Higher `churn` and `age` weights amplify those factors. Severity weights follow 
 Payoff ranking fits between calibration and triage:
 
 1. `debtlens calibrate` — tune thresholds to your repo (see [`docs/false-positives.md`](./false-positives.md)).
-2. `debtlens scan . --sort payoff --hotspots` — review the highest-ROI findings first.
+2. `debtlens adopt . --top 10` or `debtlens scan . --top 10 --hotspots` — review the highest-ROI findings first.
 3. `debtlens triage` — baseline or suppress the backlog interactively.
 4. Add `budgets` — cap debt per directory after cleanup (see below).
 

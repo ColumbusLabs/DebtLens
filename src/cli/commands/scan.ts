@@ -8,7 +8,7 @@ import { resolveWorkspacePackage } from "../../config/workspaces.js";
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../../core/baseline.js";
 import { evaluateBudgets, renderBudgetReport, type BudgetEvaluation } from "../../core/budgets.js";
 import { buildOwnershipReport, renderOwnershipReportTerminal } from "../../core/ownershipReport.js";
-import { enrichIssuesWithPayoffScores, sortIssuesByPayoff, topPayoffIssues } from "../../core/priority.js";
+import { enrichIssuesWithPayoffScores, selectTopPayoffResult, sortIssuesByPayoff, topPayoffIssues } from "../../core/priority.js";
 import { buildGitChurnHotspots } from "../../core/hotspots.js";
 import { buildOwnershipSummary, loadCodeowners } from "../../core/ownership.js";
 import { scan } from "../../core/scan.js";
@@ -123,6 +123,7 @@ export function registerScanCommand(program: Command): void {
     .option("--pr-comment-full-report-url <url>", "with --format pr-comment, link omitted findings to a full report artifact")
     .option("--budget-report", "print per-area budget usage without failing the gate")
     .option("--sort <field>", "sort findings by severity or payoff")
+    .option("--top <count>", "show only the top N payoff-ranked findings while evaluating the full scan", parseInteger)
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
         const result = await runScanCommand(target, rawOptions);
@@ -218,7 +219,11 @@ export async function runScanCommand(target: string, rawOptions: Record<string, 
 
   const badgeThresholds = parseBadgeThresholds(fileConfig.badge);
 
-  let report = renderReport(reported, format, {
+  const displayed = typeof rawOptions.top === "number"
+    ? selectTopPayoffResult(reported, rawOptions.top)
+    : reported;
+
+  let report = renderReport(displayed, format, {
     color: rawOptions.color !== false && format === "terminal" && process.stdout.isTTY === true,
     quiet: rawOptions.quiet === true,
     sourceUrlBase: format === "pr-comment" ? getGitHubSourceUrlBase(process.env) : undefined,
@@ -384,6 +389,12 @@ function validateScanModes(rawOptions: Record<string, unknown>): void {
   if (rawOptions.failOnRegression === true && !rawOptions.baseline && !rawOptions.diffBase) {
     throw new Error("Use --fail-on-regression with --baseline or --diff-base.");
   }
+  if (rawOptions.top !== undefined) {
+    const format = String(rawOptions.format ?? "terminal");
+    if (!["terminal", "markdown", "json", "pr-comment"].includes(format)) {
+      throw new Error(`Use --top with terminal, markdown, json, or pr-comment output, not ${format}.`);
+    }
+  }
 }
 
 function emitScanDiagnostics(
@@ -445,12 +456,14 @@ function enrichPayoffScores(
   rawOptions: Record<string, unknown>,
   fileConfig: DebtLensConfig,
 ): void {
-  if (rawOptions.sort === "payoff") {
+  if (rawOptions.sort === "payoff" || rawOptions.top !== undefined) {
     enrichIssuesWithPayoffScores(reported.issues, {
       hotspots: reported.summary.hotspots,
       weights: fileConfig.priority,
     });
-    reported.issues = sortIssuesByPayoff(reported.issues);
+    if (rawOptions.sort === "payoff") {
+      reported.issues = sortIssuesByPayoff(reported.issues);
+    }
   } else if (rawOptions.blameAge === true || reported.summary.hotspots) {
     enrichIssuesWithPayoffScores(reported.issues, {
       hotspots: reported.summary.hotspots,
@@ -458,7 +471,8 @@ function enrichPayoffScores(
     });
   }
   if (reported.issues.some((issue) => issue.payoffScore !== undefined)) {
-    reported.summary.topPayoffTargets = topPayoffIssues(reported.issues, 10).map((issue) => ({
+    const requestedLimit = typeof rawOptions.top === "number" ? rawOptions.top : 10;
+    reported.summary.topPayoffTargets = topPayoffIssues(reported.issues, Math.min(requestedLimit, 10)).map((issue) => ({
       id: issue.id,
       fingerprint: issue.fingerprint,
       ruleId: issue.ruleId,

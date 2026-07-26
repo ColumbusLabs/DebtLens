@@ -1,4 +1,5 @@
 import { buildFixTargets, groupIssuesByFile, summarizeIssues } from "../core/issueAggregates.js";
+import { enrichIssuesWithPayoffScores, sortIssuesByPayoff } from "../core/priority.js";
 import type { DebtIssue, ScanResult, Severity } from "../core/types.js";
 import { formatFilterStats } from "./filterStats.js";
 import { escapeHtml } from "./htmlEscape.js";
@@ -23,14 +24,14 @@ export function renderPrComment(result: ScanResult, options: PrCommentOptions = 
   if (options.maxBytes && options.maxBytes > 0) {
     return renderPrCommentWithinByteLimit(result, options);
   }
-  const detailIssues = limitIssuesForComment(result.issues, options.maxFindings);
+  const detailIssues = limitIssuesForComment(result, options.maxFindings);
   return renderPrCommentBody(result, options, detailIssues, findingCapReason(options.maxFindings, result.issues.length, detailIssues.length));
 }
 
 function renderPrCommentWithinByteLimit(result: ScanResult, options: PrCommentOptions): string {
   const maxFindings = Math.min(result.issues.length, options.maxFindings ?? result.issues.length);
   for (let count = maxFindings; count >= 0; count -= 1) {
-    const detailIssues = limitIssuesForComment(result.issues, count);
+    const detailIssues = limitIssuesForComment(result, count);
     const report = renderPrCommentBody(result, options, detailIssues, capReasonForByteLimitedRender(options, result.issues.length, maxFindings, count));
     if (byteLength(report) <= (options.maxBytes ?? Infinity)) {
       return report;
@@ -52,6 +53,7 @@ function renderPrCommentBody(
   lines.push("| Files scanned | Rules run | Total issues | High | Medium | Low | Info |");
   lines.push("| ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
   lines.push(`| ${result.summary.filesScanned} | ${result.summary.rulesRun} | ${result.summary.totalIssues} | ${result.summary.bySeverity.high} | ${result.summary.bySeverity.medium} | ${result.summary.bySeverity.low} | ${result.summary.bySeverity.info} |`);
+  renderIssueSelection(lines, result);
   const filterStats = formatFilterStats(result.summary.filterStats);
   if (filterStats) {
     lines.push("");
@@ -67,7 +69,11 @@ function renderPrCommentBody(
 
   if (result.issues.length === 0) {
     lines.push("");
-    lines.push("No maintainability debt found at the configured severity level.");
+    if (options.deltaOnly && delta) {
+      lines.push("No new findings versus the compared baseline.");
+    } else {
+      lines.push("No maintainability debt found at the configured severity level.");
+    }
     return `${lines.join("\n")}\n`;
   }
 
@@ -201,6 +207,10 @@ function renderOmittedSummary(
   lines.push("### Omitted finding summary");
   lines.push("");
   lines.push(`${omitted.length} finding${omitted.length === 1 ? "" : "s"} omitted from detailed annotations to stay under ${capReason}.`);
+  if (detailIssues.length > 0) {
+    const selectionVerb = detailIssues.length === 1 ? "was" : "were";
+    lines.push(`The ${detailIssues.length} detailed finding${detailIssues.length === 1 ? "" : "s"} shown ${selectionVerb} selected by payoff score before applying the cap.`);
+  }
   lines.push(`Severity: ${formatSeverityCounts(summary.bySeverity)}.`);
   if (topRules) lines.push(`Top rules: ${topRules}.`);
   if (topFiles) lines.push(`Top files: ${topFiles}.`);
@@ -217,13 +227,23 @@ function renderMinimalPrComment(result: ScanResult, options: PrCommentOptions, o
     "## DebtLens findings",
     "",
     `Issues: ${result.summary.totalIssues} | high ${result.summary.bySeverity.high} | medium ${result.summary.bySeverity.medium} | low ${result.summary.bySeverity.low} | info ${result.summary.bySeverity.info}`,
+  ];
+  renderIssueSelection(lines, result);
+  lines.push(
     "",
     `Detailed annotations are omitted from this comment to stay under ${omissionReason}.`,
     options.artifactLink ? `Full details: ${options.artifactLink}.` : "Full details remain available in the canonical JSON or Markdown artifact.",
-  ];
+  );
   const report = `${lines.join("\n")}\n`;
   if (!options.maxBytes || byteLength(report) <= options.maxBytes) return report;
   return truncateToByteLimit(report, options.maxBytes);
+}
+
+function renderIssueSelection(lines: string[], result: ScanResult): void {
+  const selection = result.summary.issueSelection;
+  if (!selection) return;
+  lines.push("");
+  lines.push(`Showing ${result.summary.totalIssues} of ${selection.totalAvailable} findings ranked by payoff; gates and baseline writes use the full scan.`);
 }
 
 function renderSuppressionAudit(lines: string[], result: ScanResult): void {
@@ -257,9 +277,20 @@ function renderLocation(issue: DebtIssue, sourceUrlBase: string | undefined): st
   return `[\`${label}\`](${sourceUrlBase}/${encodePath(issue.file)}#L${line})`;
 }
 
-function limitIssuesForComment(issues: DebtIssue[], maxFindings: number | undefined): DebtIssue[] {
+function limitIssuesForComment(result: ScanResult, maxFindings: number | undefined): DebtIssue[] {
+  const issues = result.issues;
   if (maxFindings === undefined || maxFindings >= issues.length) return [...issues];
-  return [...issues].sort(compareIssuesForComment).slice(0, Math.max(0, maxFindings));
+  return rankIssuesForComment(result).slice(0, Math.max(0, maxFindings));
+}
+
+function rankIssuesForComment(result: ScanResult): DebtIssue[] {
+  if (result.issues.every((issue) => issue.payoffScore !== undefined)) {
+    return sortIssuesByPayoff(result.issues);
+  }
+  const scoredCopies = result.issues.map((issue) => ({ ...issue }));
+  enrichIssuesWithPayoffScores(scoredCopies, { hotspots: result.summary.hotspots });
+  const originals = new Map(scoredCopies.map((copy, index) => [copy, result.issues[index]]));
+  return sortIssuesByPayoff(scoredCopies).map((copy) => originals.get(copy)!);
 }
 
 function capReasonForByteLimitedRender(
@@ -283,16 +314,6 @@ function byteCapReason(maxBytes: number | undefined): string {
   return maxBytes ? `the configured ${maxBytes}-byte comment cap` : "the configured comment byte cap";
 }
 
-function compareIssuesForComment(left: DebtIssue, right: DebtIssue): number {
-  const severityDelta = severityRank(right.severity) - severityRank(left.severity);
-  if (severityDelta !== 0) return severityDelta;
-  const confidenceDelta = right.confidence - left.confidence;
-  if (confidenceDelta !== 0) return confidenceDelta;
-  const fileDelta = left.file.localeCompare(right.file);
-  if (fileDelta !== 0) return fileDelta;
-  return (left.location?.startLine ?? 0) - (right.location?.startLine ?? 0);
-}
-
 function omittedIssues(allIssues: DebtIssue[], detailIssues: DebtIssue[]): DebtIssue[] {
   const detailOccurrences = new Set(detailIssues);
   return allIssues.filter((issue) => !detailOccurrences.has(issue));
@@ -300,13 +321,6 @@ function omittedIssues(allIssues: DebtIssue[], detailIssues: DebtIssue[]): DebtI
 
 function formatSeverityCounts(bySeverity: Record<Severity, number>): string {
   return `high ${bySeverity.high}, medium ${bySeverity.medium}, low ${bySeverity.low}, info ${bySeverity.info}`;
-}
-
-function severityRank(severity: Severity): number {
-  if (severity === "high") return 4;
-  if (severity === "medium") return 3;
-  if (severity === "low") return 2;
-  return 1;
 }
 
 function byteLength(value: string): number {

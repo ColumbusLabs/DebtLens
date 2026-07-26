@@ -26,6 +26,7 @@ export function registerAdoptCommand(program: Command): void {
     .option("--write-config", "write debtlens.config.json")
     .option("--force", "overwrite an existing config file (required with --write-config)")
     .option("--write-baseline [path]", "write baseline file (skipped when 0 issues)")
+    .option("--top <count>", "show the top N payoff-ranked findings in the adoption report", parseInteger)
     .option("--format <format>", "terminal or markdown", "terminal")
     .action(async (target: string, rawOptions: Record<string, unknown>) => {
       try {
@@ -41,6 +42,7 @@ export function registerAdoptCommand(program: Command): void {
           writeConfig: rawOptions.writeConfig === true,
           force: rawOptions.force === true,
           writeBaseline: rawOptions.writeBaseline as boolean | string | undefined,
+          topFindings: rawOptions.top as number | undefined,
           cliOptions: {
             cwd,
             include: parseCommaList(rawOptions.include as string | undefined),

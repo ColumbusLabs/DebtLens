@@ -131,6 +131,10 @@ describe("GitHub Action metadata", () => {
     assert.match(actionYml, /DEBTLENS_COMMENT_FAIL_ON_ERROR="\$DL_COMMENT_FAIL_ON_ERROR"/);
   });
 
+  it("does not reorder the canonical Action JSON when PR comments are enabled", () => {
+    assert.doesNotMatch(actionYml, /\[ "\$DL_COMMENT" = "true" \] && args\+=\(--sort payoff\)/);
+  });
+
   it("exposes scan metrics, gate status, and artifact paths as Action outputs", () => {
     for (const output of [
       "scan-status",

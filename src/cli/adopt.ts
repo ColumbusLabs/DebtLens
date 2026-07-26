@@ -5,8 +5,9 @@ import { findWorkspaceRoot, listWorkspacePackages, resolveWorkspacePackage, type
 import { DEFAULT_BASELINE_FILENAME, createBaseline, writeBaseline } from "../core/baseline.js";
 import { scan } from "../core/scan.js";
 import { severities } from "../core/severity.js";
-import type { CliOptions, DebtLensConfig, ScanResult, Severity } from "../core/types.js";
+import type { CliOptions, DebtIssue, DebtLensConfig, ScanResult, Severity } from "../core/types.js";
 import { isGitRepo } from "../utils/git.js";
+import { enrichIssuesWithPayoffScores, topPayoffIssues } from "../core/priority.js";
 import { buildThresholdSuggestions, type ThresholdSuggestion } from "./adoptionThresholds.js";
 import {
   formatGatePresetDefaults,
@@ -29,6 +30,7 @@ export interface AdoptInput {
   packageName?: string;
   writeBaseline?: boolean | string;
   format?: "terminal" | "markdown";
+  topFindings?: number;
 }
 
 export interface AdoptResult {
@@ -64,6 +66,7 @@ export function formatAdoptReport(
   thresholdSuggestions: ThresholdSuggestion[] = [],
   rolloutPlan: RolloutPlanStep[] = [],
   gatePreset?: GatePreset,
+  topIssues: DebtIssue[] = [],
 ): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
@@ -87,6 +90,7 @@ export function formatAdoptReport(
     `Recommended minSeverity: ${recommendedMinSeverity}`,
     `Gate preset: ${formatGatePresetSummary(gatePreset)}`,
   ];
+  renderTopFindingsTerminal(lines, topIssues, summary.totalIssues);
   if (thresholdSuggestions.length > 0) {
     lines.push("", "Suggested threshold tuning:");
     for (const suggestion of thresholdSuggestions) {
@@ -114,6 +118,7 @@ export function formatAdoptMarkdownReport(
   thresholdSuggestions: ThresholdSuggestion[] = [],
   rolloutPlan: RolloutPlanStep[] = [],
   gatePreset?: GatePreset,
+  topIssues: DebtIssue[] = [],
 ): string {
   const { summary } = scanResult;
   const topRules = Object.entries(summary.byRule)
@@ -142,6 +147,7 @@ export function formatAdoptMarkdownReport(
     `Recommended minSeverity: **${recommendedMinSeverity}**`,
     `Gate preset: **${gatePreset ?? "(none)"}**${gatePreset ? ` - ${formatGatePresetDefaults(gatePreset) || "advisory only"}` : ""}`,
   ];
+  renderTopFindingsMarkdown(lines, topIssues, summary.totalIssues);
   if (thresholdSuggestions.length > 0) {
     lines.push(
       "",
@@ -173,6 +179,9 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
     : input.target;
   const options = mergeConfig(target, fileConfig, input.cliOptions);
   const result = await scan(options);
+  const topIssues = input.topFindings
+    ? buildTopAdoptionIssues(result, input.topFindings, fileConfig)
+    : [];
 
   const recommended = recommendMinSeverity(result.summary.bySeverity, result.summary.totalIssues);
   const thresholdSuggestions = buildThresholdSuggestions(result, options);
@@ -193,8 +202,8 @@ export async function runAdopt(input: AdoptInput): Promise<AdoptResult> {
   }
 
   lines.push((input.format === "markdown"
-    ? formatAdoptMarkdownReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset)
-    : formatAdoptReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset)).trimEnd());
+    ? formatAdoptMarkdownReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset, topIssues)
+    : formatAdoptReport(result, recommended, thresholdSuggestions, rolloutPlan, selectedGatePreset, topIssues)).trimEnd());
 
   let configWritten: string | undefined;
   let baselineWritten: string | undefined;
@@ -348,6 +357,9 @@ function buildScopedCommandArgs(command: "adopt" | "scan", input: AdoptInput, fi
   addListArg(args, "--include", input.cliOptions.include);
   addListArg(args, "--exclude", input.cliOptions.exclude);
   addThresholdArg(args, input.cliOptions.thresholds);
+  if (command === "adopt" && input.topFindings) {
+    args.push("--top", String(input.topFindings));
+  }
   if (command === "adopt" && input.format === "markdown") {
     args.push("--format", "markdown");
   }
@@ -413,4 +425,28 @@ function shellQuote(value: string): string {
 
 function plural(count: number, word: string): string {
   return `${word}${count === 1 ? "" : "s"}`;
+}
+
+function buildTopAdoptionIssues(result: ScanResult, limit: number, fileConfig: DebtLensConfig): DebtIssue[] {
+  enrichIssuesWithPayoffScores(result.issues, { weights: fileConfig.priority });
+  return topPayoffIssues(result.issues, limit);
+}
+
+function renderTopFindingsTerminal(lines: string[], issues: DebtIssue[], totalIssues: number): void {
+  if (issues.length === 0) return;
+  lines.push("", `Highest-signal findings (${issues.length} of ${totalIssues}):`);
+  for (const issue of issues) {
+    const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
+    lines.push(`  ${issue.payoffScore?.toFixed(2)}  [${issue.severity}] ${issue.ruleName} — ${location}`);
+    lines.push(`    ${issue.message}`);
+  }
+}
+
+function renderTopFindingsMarkdown(lines: string[], issues: DebtIssue[], totalIssues: number): void {
+  if (issues.length === 0) return;
+  lines.push("", `## Highest-signal findings (${issues.length} of ${totalIssues})`, "");
+  for (const issue of issues) {
+    const location = issue.location ? `${issue.file}:${issue.location.startLine}` : issue.file;
+    lines.push(`- **${issue.payoffScore?.toFixed(2)}** [${issue.severity}] \`${issue.ruleId}\` — \`${location}\` — ${issue.message}`);
+  }
 }

@@ -39,6 +39,7 @@ export const SCAN_ARG_FLAGS = [
   "--sarif-category",
   "--junit-fail-on",
   "--markdown-heatmap",
+  "--top",
 ] as const;
 
 export function buildScanArgv(target: string, rawOptions: Record<string, unknown>): string[] {
@@ -83,6 +84,7 @@ export function buildScanArgv(target: string, rawOptions: Record<string, unknown
   addString(args, "--sarif-category", rawOptions.sarifCategory);
   addString(args, "--junit-fail-on", rawOptions.junitFailOn);
   addOptionalValue(args, "--markdown-heatmap", rawOptions.markdownHeatmap);
+  addValue(args, "--top", rawOptions.top);
   return args;
 }
 

@@ -9,11 +9,52 @@ contribution layers.
 
 ## Active starter board
 
-The historical v0.3 starter batch is complete, but newcomer-sized work should keep flowing
-through labeled issues. Start with the live
+The labeled queues on GitHub are the source of truth for what is open right now. The
+tables in this section are a snapshot taken on 2026-07-28 to save you a search; if a row
+disagrees with GitHub, GitHub wins. Check the live
 [`good first issue`](https://github.com/ColumbusLabs/DebtLens/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 and [`good-first-rule`](https://github.com/ColumbusLabs/DebtLens/issues?q=is%3Aissue+is%3Aopen+label%3Agood-first-rule)
-queues.
+queues before you start, and comment on the issue so two people do not pick up the same
+task.
+
+### Open general starter issues
+
+Labeled `good first issue`. The `difficulty: small` rows are the best place to start if
+this is your first PR here.
+
+| Issue | Area | Difficulty |
+| --- | --- | --- |
+| [#275 Sync `ROADMAP.md` with shipped 0.4+ language packs and Unreleased features](https://github.com/ColumbusLabs/DebtLens/issues/275) | docs | small |
+| [#276 Fix `when-not-to-use.md`: Ruby and Swift packs already ship](https://github.com/ColumbusLabs/DebtLens/issues/276) | docs | small |
+| [#277 Clarify monorepo pack status after closed #23](https://github.com/ColumbusLabs/DebtLens/issues/277) | docs, config | small |
+| [#303 Agent playbook: fix this PR's new debt (MCP + CLI recipe)](https://github.com/ColumbusLabs/DebtLens/issues/303) | docs, adoption | small |
+| [#307 Official pre-commit / Lefthook / Husky recipe for `--staged`](https://github.com/ColumbusLabs/DebtLens/issues/307) | docs, adoption | small |
+| [#306 Keep GitLab/Azure/Bitbucket CI templates in sync with Action inputs](https://github.com/ColumbusLabs/DebtLens/issues/306) | docs, github-action | medium |
+| [#332 Systematize famous-repo showcase scans as living docs](https://github.com/ColumbusLabs/DebtLens/issues/332) | docs, adoption | medium |
+| [#333 HTML report accessibility and dark/print polish](https://github.com/ColumbusLabs/DebtLens/issues/333) | reporter | medium |
+
+### Open rule and detector starter issues
+
+Labeled `good-first-rule`. Read [`docs/rule-packs.md`](./rule-packs.md) first so the new
+rule lands in the right layer, and expect to ship a positive fixture, a near-miss fixture,
+and a detector test with any rule change.
+
+| Issue | Difficulty |
+| --- | --- |
+| [#284 Deepen python-web: Django CBV and URLConf alias resolution](https://github.com/ColumbusLabs/DebtLens/issues/284) | medium |
+| [#309 TypeScript escape-hatch debt rule (`any`, `ts-ignore`, non-null assertions)](https://github.com/ColumbusLabs/DebtLens/issues/309) | medium |
+| [#310 Deprecated API usage cluster detector](https://github.com/ColumbusLabs/DebtLens/issues/310) | medium |
+| [#313 Generated-code leakage detector](https://github.com/ColumbusLabs/DebtLens/issues/313) | medium |
+| [#317 GraphQL resolver and schema sprawl rules](https://github.com/ColumbusLabs/DebtLens/issues/317) | medium |
+| [#321 Expo Router and deep-linking debt rules](https://github.com/ColumbusLabs/DebtLens/issues/321) | medium |
+| [#282 UIKit pack: large view controllers and UIKit sprawl](https://github.com/ColumbusLabs/DebtLens/issues/282) | large |
+| [#283 Deepen Rails pack beyond route/controller sprawl](https://github.com/ColumbusLabs/DebtLens/issues/283) | large |
+| [#289 Cross-language parity for newer core smells](https://github.com/ColumbusLabs/DebtLens/issues/289) | large |
+| [#311 Test quality pack (assertion-free tests, snapshot sprawl, giant `beforeEach`)](https://github.com/ColumbusLabs/DebtLens/issues/311) | large |
+
+### What a good starter PR looks like
+
+Whichever issue you pick, the review goes faster when the PR carries its own evidence.
 
 | Track | Good starter shape | Evidence to include |
 | --- | --- | --- |
@@ -31,10 +72,12 @@ broad implementation.
 
 ## Historical roadmap status (v0.3.0)
 
-The original contributor roadmap batch is **complete**. There are no open good-first
-implementation issues from that batch.
+Everything from here down is history, kept so the closed issues stay searchable. It is not
+the current queue: for open work use the [active starter board](#active-starter-board)
+above, or the labeled queues on GitHub.
 
-Statuses below are historical. **Done** means the GitHub issue is closed.
+The original contributor roadmap batch is **complete**. There are no open good-first
+implementation issues from that batch. **Done** means the GitHub issue is closed.
 
 ## Core rules (any TS/JS project)
 

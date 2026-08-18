@@ -35,6 +35,7 @@ const CORE_RULES = [
   "long-parameter-list",
   "god-file",
   "cognitive-complexity",
+  "generated-code-leakage",
 ] as const;
 
 const REACT_RULES = [
@@ -85,6 +86,7 @@ const AI_ASSISTED_MAINTAINER_RULES = [
   "empty-catch",
   "swallowed-error",
   "commented-out-code",
+  "generated-code-leakage",
 ] as const;
 
 const OSS_MAINTAINER_RULES = [

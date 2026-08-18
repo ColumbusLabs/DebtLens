@@ -13,6 +13,7 @@ import { deadAbstractionDetector } from "./deadAbstraction.js";
 import { emptyCatchDetector, swallowedErrorDetector } from "./errorHandling.js";
 import { featureFlagDebtDetector } from "./featureFlagDebt.js";
 import { floatingPromiseDetector } from "./floatingPromise.js";
+import { generatedCodeLeakageDetector } from "./generatedCodeLeakage.js";
 import { duplicateLogicDetector } from "./duplicateLogic.js";
 import { duplicatedLiteralDetector } from "./duplicatedLiteral.js";
 import { effectComplexityDetector } from "./effectComplexity.js";
@@ -125,6 +126,7 @@ export const allDetectors: Detector[] = [
   instructionDuplicationDetector,
   instructionContradictionDetector,
   featureFlagDebtDetector,
+  generatedCodeLeakageDetector,
 ];
 
 export const detectorIds = allDetectors.map((detector) => detector.id);
